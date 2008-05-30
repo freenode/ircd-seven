@@ -104,7 +104,7 @@ static void show_privs(struct Client *source_p, struct Client *target_p)
 	p = &oper_table[0];
 	while (p->name != NULL)
 	{
-		if (target_p->flags2 & p->mode)
+		if (target_p->operflags & p->mode)
 		{
 			if (buf[0] != '\0')
 				rb_strlcat(buf, " ", sizeof buf);

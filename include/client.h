@@ -133,6 +133,8 @@ struct Client
 	unsigned int flags;	/* client flags */
 	unsigned int flags2;	/* ugh. overflow */
 
+	unsigned int operflags;	/* Oper flags. */
+
 	unsigned int snomask;	/* server notice mask */
 
 	int hopcount;		/* number of servers to this 0 = local */
@@ -439,13 +441,13 @@ struct exit_client_hook
 
 /* overflow flags */
 /* EARLIER FLAGS ARE IN s_newconf.h */
-#define FLAGS2_EXEMPTRESV	0x00400000
-#define FLAGS2_EXEMPTKLINE      0x00800000
-#define FLAGS2_EXEMPTFLOOD      0x01000000
-#define FLAGS2_IP_SPOOFING      0x10000000
-#define FLAGS2_EXEMPTSPAMBOT	0x20000000
-#define FLAGS2_EXEMPTSHIDE	0x40000000
-#define FLAGS2_EXEMPTJUPE	0x80000000
+#define FLAGS2_EXEMPTRESV	0x001
+#define FLAGS2_EXEMPTKLINE      0x002
+#define FLAGS2_EXEMPTFLOOD      0x004
+#define FLAGS2_IP_SPOOFING      0x008
+#define FLAGS2_EXEMPTSPAMBOT	0x010
+#define FLAGS2_EXEMPTSHIDE	0x020
+#define FLAGS2_EXEMPTJUPE	0x040
 
 #define DEFAULT_OPER_UMODES (UMODE_SERVNOTICE | UMODE_OPERWALL | \
                              UMODE_WALLOP | UMODE_LOCOPS)

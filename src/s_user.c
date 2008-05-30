@@ -982,7 +982,7 @@ user_mode(struct Client *client_p, struct Client *source_p, int parc, const char
 						source_p->snomask = 0;
 						showsnomask = YES;
 					}
-					source_p->flags2 &= ~OPER_FLAGS;
+					source_p->operflags = 0;
 
 					rb_free(source_p->localClient->opername);
 					source_p->localClient->opername = NULL;
@@ -1271,7 +1271,7 @@ oper_up(struct Client *source_p, struct oper_conf *oper_p)
 
 	SetExemptKline(source_p);
 
-	source_p->flags2 |= oper_p->flags;
+	source_p->operflags |= oper_p->flags;
 	source_p->localClient->opername = rb_strdup(oper_p->name);
 
 	rb_dlinkAddAlloc(source_p, &local_oper_list);
