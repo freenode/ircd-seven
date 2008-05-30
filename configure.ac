@@ -1167,7 +1167,6 @@ AC_CONFIG_FILES(			\
 	Makefile			\
 	ssld/Makefile			\
 	extensions/Makefile		\
-	unsupported/Makefile		\
 	src/Makefile			\
 	modules/Makefile		\
 	tools/Makefile			\
