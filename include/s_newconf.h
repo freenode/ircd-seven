@@ -136,51 +136,48 @@ extern void propagate_generic(struct Client *source_p, const char *command,
 extern void cluster_generic(struct Client *, const char *, int cltype,
 			int cap, const char *format, ...);
 
-#define OPER_ENCRYPTED	0x00001
-#define OPER_KLINE	0x00002
-#define OPER_UNKLINE	0x00004
-#define OPER_LOCKILL	0x00008
-#define OPER_GLOBKILL	0x00010
-#define OPER_REMOTE	0x00020
-#define OPER_XLINE	0x00080
-#define OPER_RESV	0x00100
-#define OPER_NICKS	0x00200
-#define OPER_REHASH	0x00400
-#define OPER_DIE	0x00800
-#define OPER_ADMIN	0x01000
-#define OPER_HADMIN	0x02000
-#define OPER_OPERWALL	0x04000
-#define OPER_INVIS	0x08000
-#define OPER_SPY	0x10000
-#define OPER_REMOTEBAN	0x20000
-#define OPER_MASSNOTICE 0x40000
-/* 0x400000 and above are in client.h */
-
-#define OPER_FLAGS	(OPER_KLINE|OPER_UNKLINE|OPER_LOCKILL|OPER_GLOBKILL|\
-			 OPER_REMOTE|OPER_XLINE|OPER_RESV|\
-			 OPER_NICKS|OPER_REHASH|OPER_DIE|OPER_ADMIN|\
-			 OPER_HADMIN|OPER_OPERWALL|OPER_INVIS|OPER_SPY|\
-			 OPER_REMOTEBAN|OPER_MASSNOTICE)
+#define OPER_ENCRYPTED  0x00001
+#define OPER_HELPER     0x00002
+#define OPER_OPERWALL   0x00004
+#define OPER_STAFFER    0x00008
+#define OPER_KILL       0x00010
+#define OPER_KLINE      0x00020
+#define OPER_UNKLINE    0x00040
+#define OPER_REHASH     0x00080
+#define OPER_AUSPEX     0x00100
+#define OPER_CMODES     0x00200
+#define OPER_IMMUNE     0x00400
+#define OPER_OVERRIDE   0x00800
+#define OPER_MASSNOTICE 0x01000
+#define OPER_ROUTING    0x02000
+#define OPER_XLINE      0x04000
+#define OPER_RESV       0x08000
+#define OPER_REMOTEBAN  0x10000
+#define OPER_ADMIN      0x20000
+#define OPER_DIE        0x40000
+#define OPER_GRANT      0x80000
 
 #define IsOperConfEncrypted(x)	((x)->flags & OPER_ENCRYPTED)
 
-#define IsOperGlobalKill(x)     ((x)->operflags & OPER_GLOBKILL)
-#define IsOperLocalKill(x)      ((x)->operflags & OPER_LOCKILL)
-#define IsOperRemote(x)         ((x)->operflags & OPER_REMOTE)
+#define IsOperHelper(x)         ((x)->operflags & OPER_HELPER)
+#define IsOperOperwall(x)       ((x)->operflags & OPER_OPERWALL)
+#define IsOperStaffer(x)        ((x)->operflags & OPER_STAFFER)
+#define IsOperKill(x)           ((x)->operflags & OPER_KILL)
+#define IsOperKline(x)          ((x)->operflags & OPER_KLINE)
 #define IsOperUnkline(x)        ((x)->operflags & OPER_UNKLINE)
-#define IsOperN(x)              ((x)->operflags & OPER_NICKS)
-#define IsOperK(x)              ((x)->operflags & OPER_KLINE)
+#define IsOperRehash(x)         ((x)->operflags & OPER_REHASH)
+#define IsOperAuspex(x)         ((x)->operflags & OPER_AUSPEX)
+#define IsOperCModes(x)         ((x)->operflags & OPER_CMODES)
+#define IsOperImmune(x)         ((x)->operflags & OPER_IMMUNE)
+#define IsOperOverride(x)       ((x)->operflags & OPER_OVERRIDE)
+#define IsOperMassNotice(x)     ((x)->operflags & OPER_MASSNOTICE)
+#define IsOperRouting(x)        ((x)->operflags & OPER_ROUTING)
 #define IsOperXline(x)          ((x)->operflags & OPER_XLINE)
 #define IsOperResv(x)           ((x)->operflags & OPER_RESV)
-#define IsOperDie(x)            ((x)->operflags & OPER_DIE)
-#define IsOperRehash(x)         ((x)->operflags & OPER_REHASH)
-#define IsOperHiddenAdmin(x)    ((x)->operflags & OPER_HADMIN)
+#define IsOperRemoteBan(x)      ((x)->operflags & OPER_REMOTEBAN)
 #define IsOperAdmin(x)          ((x)->operflags & OPER_ADMIN)
-#define IsOperOperwall(x)       ((x)->operflags & OPER_OPERWALL)
-#define IsOperSpy(x)            ((x)->operflags & OPER_SPY)
-#define IsOperInvis(x)          ((x)->operflags & OPER_INVIS)
-#define IsOperRemoteBan(x)	((x)->operflags & OPER_REMOTEBAN)
-#define IsOperMassNotice(x)	((x)->operflags & OPER_MASSNOTICE)
+#define IsOperDie(x)            ((x)->operflags & OPER_DIE)
+#define IsOperGrant(x)          ((x)->operflags & OPER_GRANT)
 
 extern struct oper_conf *make_oper_conf(void);
 extern void free_oper_conf(struct oper_conf *);
@@ -190,6 +187,14 @@ extern struct oper_conf *find_oper_conf(const char *username, const char *host,
 					const char *locip, const char *oname);
 
 extern const char *get_oper_privs(int flags);
+
+struct mode_table
+{
+	const char *name;
+	int mode;
+};
+
+extern struct mode_table oper_table[];
 
 struct server_conf
 {

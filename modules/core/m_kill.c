@@ -72,9 +72,9 @@ mo_kill(struct Client *client_p, struct Client *source_p, int parc, const char *
 
 	user = parv[1];
 
-	if(!IsOperLocalKill(source_p))
+	if(!IsOperKill(source_p))
 	{
-		sendto_one(source_p, form_str(ERR_NOPRIVS), me.name, source_p->name, "local_kill");
+		sendto_one(source_p, form_str(ERR_NOPRIVS), me.name, source_p->name, "kill");
 		return 0;
 	}
 
@@ -106,14 +106,6 @@ mo_kill(struct Client *client_p, struct Client *source_p, int parc, const char *
 			return 0;
 		}
 		sendto_one_notice(source_p, ":KILL changed from %s to %s", user, target_p->name);
-	}
-
-	if(!MyConnect(target_p) && (!IsOperGlobalKill(source_p)))
-	{
-		sendto_one_notice(source_p, ":Nick %s is not on your server "
-				            "and you do not have the global_kill flag",
-				target_p->name);
-		return 0;
 	}
 
 	if(MyConnect(target_p))

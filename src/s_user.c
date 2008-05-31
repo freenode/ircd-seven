@@ -1069,12 +1069,6 @@ user_mode(struct Client *client_p, struct Client *source_p, int parc, const char
 	if(badflag)
 		sendto_one(source_p, form_str(ERR_UMODEUNKNOWNFLAG), me.name, source_p->name);
 
-	if(MyClient(source_p) && (source_p->snomask & SNO_NCHANGE) && !IsOperN(source_p))
-	{
-		sendto_one_notice(source_p, ":*** You need oper and nick_changes flag for +s +n");
-		source_p->snomask &= ~SNO_NCHANGE;	/* only tcm's really need this */
-	}
-
 	if(MyClient(source_p) && (source_p->umodes & UMODE_OPERWALL) && !IsOperOperwall(source_p))
 	{
 		sendto_one_notice(source_p, ":*** You need oper and operwall flag for +z");
@@ -1082,7 +1076,7 @@ user_mode(struct Client *client_p, struct Client *source_p, int parc, const char
 	}
 
 	if(MyConnect(source_p) && (source_p->umodes & UMODE_ADMIN) &&
-	   (!IsOperAdmin(source_p) || IsOperHiddenAdmin(source_p)))
+	   (!IsOperAdmin(source_p)))
 	{
 		sendto_one_notice(source_p, ":*** You need oper and admin flag for +a");
 		source_p->umodes &= ~UMODE_ADMIN;
@@ -1277,10 +1271,8 @@ oper_up(struct Client *source_p, struct oper_conf *oper_p)
 	rb_dlinkAddAlloc(source_p, &local_oper_list);
 	rb_dlinkAddAlloc(source_p, &oper_list);
 
-	if(IsOperAdmin(source_p) && !IsOperHiddenAdmin(source_p))
+	if(IsOperAdmin(source_p))
 		source_p->umodes |= UMODE_ADMIN;
-	if(!IsOperN(source_p))
-		source_p->snomask &= ~SNO_NCHANGE;
 	if(!IsOperOperwall(source_p))
 		source_p->umodes &= ~UMODE_OPERWALL;
 	hdata.client = source_p;

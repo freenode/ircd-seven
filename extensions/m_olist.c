@@ -68,7 +68,7 @@ static void list_named_channel(struct Client *source_p, const char *name);
 static int
 mo_olist(struct Client *client_p, struct Client *source_p, int parc, const char *parv[])
 {
-	if(!IsOperSpy(source_p))
+	if(IsOperAuspex(source_p))
 	{
 		sendto_one(source_p, form_str(ERR_NOPRIVS),
 				me.name, source_p->name, "oper_spy");

@@ -284,12 +284,6 @@ conf_set_modules_path(void *data)
 #endif
 }
 
-struct mode_table
-{
-	const char *name;
-	int mode;
-};
-
 /* *INDENT-OFF* */
 static struct mode_table umode_table[] = {
 	{"callerid",	UMODE_CALLERID	},
@@ -304,25 +298,27 @@ static struct mode_table umode_table[] = {
 	{NULL, 0}
 };
 
-static struct mode_table oper_table[] = {
-	{"encrypted",		OPER_ENCRYPTED		},
-	{"local_kill",		OPER_LOCKILL		},
-	{"global_kill",		OPER_GLOBKILL|OPER_LOCKILL	},
-	{"remote",		OPER_REMOTE		},
-	{"kline",		OPER_KLINE		},
-	{"unkline",		OPER_UNKLINE		},
-	{"nick_changes",	OPER_NICKS		},
-	{"rehash",		OPER_REHASH		},
-	{"die",			OPER_DIE		},
-	{"admin",		OPER_ADMIN		},
-	{"hidden_admin",	OPER_HADMIN		},
-	{"xline",		OPER_XLINE		},
-	{"resv",		OPER_RESV		},
-	{"operwall",		OPER_OPERWALL		},
-	{"oper_spy",		OPER_SPY		},
-	{"hidden_oper",		OPER_INVIS		},
-	{"remoteban",		OPER_REMOTEBAN		},
-	{"mass_notice",		OPER_MASSNOTICE		},
+struct mode_table oper_table[] = {
+	{ "encrypted",		OPER_ENCRYPTED		},
+	{ "helper",		OPER_HELPER		},
+	{ "operwall",		OPER_OPERWALL		},
+	{ "staffer",		OPER_STAFFER		},
+	{ "kill",		OPER_KILL		},
+	{ "kline",		OPER_KLINE		},
+	{ "unkline",		OPER_UNKLINE		},
+	{ "rehash",		OPER_REHASH		},
+	{ "auspex",		OPER_AUSPEX		},
+	{ "cmodes",		OPER_CMODES		},
+	{ "immune",		OPER_IMMUNE		},
+	{ "override",		OPER_OVERRIDE		},
+	{ "mass_notice",	OPER_MASSNOTICE		},
+	{ "routing",		OPER_ROUTING		},
+	{ "xline",		OPER_XLINE		},
+	{ "resv",		OPER_RESV		},
+	{ "remoteban",		OPER_REMOTEBAN		},
+	{ "admin",		OPER_ADMIN		},
+	{ "die",		OPER_DIE		},
+	{ "grant",		OPER_GRANT		},
 	{NULL, 0}
 };
 

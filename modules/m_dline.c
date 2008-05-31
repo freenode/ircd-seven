@@ -83,7 +83,7 @@ mo_dline(struct Client *client_p, struct Client *source_p,
 	const char *target_server = NULL;
 	int loc = 1;
 
-	if(!IsOperK(source_p))
+	if(!IsOperKline(source_p))
 	{
 		sendto_one(source_p, form_str(ERR_NOPRIVS),
 			   me.name, source_p->name, "kline");
@@ -141,7 +141,7 @@ mo_undline(struct Client *client_p, struct Client *source_p, int parc, const cha
 	const char *cidr;
 	const char *target_server = NULL;
 
-	if(!IsOperK(source_p))
+	if(!IsOperKline(source_p))
 	{
 		sendto_one(source_p, form_str(ERR_NOPRIVS),
 			   me.name, source_p->name, "unkline");

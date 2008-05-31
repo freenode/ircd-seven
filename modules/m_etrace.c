@@ -225,7 +225,7 @@ mo_chantrace(struct Client *client_p, struct Client *source_p, int parc, const c
 
 	name = parv[1];
 
-	if(IsOperSpy(source_p) && parv[1][0] == '!')
+	if(IsOperAuspex(source_p) && parv[1][0] == '!')
 	{
 		name++;
 		operspy = 1;
@@ -375,7 +375,7 @@ mo_masktrace(struct Client *client_p, struct Client *source_p, int parc,
 	name = LOCAL_COPY(parv[1]);	
 	collapse(name);
 
-	if(IsOperSpy(source_p) && parv[1][0] == '!')
+	if(IsOperAuspex(source_p) && parv[1][0] == '!')
 	{
 		name++;
 		mask++;

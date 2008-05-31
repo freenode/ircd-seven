@@ -698,9 +698,11 @@ stats_operedup (struct Client *source_p)
 	{
 		target_p = oper_ptr->data;
 
-		if(IsOperInvis(target_p) && !IsOper(source_p))
+/*
+ * Don't remove this check completely -- it'll be turned into operhide later
+                if(IsOperInvis(target_p) && !IsOper(source_p))
 			continue;
-
+*/
 		if(target_p->user->away)
 			continue;
 

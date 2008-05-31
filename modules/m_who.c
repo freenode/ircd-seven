@@ -100,7 +100,7 @@ m_who(struct Client *client_p, struct Client *source_p, int parc, const char *pa
 		return 0;
 	}
 
-	if(IsOperSpy(source_p) && *mask == '!')
+	if(IsOperAuspex(source_p) && *mask == '!')
 	{
 		mask++;
 		operspy = 1;
@@ -189,7 +189,7 @@ m_who(struct Client *client_p, struct Client *source_p, int parc, const char *pa
 
 	/* Note: operspy_dont_care_user_info does not apply to
 	 * who on channels */
-	if(IsOperSpy(source_p) && ConfigFileEntry.operspy_dont_care_user_info)
+	if(IsOperAuspex(source_p) && ConfigFileEntry.operspy_dont_care_user_info)
 		operspy = 1;
 
 	/* '/who 0' for a global list.  this forces clients to actually

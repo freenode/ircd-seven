@@ -326,23 +326,26 @@ struct oper_flags
 };
 static struct oper_flags oper_flagtable[] =
 {
-	{ OPER_KLINE,		'K', 'k' },
-	{ OPER_XLINE,		'X', 'x' },
-	{ OPER_RESV,		'Q', 'q' },
-	{ OPER_GLOBKILL,	'O', 'o' },
-	{ OPER_LOCKILL,		'C', 'c' },
-	{ OPER_REMOTE,		'R', 'r' },
-	{ OPER_UNKLINE,		'U', 'u' },
-	{ OPER_REHASH,		'H', 'h' },
-	{ OPER_DIE,		'D', 'd' },
-	{ OPER_ADMIN,		'A', 'a' },
-	{ OPER_NICKS,		'N', 'n' },
-	{ OPER_OPERWALL,	'L', 'l' },
-	{ OPER_SPY,		'S', 's' },
-	{ OPER_INVIS,		'P', 'p' },
-	{ OPER_REMOTEBAN,	'B', 'b' },
-	{ OPER_MASSNOTICE,	'M', 'm' },
-	{ 0,			'\0', '\0' }
+        { OPER_HELPER,          'H', 'h' },
+        { OPER_OPERWALL,        'L', 'l' },
+        { OPER_STAFFER,         'F', 'f' },
+        { OPER_KILL,            'C', 'c' },
+        { OPER_KLINE,           'K', 'k' },
+        { OPER_UNKLINE,         'U', 'u' },
+        { OPER_REHASH,          'H', 'h' },
+        { OPER_AUSPEX,          'S', 's' },
+        { OPER_CMODES,          'M', 'm' },
+        { OPER_IMMUNE,          'I', 'i' },
+        { OPER_OVERRIDE,        'O', 'o' },
+        { OPER_MASSNOTICE,      'N', 'n' },
+        { OPER_ROUTING,         'R', 'r' },
+        { OPER_XLINE,           'X', 'x' },
+        { OPER_RESV,            'Q', 'q' },
+        { OPER_REMOTEBAN,       'B', 'b' },
+        { OPER_ADMIN,           'A', 'a' },
+        { OPER_DIE,             'D', 'd' },
+        { OPER_GRANT,           'G', 'g' },
+        { 0,                    '\0', '\0' }
 };
 
 const char *

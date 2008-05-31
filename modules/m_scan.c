@@ -174,7 +174,7 @@ scan_umodes(struct Client *client_p, struct Client *source_p, int parc,
 	}
 	if (target_list == &global_client_list && (list_users || mask))
 	{
-		if (IsOperSpy(source_p))
+		if (IsOperAuspex(source_p))
 		{
 			if (!ConfigFileEntry.operspy_dont_care_user_info)
 			{

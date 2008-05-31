@@ -108,7 +108,7 @@ mo_kline(struct Client *client_p, struct Client *source_p,
 	int tkline_time = 0;
 	int loc = 1;
 
-	if(!IsOperK(source_p))
+	if(!IsOperKline(source_p))
 	{
 		sendto_one(source_p, form_str(ERR_NOPRIVS),
 			   me.name, source_p->name, "kline");
