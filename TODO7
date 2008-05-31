@@ -1,0 +1,16 @@
+[?] make snotes global. how many, which?
+[ ] reorganise oper privileges
+[ ] umode +h
+[ ] propagate OPER
+[ ] operhide
+[ ] umodes +p, +m
+[ ] GRANT
+[?] operspy->auspex.
+[ ] extendchans
+[ ] remote die/restart
+[ ] show privs in whois
+[ ] / in spoofs
+[ ] forwarding bans, plus translation
+[ ] make umode +i do as hyperion
+[ ] dehelper
+[ ] PASS user:pass support
