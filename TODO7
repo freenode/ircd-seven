@@ -1,6 +1,6 @@
 [?] make snotes global. how many, which?
-[ ] reorganise oper privileges
-[ ] umode +h
+[x] reorganise oper privileges
+[x] umode +h
 [ ] propagate OPER
 [ ] operhide
 [ ] umodes +p, +m
@@ -14,3 +14,4 @@
 [ ] make umode +i do as hyperion
 [ ] dehelper
 [ ] PASS user:pass support
+[ ] remove
