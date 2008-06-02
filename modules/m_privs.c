@@ -61,6 +61,7 @@ static struct mode_table auth_client_table[] = {
 	{"spambot_exempt",	FLAGS2_EXEMPTSPAMBOT	},
 	{"shide_exempt",	FLAGS2_EXEMPTSHIDE	},
 	{"jupe_exempt",		FLAGS2_EXEMPTJUPE	},
+	{"extend_chans",	FLAGS2_EXTENDCHANS	},
 	{NULL, 0}
 };
 

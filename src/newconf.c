@@ -337,6 +337,7 @@ static struct mode_table auth_table[] = {
 	{"need_ident",		CONF_FLAGS_NEED_IDENTD	},
 	{"have_ident",		CONF_FLAGS_NEED_IDENTD	},
 	{"need_sasl",		CONF_FLAGS_NEED_SASL	},
+	{"extend_chans",	CONF_FLAGS_EXTEND_CHANS },
 	{NULL, 0}
 };
 
@@ -2086,6 +2087,7 @@ static struct ConfEntry conf_channel_table[] =
 	{ "max_bans",		CF_INT,   NULL, 0, &ConfigChannel.max_bans		},
 	{ "max_bans_large",	CF_INT,   NULL, 0, &ConfigChannel.max_bans_large	},
 	{ "max_chans_per_user", CF_INT,   NULL, 0, &ConfigChannel.max_chans_per_user 	},
+	{ "max_chans_per_user_large", CF_INT,   NULL, 0, &ConfigChannel.max_chans_per_user_large },
 	{ "no_create_on_split", CF_YESNO, NULL, 0, &ConfigChannel.no_create_on_split 	},
 	{ "no_join_on_split",	CF_YESNO, NULL, 0, &ConfigChannel.no_join_on_split	},
 	{ "use_except",		CF_YESNO, NULL, 0, &ConfigChannel.use_except		},

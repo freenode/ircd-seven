@@ -449,6 +449,7 @@ struct exit_client_hook
 #define FLAGS2_EXEMPTSPAMBOT	0x010
 #define FLAGS2_EXEMPTSHIDE	0x020
 #define FLAGS2_EXEMPTJUPE	0x040
+#define FLAGS2_EXTENDCHANS	0x080
 
 #define DEFAULT_OPER_UMODES (UMODE_SERVNOTICE | UMODE_OPERWALL | \
                              UMODE_WALLOP | UMODE_LOCOPS)
@@ -552,6 +553,9 @@ struct exit_client_hook
 #define SetExemptResv(x)	((x)->flags2 |= FLAGS2_EXEMPTRESV)
 #define IsIPSpoof(x)            ((x)->flags2 & FLAGS2_IP_SPOOFING)
 #define SetIPSpoof(x)           ((x)->flags2 |= FLAGS2_IP_SPOOFING)
+
+#define IsExtendChans(x)	((x)->flags2 & FLAGS2_EXTENDCHANS)
+#define SetExtendChans(x)	((x)->flags2 |= FLAGS2_EXTENDCHANS)
 
 /* for local users: flood grace period is over
  * for servers: mentioned in networknotice.c notice

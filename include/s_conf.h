@@ -102,15 +102,16 @@ struct ConfItem
 #define CONF_FLAGS_EXEMPTSHIDE		0x00010000
 #define CONF_FLAGS_EXEMPTJUPE		0x00020000	/* exempt from resv generating warnings */
 #define CONF_FLAGS_NEED_SASL		0x00040000
+#define CONF_FLAGS_EXTEND_CHANS		0x00080000
 /* server flags */
-#define CONF_FLAGS_ALLOW_AUTO_CONN      0x00080000
-#define CONF_FLAGS_LAZY_LINK            0x00100000
-#define CONF_FLAGS_ENCRYPTED            0x00200000
-#define CONF_FLAGS_COMPRESSED           0x00400000
-#define CONF_FLAGS_TEMPORARY            0x00800000
-#define CONF_FLAGS_TB			0x01000000
-#define CONF_FLAGS_VHOSTED		0x02000000
-#define CONF_FLAGS_EXEMPTDNSBL		0x04000000
+#define CONF_FLAGS_ALLOW_AUTO_CONN      0x00100000
+#define CONF_FLAGS_LAZY_LINK            0x00200000
+#define CONF_FLAGS_ENCRYPTED            0x00400000
+#define CONF_FLAGS_COMPRESSED           0x00800000
+#define CONF_FLAGS_TEMPORARY            0x01000000
+#define CONF_FLAGS_TB			0x02000000
+#define CONF_FLAGS_VHOSTED		0x04000000
+#define CONF_FLAGS_EXEMPTDNSBL		0x08000000
 
 
 /* Macros for struct ConfItem */
@@ -131,6 +132,7 @@ struct ConfItem
 #define IsConfTburst(x)		((x)->flags & CONF_FLAGS_TB)
 #define IsNeedSasl(x)		((x)->flags & CONF_FLAGS_NEED_SASL)
 #define IsConfExemptDNSBL(x)	((x)->flags & CONF_FLAGS_EXEMPTDNSBL)
+#define IsConfExtendChans(x)	((x)->flags & CONF_FLAGS_EXTEND_CHANS)
 
 /* flag definitions for opers now in client.h */
 
@@ -238,6 +240,7 @@ struct config_channel_entry
 	int max_bans;
 	int max_bans_large;
 	int max_chans_per_user;
+	int max_chans_per_user_large;
 	int no_create_on_split;
 	int no_join_on_split;
 	int default_split_server_count;
