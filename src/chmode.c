@@ -432,18 +432,18 @@ chm_staff(struct Client *source_p, struct Channel *chptr,
 	  int alevel, int parc, int *parn,
 	  const char **parv, int *errors, int dir, char c, long mode_type)
 {
-	if(!IsOperCModes(source_p) && !IsServer(source_p))
+	if(!IsOper(source_p) && !IsServer(source_p))
 	{
 		if(!(*errors & SM_ERR_NOPRIVS))
 			sendto_one_numeric(source_p, ERR_NOPRIVILEGES, form_str(ERR_NOPRIVILEGES));
 		*errors |= SM_ERR_NOPRIVS;
 		return;
 	}
-	if(MyClient(source_p) && !IsOperResv(source_p))
+	if(MyClient(source_p) && !IsOperCModes(source_p))
 	{
 		if(!(*errors & SM_ERR_NOPRIVS))
 			sendto_one(source_p, form_str(ERR_NOPRIVS), me.name,
-					source_p->name, "resv");
+					source_p->name, "cmodes");
 		*errors |= SM_ERR_NOPRIVS;
 		return;
 	}
@@ -983,7 +983,7 @@ chm_forward(struct Client *source_p, struct Channel *chptr,
 		return;
 	}
 #else
-	if(!IsOper(source_p) && !IsServer(source_p))
+	if(!IsOperCModes(source_p) && !IsServer(source_p))
 	{
 		if(!(*errors & SM_ERR_NOPRIVS))
 			sendto_one_numeric(source_p, ERR_NOPRIVILEGES, form_str(ERR_NOPRIVILEGES));
