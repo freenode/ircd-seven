@@ -1,12 +1,12 @@
 [?] make snotes global. how many, which?
 [x] reorganise oper privileges
 [x] umode +h
-[ ] propagate OPER
-[ ] operhide
+[?] propagate OPER
+[x] operhide
 [ ] umodes +p, +m
 [ ] GRANT
 [?] operspy->auspex.
-[ ] extendchans
+[/] extendchans
 [ ] remote die/restart
 [ ] show privs in whois
 [ ] / in spoofs
