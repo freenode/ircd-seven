@@ -820,6 +820,7 @@ set_default_conf(void)
 	ConfigFileEntry.reject_ban_time = 300;  
 	ConfigFileEntry.reject_duration = 120;
 	ConfigFileEntry.max_unknown_ip = 2;
+	ConfigFileEntry.operhide = 0;
 
 	ServerInfo.default_max_clients = MAXCONNECTIONS;
 }

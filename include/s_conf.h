@@ -227,6 +227,7 @@ struct config_file_entry
 	int global_snotices;
 	int operspy_dont_care_user_info;
 	int max_unknown_ip;
+	int operhide;
 };
 
 struct config_channel_entry

@@ -337,9 +337,6 @@ struct exit_client_hook
 
 #define IsAnyServer(x)          (IsServer(x) || IsHandshake(x) || IsConnecting(x))
 
-#define IsOper(x)		((x)->umodes & UMODE_OPER)
-#define IsAdmin(x)		((x)->umodes & UMODE_ADMIN)
-
 #define SetReject(x)		{(x)->status = STAT_REJECT; \
 				 (x)->handler = UNREGISTERED_HANDLER; }
 
@@ -439,6 +436,15 @@ struct exit_client_hook
 #define UMODE_OPER         0x1000	/* Operator */
 #define UMODE_ADMIN        0x2000	/* Admin on server */
 #define UMODE_SSLCLIENT    0x4000	/* using SSL */
+
+/* umode/oper mode macros */
+#define IsOper(x)		((x)->umodes & UMODE_OPER)
+#define IsAdmin(x)		((x)->umodes & UMODE_ADMIN)
+
+/* Is t an oper, and is s allowed to know this? */
+#define SeesOpers(s)		(IsOper(s) || !ConfigFileEntry.operhide)
+#define SeesOper(s, t)		(IsOper(t) && SeesOpers(s))
+
 
 /* overflow flags */
 /* EARLIER FLAGS ARE IN s_newconf.h */
