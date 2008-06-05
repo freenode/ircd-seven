@@ -70,7 +70,7 @@ m_oper(struct Client *client_p, struct Client *source_p, int parc, const char *p
 	name = parv[1];
 	password = parv[2];
 
-	if(IsOper(source_p))
+	if(IsAnyOper(source_p))
 	{
 		sendto_one(source_p, form_str(RPL_YOUREOPER), me.name, source_p->name);
 		send_oper_motd(source_p);
