@@ -152,6 +152,12 @@ static struct InfoStruct info_table[] = {
 		"Default operstring at startup.",
 	},
 	{
+		"default_helperstring",
+		OUTPUT_STRING,
+		&ConfigFileEntry.default_helperstring,
+		"Default helperstring at startup.",
+	},
+	{
 		"servicestring",
 		OUTPUT_STRING,
 		&ConfigFileEntry.servicestring,

@@ -68,6 +68,7 @@ static void quote_adminstring(struct Client *, const char *);
 static void quote_autoconn(struct Client *, char *, int);
 static void quote_autoconnall(struct Client *, int);
 static void quote_floodcount(struct Client *, int);
+static void quote_helperstring(struct Client *, const char *);
 static void quote_identtimeout(struct Client *, int);
 static void quote_max(struct Client *, int);
 static void quote_operstring(struct Client *, const char *);
@@ -94,6 +95,7 @@ static struct SetStruct set_cmd_table[] = {
 	{"AUTOCONN", 	quote_autoconn, 	1,	1	},
 	{"AUTOCONNALL", quote_autoconnall, 	0,	1	},
 	{"FLOODCOUNT", 	quote_floodcount, 	0,	1	},
+	{"HELPERSTRING", quote_helperstring,	1,	0	},
 	{"IDENTTIMEOUT", quote_identtimeout,	0,	1	},
 	{"MAX", 	quote_max, 		0,	1	},
 	{"MAXCLIENTS",	quote_max,		0,	1	},
@@ -243,6 +245,25 @@ quote_max(struct Client *source_p, int newval)
 	{
 		sendto_one_notice(source_p, ":Current Maxclients = %d (%lu)",
 			   GlobalSetOptions.maxclients, rb_dlink_list_length(&lclient_list));
+	}
+}
+
+/* SET HELPERSTRING */
+static void
+quote_helperstring(struct Client *source_p, const char *arg)
+{
+	if(EmptyString(arg))
+	{
+		sendto_one_notice(source_p, ":HELPERSTRING is currently '%s'", GlobalSetOptions.helperstring);
+	}
+	else
+	{
+		rb_strlcpy(GlobalSetOptions.helperstring, arg,
+			sizeof(GlobalSetOptions.helperstring));
+		
+		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+				     "%s has changed HELPERSTRING to '%s'",
+				     get_oper_name(source_p), arg);
 	}
 }
 

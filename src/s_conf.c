@@ -719,6 +719,7 @@ set_default_conf(void)
 	AdminInfo.email = NULL;
 	AdminInfo.description = NULL;
 
+	ConfigFileEntry.default_helperstring = rb_strdup("is a Network Helper");
 	ConfigFileEntry.default_operstring = rb_strdup("is an IRC operator");
 	ConfigFileEntry.default_adminstring = rb_strdup("is a Server Administrator");
 	ConfigFileEntry.servicestring = rb_strdup("is a Network Service");

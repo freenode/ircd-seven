@@ -435,15 +435,20 @@ struct exit_client_hook
 /* user information flags, only settable by remote mode or local oper */
 #define UMODE_OPER         0x1000	/* Operator */
 #define UMODE_ADMIN        0x2000	/* Admin on server */
-#define UMODE_SSLCLIENT    0x4000	/* using SSL */
+#define UMODE_HELPER       0x4000	/* Helper */
+#define UMODE_SSLCLIENT    0x8000	/* using SSL */
 
 /* umode/oper mode macros */
 #define IsOper(x)		((x)->umodes & UMODE_OPER)
 #define IsAdmin(x)		((x)->umodes & UMODE_ADMIN)
+#define IsHelper(x)		((x)->umodes & UMODE_HELPER)
+#define IsAnyOper(x)		((x)->umodes & (UMODE_OPER|UMODE_HELPER))
 
 /* Is t an oper, and is s allowed to know this? */
 #define SeesOpers(s)		(IsOper(s) || !ConfigFileEntry.operhide)
-#define SeesOper(s, t)		(IsOper(t) && SeesOpers(s))
+#define SeesOper(s, t)		(IsOper(t) && (SeesOpers(s) || ((s) == (t))))
+#define SeesHelper(s, t)	(IsHelper(t) && (SeesOpers(s) || ((s) == (t))))
+#define SeesAnyOper(s, t)	(IsAnyOper(t) && (SeesOpers(s) || ((s) == (t))))
 
 
 /* overflow flags */
@@ -519,6 +524,9 @@ struct exit_client_hook
 #define ClearOper(x)            {(x)->umodes &= ~(UMODE_OPER|UMODE_ADMIN); \
 				 if (MyClient((x)) && !IsOper((x)) && !IsServer((x))) \
 				  (x)->handler = CLIENT_HANDLER; }
+
+#define SetHelper(x)		(x)->umodes |= UMODE_HELPER
+#define ClearHelper(x)		(x)->umodes &= ~UMODE_HELPER
 
 /* umode flags */
 #define IsInvisible(x)          ((x)->umodes & UMODE_INVISIBLE)

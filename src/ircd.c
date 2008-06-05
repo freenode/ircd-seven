@@ -387,6 +387,9 @@ initialize_global_set_options(void)
 
 	GlobalSetOptions.ident_timeout = IDENT_TIMEOUT;
 
+	rb_strlcpy(GlobalSetOptions.helperstring,
+		ConfigFileEntry.default_helperstring,
+		sizeof(GlobalSetOptions.helperstring));
 	rb_strlcpy(GlobalSetOptions.operstring,
 		ConfigFileEntry.default_operstring,
 		sizeof(GlobalSetOptions.operstring));

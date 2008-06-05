@@ -82,7 +82,7 @@ int user_modes[256] = {
 	0,			/* L */
 	0,			/* M */
 	0,			/* N */
-	0,			/* O */
+	UMODE_HELPER,		/* O */
 	0,			/* P */
 	UMODE_NOFORWARD,	/* Q */
 	UMODE_REGONLYMSG,	/* R */
@@ -1250,28 +1250,33 @@ oper_up(struct Client *source_p, struct oper_conf *oper_p)
 	unsigned int old = source_p->umodes, oldsnomask = source_p->snomask;
 	hook_data_umode_changed hdata;
 
-	SetOper(source_p);
-
-	if(oper_p->umodes)
-		source_p->umodes |= oper_p->umodes;
-	else if(ConfigFileEntry.oper_umodes)
-		source_p->umodes |= ConfigFileEntry.oper_umodes;
-	else
-		source_p->umodes |= DEFAULT_OPER_UMODES;
-
-	if (oper_p->snomask)
+	if(oper_p->flags & OPER_STAFFER)
 	{
-		source_p->snomask |= oper_p->snomask;
-		source_p->umodes |= UMODE_SERVNOTICE;
-	}
-	else if (source_p->umodes & UMODE_SERVNOTICE)
-	{
-		/* Only apply these if +s is already set -- jilles */
-		if (ConfigFileEntry.oper_snomask)
-			source_p->snomask |= ConfigFileEntry.oper_snomask;
+		SetOper(source_p);
+
+		if(oper_p->umodes)
+			source_p->umodes |= oper_p->umodes;
+		else if(ConfigFileEntry.oper_umodes)
+			source_p->umodes |= ConfigFileEntry.oper_umodes;
 		else
-			source_p->snomask |= DEFAULT_OPER_SNOMASK;
+			source_p->umodes |= DEFAULT_OPER_UMODES;
+
+		if (oper_p->snomask)
+		{
+			source_p->snomask |= oper_p->snomask;
+			source_p->umodes |= UMODE_SERVNOTICE;
+		}
+		else if (source_p->umodes & UMODE_SERVNOTICE)
+		{
+			/* Only apply these if +s is already set -- jilles */
+			if (ConfigFileEntry.oper_snomask)
+				source_p->snomask |= ConfigFileEntry.oper_snomask;
+			else
+				source_p->snomask |= DEFAULT_OPER_SNOMASK;
+		}
 	}
+	else
+		SetHelper(source_p);
 
 	Count.oper++;
 
@@ -1281,7 +1286,9 @@ oper_up(struct Client *source_p, struct oper_conf *oper_p)
 	source_p->operflags |= oper_p->flags;
 	source_p->localClient->opername = rb_strdup(oper_p->name);
 
-	rb_dlinkAddAlloc(source_p, &local_oper_list);
+	if(IsOper(source_p))
+		rb_dlinkAddAlloc(source_p, &local_oper_list);
+
 	rb_dlinkAddAlloc(source_p, &oper_list);
 
 	if(IsOperAdmin(source_p))

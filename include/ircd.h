@@ -45,6 +45,7 @@ struct SetOptions
 
 	char operstring[REALLEN];
 	char adminstring[REALLEN];
+	char helperstring[REALLEN];
 };
 
 struct Counter
