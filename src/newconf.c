@@ -464,7 +464,7 @@ conf_begin_oper(struct TopConf *tc)
 	}
 
 	yy_oper = make_oper_conf();
-	yy_oper->flags |= OPER_ENCRYPTED|OPER_RESV|OPER_OPERWALL|OPER_REMOTEBAN|OPER_MASSNOTICE;
+	yy_oper->flags |= OPER_ENCRYPTED;
 
 	return 0;
 }
