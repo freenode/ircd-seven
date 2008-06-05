@@ -1,5 +1,6 @@
 [?] make snotes global. how many, which?
 [x] reorganise oper privileges
+[x] Add umode +O / helper status
 [x] umode +h
 [?] propagate OPER
 [x] operhide
