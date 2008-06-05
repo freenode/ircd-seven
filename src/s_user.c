@@ -110,7 +110,7 @@ int user_modes[256] = {
 	UMODE_IMMUNE,		/* m */
 	0,			/* n */
 	UMODE_OPER,		/* o */
-	0,			/* p */
+	UMODE_OVERRIDE,		/* p */
 	0,			/* q */
 	0,			/* r */
 	UMODE_SERVNOTICE,	/* s */
@@ -1135,6 +1135,12 @@ user_mode(struct Client *client_p, struct Client *source_p, int parc, const char
 	{
 		sendto_one_notice(source_p, ":*** You need oper and the immune flag for +m");
 		source_p->umodes &= ~UMODE_IMMUNE;
+	}
+
+	if(MyConnect(source_p) && (source_p->umodes & UMODE_OVERRIDE) && (!IsOperOverride(source_p)))
+	{
+		sendto_one_notice(source_p, ":*** You need oper and the override flag for +p");
+		source_p->umodes &= ~UMODE_OVERRIDE;
 	}
 
 	/* let modules providing usermodes know that we've changed our usermode --nenolod */

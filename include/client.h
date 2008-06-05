@@ -440,6 +440,7 @@ struct exit_client_hook
 
 /* oper-controlled privilege umodes. */
 #define UMODE_IMMUNE       0x10000
+#define UMODE_OVERRIDE     0x20000
 
 /* umode/oper mode macros */
 #define IsOper(x)		((x)->umodes & UMODE_OPER)
@@ -448,6 +449,7 @@ struct exit_client_hook
 #define IsAnyOper(x)		((x)->umodes & (UMODE_OPER|UMODE_HELPER))
 
 #define IsImmune(x)		((x)->umodes & UMODE_IMMUNE)
+#define IsOverride(x)		((x)->umodes & UMODE_OVERRIDE)
 
 /* Is t an oper, and is s allowed to know this? */
 #define SeesOpers(s)		(IsOper(s) || !ConfigFileEntry.operhide)

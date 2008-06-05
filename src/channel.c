@@ -716,6 +716,9 @@ can_join(struct Client *source_p, struct Channel *chptr, char *key)
 
 	s_assert(source_p->localClient != NULL);
 
+	if(IsOverride(source_p))
+		return 0;
+
 	rb_sprintf(src_host, "%s!%s@%s", source_p->name, source_p->username, source_p->host);
 	rb_sprintf(src_iphost, "%s!%s@%s", source_p->name, source_p->username, source_p->sockhost);
 	if(source_p->localClient->mangledhost != NULL)
@@ -838,6 +841,9 @@ can_send(struct Channel *chptr, struct Client *source_p, struct membership *mspt
 	if(is_chanop_voiced(msptr))
 		return CAN_SEND_OPV;
 
+	if(IsOverride(source_p))
+		return CAN_SEND_NONOP;
+
 	if(chptr->mode.mode & MODE_MODERATED)
 		return CAN_SEND_NO;
 
@@ -870,7 +876,7 @@ find_bannickchange_channel(struct Client *client_p)
 	char src_host[NICKLEN + USERLEN + HOSTLEN + 6];
 	char src_iphost[NICKLEN + USERLEN + HOSTLEN + 6];
 
-	if (!MyClient(client_p))
+	if (!MyClient(client_p) || IsOverride(client_p))
 		return NULL;
 
 	rb_sprintf(src_host, "%s!%s@%s", client_p->name, client_p->username, client_p->host);
