@@ -1000,6 +1000,35 @@ user_mode(struct Client *client_p, struct Client *source_p, int parc, const char
 			}
 			break;
 
+		case 'O':
+			if(what == MODE_ADD)
+			{
+				if(IsServer(client_p) && !IsHelper(source_p))
+				{
+					++Count.oper;
+					SetHelper(source_p);
+					rb_dlinkAddAlloc(source_p, &oper_list);
+				}
+			}
+			else
+			{
+				if(!IsHelper(source_p))
+					break;
+
+				ClearHelper(source_p);
+				Count.oper--;
+
+				if(MyConnect(source_p))
+				{
+					source_p->operflags = 0;
+					rb_free(source_p->localClient->opername);
+					source_p->localClient->opername = NULL;
+				}
+
+				rb_dlinkFindDestroy(source_p, &oper_list);
+			}
+			break;
+
 			/* we may not get these,
 			 * but they shouldnt be in default
 			 */
