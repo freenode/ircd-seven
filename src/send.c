@@ -1095,7 +1095,7 @@ sendto_wallops_flags(int flags, struct Client *source_p, const char *pattern, ..
 
 	va_end(args);
 
-	RB_DLINK_FOREACH_SAFE(ptr, next_ptr, IsPerson(source_p) && flags == UMODE_WALLOP ? lclient_list.head : local_oper_list.head)
+	RB_DLINK_FOREACH_SAFE(ptr, next_ptr, IsPerson(source_p) ? lclient_list.head : local_oper_list.head)
 	{
 		client_p = ptr->data;
 

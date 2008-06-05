@@ -48,7 +48,7 @@ struct Message wallops_msgtab = {
 };
 struct Message operwall_msgtab = {
 	"OPERWALL", 0, 0, 0, MFLG_SLOW,
-	{mg_unreg, mg_not_oper, {ms_operwall, 2}, mg_ignore, mg_ignore, {mo_operwall, 2}}
+	{mg_unreg, {mo_operwall, 2}, {ms_operwall, 2}, mg_ignore, mg_ignore, {mo_operwall, 2}}
 };
 
 mapi_clist_av1 wallops_clist[] = { &wallops_msgtab, &operwall_msgtab, NULL };
@@ -61,6 +61,17 @@ DECLARE_MODULE_AV1(wallops, NULL, NULL, wallops_clist, NULL, NULL, "$Revision: 1
 static int
 mo_operwall(struct Client *client_p, struct Client *source_p, int parc, const char *parv[])
 {
+	if(!IsAnyOper(source_p))
+	{
+		/* If they're just a regular user (possible, since CLIENT_HANDLER
+		 * can execute this to let helpers get it), give them the normal
+		 * "you're not an oper" message instead of the more specific oper
+		 * message.
+		 */
+		sendto_one_numeric(source_p, ERR_NOPRIVILEGES,
+				form_str(ERR_NOPRIVILEGES));
+		return 0;
+	}
 	if(!IsOperOperwall(source_p))
 	{
 		sendto_one(source_p, form_str(ERR_NOPRIVS),
