@@ -158,6 +158,14 @@ m_kick(struct Client *client_p, struct Client *source_p, int parc, const char *p
 			return 0;
 		}
 
+		if(MyClient(source_p) && IsImmune(who))
+		{
+			sendto_one_numeric(source_p, ERR_ISCHANSERVICE,
+					   "%s %s :User is immune from kick",
+					   who->name, chptr->chname);
+			return 0;
+		}
+
 		comment = LOCAL_COPY((EmptyString(parv[3])) ? who->name : parv[3]);
 		if(strlen(comment) > (size_t) REASONLEN)
 			comment[REASONLEN] = '\0';

@@ -438,11 +438,16 @@ struct exit_client_hook
 #define UMODE_HELPER       0x4000	/* Helper */
 #define UMODE_SSLCLIENT    0x8000	/* using SSL */
 
+/* oper-controlled privilege umodes. */
+#define UMODE_IMMUNE       0x10000
+
 /* umode/oper mode macros */
 #define IsOper(x)		((x)->umodes & UMODE_OPER)
 #define IsAdmin(x)		((x)->umodes & UMODE_ADMIN)
 #define IsHelper(x)		((x)->umodes & UMODE_HELPER)
 #define IsAnyOper(x)		((x)->umodes & (UMODE_OPER|UMODE_HELPER))
+
+#define IsImmune(x)		((x)->umodes & UMODE_IMMUNE)
 
 /* Is t an oper, and is s allowed to know this? */
 #define SeesOpers(s)		(IsOper(s) || !ConfigFileEntry.operhide)
