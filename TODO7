@@ -4,13 +4,13 @@
 [x] umode +h
 [?] propagate OPER
 [x] operhide
-[ ] umodes +p, +m
+[x] umodes +p, +m
 [ ] GRANT
 [?] operspy->auspex.
 [/] extendchans
 [ ] remote die/restart
-[ ] show privs in whois
-[ ] / in spoofs
+[x] show privs in whois
+[x] / in spoofs
 [ ] forwarding bans, plus translation
 [ ] make umode +i do as hyperion
 [ ] dehelper
