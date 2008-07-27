@@ -7,7 +7,7 @@
 [x] umodes +p, +m
 [x] GRANT
 [?] operspy->auspex.
-[/] extendchans
+[x] extendchans
 [x] remote die/restart
 [x] remote mod* commands
 [x] show privs in whois
