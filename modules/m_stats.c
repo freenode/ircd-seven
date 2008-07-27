@@ -954,6 +954,7 @@ static struct shared_flags shared_flagtable[] =
 	{ SHARED_UNDLINE,       'E' },
         { SHARED_GRANT,         'G' },
         { SHARED_DIE,           'I' },
+        { SHARED_MODULE,        'M' },
 	{ 0,			'\0'}
 };
 
