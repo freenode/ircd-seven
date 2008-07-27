@@ -13,7 +13,7 @@
 [x] show privs in whois
 [x] / in spoofs
 [ ] forwarding bans, plus translation
-[ ] make umode +i do as hyperion
+[x] make umode +i do as hyperion
 [ ] dehelper
 [x] PASS user:pass support
 [ ] remove
