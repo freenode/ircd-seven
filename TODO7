@@ -5,7 +5,7 @@
 [?] propagate OPER
 [x] operhide
 [x] umodes +p, +m
-[ ] GRANT
+[x] GRANT
 [?] operspy->auspex.
 [/] extendchans
 [ ] remote die/restart
