@@ -8,7 +8,8 @@
 [x] GRANT
 [?] operspy->auspex.
 [/] extendchans
-[ ] remote die/restart
+[x] remote die/restart
+[x] remote mod* commands
 [x] show privs in whois
 [x] / in spoofs
 [ ] forwarding bans, plus translation
