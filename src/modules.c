@@ -624,9 +624,9 @@ mo_modrestart(struct Client *client_p, struct Client *source_p, int parc, const 
 
         if(parc > 1)
         {
-                sendto_match_servs(source_p, parv[2], CAP_ENCAP, NOCAPS,
-                                "ENCAP %s MODRESTART %s", parv[2], parv[1]);
-                if (match(parv[2], me.name) == 0)
+                sendto_match_servs(source_p, parv[1], CAP_ENCAP, NOCAPS,
+                                "ENCAP %s MODRESTART %s", parv[1]);
+                if (match(parv[1], me.name) == 0)
                         return 0;
         }
 
