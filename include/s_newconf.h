@@ -98,6 +98,7 @@ struct remote_conf
 #define SHARED_TDLINE	0x0800
 #define SHARED_PDLINE	0x1000
 #define SHARED_UNDLINE	0x2000
+#define SHARED_GRANT	0x4000
 
 #define SHARED_ALL	(SHARED_TKLINE | SHARED_PKLINE | SHARED_UNKLINE |\
 			SHARED_PXLINE | SHARED_TXLINE | SHARED_UNXLINE |\
@@ -194,7 +195,16 @@ struct mode_table
 	int mode;
 };
 
+struct oper_flags
+{
+	int flag;
+	const char *name;
+	char has;
+	char hasnt;
+};
+
 extern struct mode_table oper_table[];
+extern struct oper_flags oper_flagtable[];
 
 struct server_conf
 {

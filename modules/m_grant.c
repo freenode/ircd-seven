@@ -7,6 +7,7 @@
 
 #include "stdinc.h"
 #include "modules.h"
+#include "numeric.h"
 #include "client.h"
 #include "ircd.h"
 #include "send.h"
@@ -30,20 +31,13 @@ mapi_clist_av1 grant_clist[] = { &grant_msgtab, NULL };
 
 DECLARE_MODULE_AV1(grant, NULL, NULL, grant_clist, NULL, NULL, "$Revision$");
 
-/* copied from src/newconf.c */
-struct mode_table
-{
-	const char *name;
-	int mode;
-};
-
-extern struct mode_table flag_table[];
+extern struct mode_table oper_table[];
 
 static int
 mo_grant(struct Client *client_p, struct Client *source_p, int parc, const char *parv[])
 {
 	struct Client *target_p;
-	int addflags = 0, removeflags = 0;
+	unsigned int addflags = 0, removeflags = 0;
 	int dooper = 0, dodeoper = 0;
 	int i, j;
 	int dir;
@@ -83,18 +77,18 @@ mo_grant(struct Client *client_p, struct Client *source_p, int parc, const char 
 			continue;
 		}
 
-		for (j = 0; flag_table[j].name != NULL; j++)
+		for (j = 0; oper_table[j].name != NULL; j++)
 		{
-			if (!irccmp(p, flag_table[j].name))
+			if (!irccmp(p, oper_table[j].name))
 			{
 				if (dir == MODE_ADD)
-					addflags |= flag_table[j].mode, removeflags &= ~flag_table[j].mode;
+					addflags |= oper_table[j].mode, removeflags &= ~oper_table[j].mode;
 				else
-					removeflags |= flag_table[j].mode, addflags &= ~flag_table[j].mode;
+					removeflags |= oper_table[j].mode, addflags &= ~oper_table[j].mode;
 				break;
 			}
 		}
-		if (flag_table[j].name == NULL)
+		if (oper_table[j].name == NULL)
 		{
 			sendto_one_notice(source_p, ":Unknown GRANT keyword '%s'", p);
 			return 0;
@@ -165,7 +159,7 @@ static int me_grant(struct Client *client_p, struct Client *source_p, int parc, 
 	}
 
 	if(!find_shared_conf(source_p->username, source_p->host,
-				source_p->user->server, SHARED_GRANT))
+				source_p->servptr->name, SHARED_GRANT))
 	{
 		sendto_one(source_p, ":%s NOTICE %s :*** You don't have an appropriate shared"
 			"block to grant privilege on this server.", me.name, source_p->name);
@@ -213,10 +207,10 @@ static int do_grant(struct Client *source_p, struct Client *target_p, int addfla
 	/* If the target is already opered, we should preserve their original opername
 	 * instead of clobbering it with <grant> on de/reoper to change between +O/+o
 	 */
-	if(!EmptyString(target_p->user->opername))
-		strlcpy(oper_name, target_p->user->opername, sizeof(oper_name));
+	if(!EmptyString(target_p->localClient->opername))
+		rb_strlcpy(oper_name, target_p->localClient->opername, sizeof(oper_name));
 	else
-		strlcpy(oper_name, "<grant>", sizeof(oper_name));
+		rb_strlcpy(oper_name, "<grant>", sizeof(oper_name));
 
 	if (dodeoper && dooper)
 		addflags2 = (addflags | target_p->operflags) & ~removeflags;
@@ -258,18 +252,18 @@ static int do_grant(struct Client *source_p, struct Client *target_p, int addfla
 		else
 		{
 			desc[0] = '\0';
-			for (j = 0; flag_table[j].name != NULL; j++)
+			for (j = 0; oper_table[j].name != NULL; j++)
 			{
-				if ((addflags2 & flag_table[j].mode) == flag_table[j].mode)
+				if ((addflags2 & oper_table[j].mode) == oper_table[j].mode)
 				{
 					if (desc[0] != '\0')
-						strlcat(desc, " ", sizeof desc);
-					strlcat(desc, "+", sizeof desc);
-					strlcat(desc, flag_table[j].name, sizeof desc);
+						rb_strlcat(desc, " ", sizeof desc);
+					rb_strlcat(desc, "+", sizeof desc);
+					rb_strlcat(desc, oper_table[j].name, sizeof desc);
 				}
 			}
 			if (desc[0] == '\0')
-				strlcpy(desc, "<none>", sizeof desc);
+				rb_strlcpy(desc, "<none>", sizeof desc);
 			oper.name = oper_name;
 			oper.username = "";
 			oper.host = "";
@@ -309,25 +303,25 @@ static int do_grant(struct Client *source_p, struct Client *target_p, int addfla
 			target_p->operflags |= addflags;
 			target_p->operflags &= ~removeflags;
 			desc[0] = '\0';
-			for (j = 0; flag_table[j].name != NULL; j++)
+			for (j = 0; oper_table[j].name != NULL; j++)
 			{
-				if ((addflags & flag_table[j].mode) == flag_table[j].mode)
+				if ((addflags & oper_table[j].mode) == oper_table[j].mode)
 				{
 					if (desc[0] != '\0')
-						strlcat(desc, " ", sizeof desc);
-					strlcat(desc, "+", sizeof desc);
-					strlcat(desc, flag_table[j].name, sizeof desc);
+						rb_strlcat(desc, " ", sizeof desc);
+					rb_strlcat(desc, "+", sizeof desc);
+					rb_strlcat(desc, oper_table[j].name, sizeof desc);
 				}
-				else if ((removeflags & flag_table[j].mode) == flag_table[j].mode)
+				else if ((removeflags & oper_table[j].mode) == oper_table[j].mode)
 				{
 					if (desc[0] != '\0')
-						strlcat(desc, " ", sizeof desc);
-					strlcat(desc, "-", sizeof desc);
-					strlcat(desc, flag_table[j].name, sizeof desc);
+						rb_strlcat(desc, " ", sizeof desc);
+					rb_strlcat(desc, "-", sizeof desc);
+					rb_strlcat(desc, oper_table[j].name, sizeof desc);
 				}
 			}
 			if(desc[0] == '\0')
-				strlcpy(desc, "<none>", sizeof desc);
+				rb_strlcpy(desc, "<none>", sizeof desc);
 			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 					"%s is changing oper flags on %s (%s)",
 					get_oper_name(source_p),
