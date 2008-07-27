@@ -1,4 +1,4 @@
-dnl $Id: configure.ac 23020 2006-09-01 18:20:19Z androsyn $
+dnl $Id: configure.ac 25574 2008-06-20 21:49:06Z androsyn $
 dnl Process this file with autoconf to produce a configure script.
 
 dnl TODO: clean up all the OpenSSL and shared module checking stuff;
@@ -8,7 +8,7 @@ dnl said functions need to be just about as complex as they already are.
 AC_PREREQ(2.60)
 AUTOMAKE_OPTIONS = 1.10
 dnl Sneaky way to get an Id tag into the configure script
-AC_COPYRIGHT([$Id: configure.ac 23020 2006-09-01 18:20:19Z androsyn $])
+AC_COPYRIGHT([$Id: configure.ac 25574 2008-06-20 21:49:06Z androsyn $])
 AC_INIT([libratbox],[devel])
 AM_INIT_AUTOMAKE(AC_PACKAGE_TARNAME, AC_PACKAGE_VERSION, -)
 
@@ -203,7 +203,7 @@ elif test "$CRYPT_LIB" = no; then
 	unset CRYPT_LIB
 fi
 
-AM_CONDITIONAL([NEED_CRYPT], [test x"$need_crypt" == "xyes"])
+AM_CONDITIONAL([NEED_CRYPT], [test x"$need_crypt" = "xyes"])
 
 
 AC_SUBST(CRYPT_LIB)
@@ -270,7 +270,7 @@ if test "$cf_enable_openssl" != "no" ; then
 	dnl Now check cf_openssl_found to see if we found anything.
 	if test ! -z "$cf_openssl_basedir"; then
 		if test -f "${cf_openssl_basedir}/include/openssl/opensslv.h" ; then
-			SSL_INCLUDES="-I${cf_openssl_basedir}/include"
+			SSL_CFLAGS="-I${cf_openssl_basedir}/include"
 			SSL_LIBS="-L${cf_openssl_basedir}/lib"
 		else
 		dnl OpenSSL wasn't found in the directory specified.  Naughty
@@ -305,7 +305,7 @@ else
 fi
 
 save_CPPFLAGS="$CPPFLAGS"
-CPPFLAGS="$CPPFLAGS $SSL_INCLUDES"
+CPPFLAGS="$CPPFLAGS $SSL_CFLAGS"
 save_LIBS="$LIBS"
 LIBS="$LIBS $SSL_LIBS"
 if test "$cf_enable_openssl" != no; then
@@ -345,9 +345,39 @@ if test "$cf_enable_openssl" != no; then
 		[cf_enable_openssl=no], [-lcrypto])
 fi
 
-if test "$cf_enable_openssl" != no; then
-	AC_DEFINE(HAVE_OPENSSL,1,[Has OpenSSL])
+
+
+dnl GnuTLS support
+AC_MSG_CHECKING(for GnuTLS)
+AC_ARG_ENABLE(gnutls,
+[AC_HELP_STRING([--enable-gnutls],[Enable GnuTLS support.])
+AC_HELP_STRING([--disable-gnutls],[Disable GnuTLS support.])],
+[cf_enable_gnutls=$enableval],
+[cf_enable_gnutls="auto"])
+ 
+if test "$cf_enable_gnutls" != no; then
+       PKG_CHECK_MODULES(GNUTLS, [gnutls], [
+               cf_enable_gnutls="yes"   
+       ], [cf_enable_gnutls="no"])      
 fi
+
+if test "$cf_enable_gnutls" = "auto" -a "$cf_enable_openssl" = "yes"; then
+       cf_enable_gnutls="no"
+fi
+
+if test x"$cf_enable_openssl" != xno; then
+	AC_DEFINE(HAVE_OPENSSL,1,[Has OpenSSL])
+	GNUTLS_CFLAGS=""
+	GNUTLS_LIBS=""
+	SSL_TYPE="openssl"
+elif test x"$cf_enable_gnutls" != xno; then
+	AC_DEFINE(HAVE_GNUTLS, 1, [Has GnuTLS])
+	SSL_LIBS=""
+	SSL_CFLAGS=""	
+	SSL_TYPE="gnutls"
+fi
+
+
 
 
 CPPFLAGS="$save_CPPFLAGS"
@@ -407,9 +437,10 @@ AC_SUBST(LDFLAGS)
 AC_SUBST(PICFLAGS)
 AC_SUBST(CFLAGS)
 AC_SUBST(SEDOBJ)
-AC_SUBST(SSL_INCLUDES)
+AC_SUBST(SSL_CFLAGS)
 AC_SUBST(SSL_LIBS)
-
+AC_SUBST(GNUTLS_CFLAGS)
+AC_SUBST(GNUTLS_LIBS)
 
 if test "$prefix" = "NONE"; then 
 	AC_DEFINE_UNQUOTED(RB_PREFIX, "$ac_default_prefix", [Prefix where libratbox is installed.])
@@ -655,6 +686,7 @@ fi
 AC_CONFIG_FILES(		\
 	src/Makefile		\
 	Makefile		\
+	libratbox.pc		\
 )
 
 AC_OUTPUT
@@ -670,6 +702,6 @@ echo "Installing into: $prefix"
 echo "IPv6 support ................... $have_v6"
 echo "Assert debugging ............... $assert"
 echo "Block allocator ................ $balloc"
-echo "OpenSSL ........................ $cf_enable_openssl"
+echo "SSL Type........................ $SSL_TYPE"
 echo
 

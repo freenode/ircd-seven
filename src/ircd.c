@@ -64,6 +64,7 @@
 #include "patchlevel.h"
 #include "serno.h"
 #include "sslproc.h"
+#include "chmode.h"
 
 /* /quote set variables */
 struct SetOptions GlobalSetOptions;
@@ -79,31 +80,19 @@ struct Counter Count;
 struct ServerStatistics ServerStats;
 
 int maxconnections;
-struct timeval SystemTime;
 struct Client me;		/* That's me */
 struct LocalUser meLocalUser;	/* That's also part of me */
 
-rb_dlink_list lclient_list = { NULL, NULL, 0 };
-rb_dlink_list global_client_list = { NULL, NULL, 0 };
-rb_dlink_list global_channel_list = { NULL, NULL, 0 };
+rb_dlink_list global_client_list;
 
+/* unknown/client pointer lists */
 rb_dlink_list unknown_list;        /* unknown clients ON this server only */
+rb_dlink_list lclient_list;	/* local clients only ON this server */
 rb_dlink_list serv_list;           /* local servers to this server ONLY */
 rb_dlink_list global_serv_list;    /* global servers on the network */
 rb_dlink_list local_oper_list;     /* our opers, duplicated in lclient_list */
 rb_dlink_list oper_list;           /* network opers */
 
-time_t startup_time;
-
-int default_server_capabs = CAP_MASK;
-
-int splitmode;
-int splitchecking;
-int split_users;
-int split_servers;
-int eob_count;
-
-unsigned long initialVMTop = 0;  /* top of virtual memory at init */
 const char *logFileName = LPATH;
 const char *pidFileName = PPATH;
 
@@ -118,27 +107,15 @@ int ssl_ok = 0;
 int zlib_ok = 1;
 
 int testing_conf = 0;
+time_t startup_time;
 
-struct config_channel_entry ConfigChannel;
-rb_bh *channel_heap;
-rb_bh *ban_heap;
-rb_bh *topic_heap;
-rb_bh *member_heap;
+int default_server_capabs = CAP_MASK;
 
-rb_bh *client_heap = NULL;
-rb_bh *lclient_heap = NULL;
-rb_bh *pclient_heap = NULL;
-
-char current_uid[IDLEN];
-
-/* patricia */
-rb_bh *prefix_heap;
-rb_bh *node_heap;
-rb_bh *patricia_heap;
-
-rb_bh *linebuf_heap;
-
-rb_bh *dnode_heap;
+int splitmode;
+int splitchecking;
+int split_users;
+int split_servers;
+int eob_count;
 
 void
 ircd_shutdown(const char *reason)
@@ -566,13 +543,13 @@ main(int argc, char *argv[])
 		return -1;
 	}
 
+	rb_set_time();
+
 	/*
 	 * Setup corefile size immediately after boot -kre
 	 */
 	setup_corefile();
 
-	/* It ain't random, but it ought to be a little harder to guess */
-	srand(SystemTime.tv_sec ^ (SystemTime.tv_usec | (getpid() << 20)));
 	memset(&me, 0, sizeof(me));
 	memset(&meLocalUser, 0, sizeof(meLocalUser));
 	me.localClient = &meLocalUser;
@@ -621,10 +598,6 @@ main(int argc, char *argv[])
 
 	setup_signals();
 
-#ifdef __CYGWIN__
-	server_state_foreground = 1;
-#endif
-
 	if (testing_conf)
 		server_state_foreground = 1;
 
@@ -662,7 +635,6 @@ main(int argc, char *argv[])
 	init_host_hash();
 	clear_hash_parse();
 	init_client();
-	initUser();
 	init_hook();
 	init_channels();
 	initclass();
@@ -747,6 +719,7 @@ main(int argc, char *argv[])
 	rb_dlinkAddAlloc(&me, &global_serv_list);
 
 	construct_umodebuf();
+        construct_noparam_modes();
 
 	check_class();
 	write_pidfile(pidFileName);
@@ -761,12 +734,12 @@ main(int argc, char *argv[])
 	 * nick collisions.  what a stupid idea. set an event for the IO loop --fl
 	 */
 	rb_event_addish("try_connections", try_connections, NULL, STARTUP_CONNECTIONS_TIME);
-	rb_event_addonce("try_connections_startup", try_connections, NULL, 0);
-	rb_event_add("check_rehash", check_rehash, NULL, 1);
+	rb_event_addonce("try_connections_startup", try_connections, NULL, 2);
+	rb_event_add("check_rehash", check_rehash, NULL, 3);
 	rb_event_addish("reseed_srand", seed_random, NULL, 300); /* reseed every 10 minutes */
 
 	if(splitmode)
-		check_splitmode_ev = rb_event_add("check_splitmode", check_splitmode, NULL, 2);
+		check_splitmode_ev = rb_event_add("check_splitmode", check_splitmode, NULL, 5);
 
 	print_startup(getpid());
 

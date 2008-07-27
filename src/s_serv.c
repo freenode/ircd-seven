@@ -55,8 +55,6 @@
 #include "reject.h"
 #include "sslproc.h"
 
-extern char *crypt();
-
 #ifndef INADDR_NONE
 #define INADDR_NONE ((unsigned int) 0xffffffff)
 #endif
@@ -297,15 +295,9 @@ try_connections(void *unused)
 	 * error afterwards if it fails.
 	 *   -- adrian
 	 */
-#ifndef HIDE_SERVERS_IPS
-	sendto_realops_snomask(SNO_GENERAL, L_ALL,
-			"Connection to %s[%s] activated.",
-			server_p->name, server_p->host);
-#else
 	sendto_realops_snomask(SNO_GENERAL, L_ALL,
 			"Connection to %s activated",
 			server_p->name);
-#endif
 
 	serv_connect(server_p, 0);
 }
@@ -349,7 +341,7 @@ check_server(const char *name, struct Client *client_p)
 
 			if(ServerConfEncrypted(tmp_p))
 			{
-				if(!strcmp(tmp_p->passwd, crypt(client_p->localClient->passwd,
+				if(!strcmp(tmp_p->passwd, rb_crypt(client_p->localClient->passwd,
 								tmp_p->passwd)))
 				{
 					server_p = tmp_p;
@@ -420,62 +412,6 @@ send_capabilities(struct Client *client_p, int cap_can_send)
 	sendto_one(client_p, "CAPAB :%s", msgbuf);
 }
 
-/* burst_modes_TS5()
- *
- * input	- client to burst to, channel name, list to burst, mode flag
- * output	-
- * side effects - client is sent a list of +b, or +e, or +I modes
- */
-static void
-burst_modes_TS5(struct Client *client_p, char *chname, rb_dlink_list *list, char flag)
-{
-	rb_dlink_node *ptr;
-	struct Ban *banptr;
-	char mbuf[MODEBUFLEN];
-	char pbuf[BUFSIZE];
-	int tlen;
-	int mlen;
-	int cur_len;
-	char *mp;
-	char *pp;
-	int count = 0;
-
-	mlen = rb_sprintf(buf, ":%s MODE %s +", me.name, chname);
-	cur_len = mlen;
-
-	mp = mbuf;
-	pp = pbuf;
-
-	RB_DLINK_FOREACH(ptr, list->head)
-	{
-		banptr = ptr->data;
-		tlen = strlen(banptr->banstr) + 3;
-
-		/* uh oh */
-		if(tlen > MODEBUFLEN)
-			continue;
-
-		if((count >= MAXMODEPARAMS) || ((cur_len + tlen + 2) > (BUFSIZE - 3)))
-		{
-			sendto_one(client_p, "%s%s %s", buf, mbuf, pbuf);
-
-			mp = mbuf;
-			pp = pbuf;
-			cur_len = mlen;
-			count = 0;
-		}
-
-		*mp++ = flag;
-		*mp = '\0';
-		pp += rb_sprintf(pp, "%s ", banptr->banstr);
-		cur_len += tlen;
-		count++;
-	}
-
-	if(count != 0)
-		sendto_one(client_p, "%s%s %s", buf, mbuf, pbuf);
-}
-
 /* burst_modes_TS6()
  *
  * input	- client to burst to, channel name, list to burst, mode flag
@@ -530,138 +466,6 @@ burst_modes_TS6(struct Client *client_p, struct Channel *chptr,
 	 */
 	*(t-1) = '\0';
 	sendto_one(client_p, "%s", buf);
-}
-
-/*
- * burst_TS5
- * 
- * inputs	- client (server) to send nick towards
- * 		- client to send nick for
- * output	- NONE
- * side effects	- NICK message is sent towards given client_p
- */
-static void
-burst_TS5(struct Client *client_p)
-{
-	static char ubuf[12];
-	struct Client *target_p;
-	struct Channel *chptr;
-	struct membership *msptr;
-	hook_data_client hclientinfo;
-	hook_data_channel hchaninfo;
-	rb_dlink_node *ptr;
-	rb_dlink_node *uptr;
-	char *t;
-	int tlen, mlen;
-	int cur_len = 0;
-
-	hclientinfo.client = hchaninfo.client = client_p;
-
-	RB_DLINK_FOREACH(ptr, global_client_list.head)
-	{
-		target_p = ptr->data;
-
-		if(!IsPerson(target_p))
-			continue;
-
-		send_umode(NULL, target_p, 0, 0, ubuf);
-		if(!*ubuf)
-		{
-			ubuf[0] = '+';
-			ubuf[1] = '\0';
-		}
-
-		sendto_one(client_p, "NICK %s %d %ld %s %s %s %s :%s",
-			   target_p->name, target_p->hopcount + 1,
-			   (long) target_p->tsinfo, ubuf,
-			   target_p->username, target_p->host,
-			   target_p->servptr->name, target_p->info);
-
-		if(IsDynSpoof(target_p))
-			sendto_one(client_p, ":%s ENCAP * REALHOST %s",
-					target_p->name, target_p->orighost);
-		if(!EmptyString(target_p->user->suser))
-			sendto_one(client_p, ":%s ENCAP * LOGIN %s",
-					target_p->name, target_p->user->suser);
-
-		if(ConfigFileEntry.burst_away && !EmptyString(target_p->user->away))
-			sendto_one(client_p, ":%s AWAY :%s",
-				   target_p->name, target_p->user->away);
-
-		hclientinfo.target = target_p;
-		call_hook(h_burst_client, &hclientinfo);
-	}
-
-	RB_DLINK_FOREACH(ptr, global_channel_list.head)
-	{
-		chptr = ptr->data;
-
-		if(*chptr->chname != '#')
-			continue;
-
-		cur_len = mlen = rb_sprintf(buf, ":%s SJOIN %ld %s %s :", me.name,
-				(long) chptr->channelts, chptr->chname, 
-				channel_modes(chptr, client_p));
-
-		t = buf + mlen;
-
-		RB_DLINK_FOREACH(uptr, chptr->members.head)
-		{
-			msptr = uptr->data;
-
-			tlen = strlen(msptr->client_p->name) + 1;
-			if(is_chanop(msptr))
-				tlen++;
-			if(is_voiced(msptr))
-				tlen++;
-
-			if(cur_len + tlen >= BUFSIZE - 3)
-			{
-				t--;
-				*t = '\0';
-				sendto_one(client_p, "%s", buf);
-				cur_len = mlen;
-				t = buf + mlen;
-			}
-
-			rb_sprintf(t, "%s%s ", find_channel_status(msptr, 1), 
-				   msptr->client_p->name);
-
-			cur_len += tlen;
-			t += tlen;
-		}
-
-		if (rb_dlink_list_length(&chptr->members) > 0)
-		{
-			/* remove trailing space */
-			t--;
-			*t = '\0';
-		}
-		sendto_one(client_p, "%s", buf);
-
-		burst_modes_TS5(client_p, chptr->chname, &chptr->banlist, 'b');
-
-		if(IsCapable(client_p, CAP_EX))
-			burst_modes_TS5(client_p, chptr->chname, &chptr->exceptlist, 'e');
-
-		if(IsCapable(client_p, CAP_IE))
-			burst_modes_TS5(client_p, chptr->chname, &chptr->invexlist, 'I');
-
-		burst_modes_TS5(client_p, chptr->chname, &chptr->quietlist, 'q');
-
-		if(IsCapable(client_p, CAP_TB) && chptr->topic != NULL)
-			sendto_one(client_p, ":%s TB %s %ld %s%s:%s",
-				   me.name, chptr->chname, (long) chptr->topic_time,
-				   ConfigChannel.burst_topicwho ? chptr->topic_info : "",
-				   ConfigChannel.burst_topicwho ? " " : "",
-				   chptr->topic);
-
-		hchaninfo.chptr = chptr;
-		call_hook(h_burst_channel, &hchaninfo);
-	}
-
-	hclientinfo.target = NULL;
-	call_hook(h_burst_finished, &hclientinfo);
 }
 
 /*
@@ -839,8 +643,6 @@ show_capabilities(struct Client *target_p)
 
 	if(has_id(target_p))
 		rb_strlcpy(msgbuf, " TS6", sizeof(msgbuf));
-	else
-		rb_strlcpy(msgbuf, " TS", sizeof(msgbuf));
 
 	if(IsSSL(target_p))
 		rb_strlcat(msgbuf, " SSL", sizeof(msgbuf));
@@ -990,7 +792,7 @@ server_estab(struct Client *client_p)
 	/* Show the real host/IP to admins */
 	sendto_realops_snomask(SNO_GENERAL, L_ALL,
 			"Link with %s established: (%s) link",
-			get_server_name(client_p, SHOW_IP),
+			client_p->name,
 			show_capabilities(client_p));
 
 	ilog(L_SERVER, "Link with %s established: (%s) link",
@@ -1084,10 +886,7 @@ server_estab(struct Client *client_p)
 					target_p->serv->fullcaps);
 	}
 
-	if(has_id(client_p))
-		burst_TS6(client_p);
-	else
-		burst_TS5(client_p);
+	burst_TS6(client_p);
 
 	/* Always send a PING after connect burst is done */
 	sendto_one(client_p, "PING :%s", get_id(&me, client_p));
@@ -1117,7 +916,7 @@ serv_connect_resolved(struct Client *client_p)
 	if((server_p = client_p->localClient->att_sconf) == NULL)
 	{
 		sendto_realops_snomask(SNO_GENERAL, is_remote_connect(client_p) ? L_NETWIDE : L_ALL, "Lost connect{} block for %s",
-				get_server_name(client_p, HIDE_IP));
+				client_p->name);
 		exit_client(client_p, client_p, &me, "Lost connect{} block");
 		return 0;
 	}
@@ -1210,7 +1009,7 @@ serv_connect_dns_callback(void *vptr, struct DNSReply *reply)
 	if (reply == NULL)
 	{
 		sendto_realops_snomask(SNO_GENERAL, is_remote_connect(client_p) ? L_NETWIDE : L_ALL, "Cannot resolve hostname for %s",
-				get_server_name(client_p, HIDE_IP));
+				client_p->name);
 		ilog(L_SERVER, "Cannot resolve hostname for %s",
 				log_client_name(client_p, HIDE_IP));
 		exit_client(client_p, client_p, &me, "Cannot resolve hostname");
@@ -1271,10 +1070,10 @@ serv_connect(struct server_conf *server_p, struct Client *by)
 	{
 		sendto_realops_snomask(SNO_GENERAL, L_ALL,
 				     "Server %s already present from %s",
-				     server_p->name, get_server_name(client_p, SHOW_IP));
+				     server_p->name, client_p->name);
 		if(by && IsPerson(by) && !MyClient(by))
 			sendto_one_notice(by, ":Server %s already present from %s",
-					  server_p->name, get_server_name(client_p, SHOW_IP));
+					  server_p->name, client_p->name);
 		return 0;
 	}
 
@@ -1378,23 +1177,17 @@ serv_connect(struct server_conf *server_p, struct Client *by)
 }
 
 static void
-serv_connect_ev(void *data)
-{
-	struct Client *client_p = data;
-	serv_connect_callback(client_p->localClient->F, RB_OK, client_p);
-}
-
-static void
 serv_connect_ssl_callback(rb_fde_t *F, int status, void *data)
 {
 	struct Client *client_p = data;
 	rb_fde_t *xF[2];
+	rb_connect_sockaddr(F, (struct sockaddr *)&client_p->localClient->ip, sizeof(client_p->localClient->ip));
 	if(status != RB_OK)
 	{
-		/* XXX deal with failure */
+		/* Print error message, just like non-SSL. */
+		serv_connect_callback(F, status, data);
 		return;
 	}
-	rb_connect_sockaddr(F, (struct sockaddr *)&client_p->localClient->ip, sizeof(client_p->localClient->ip));
 	rb_socketpair(AF_UNIX, SOCK_STREAM, 0, &xF[0], &xF[1], "Outgoing ssld connection");
 	del_from_cli_fd_hash(client_p);
 	client_p->localClient->F = xF[0];
@@ -1402,7 +1195,7 @@ serv_connect_ssl_callback(rb_fde_t *F, int status, void *data)
 
 	client_p->localClient->ssl_ctl = start_ssld_connect(F, xF[1], rb_get_fd(xF[0]));
 	SetSSL(client_p);
-	rb_event_addonce("serv_connect_ev", serv_connect_ev, client_p, 1);		
+	serv_connect_callback(client_p->localClient->F, RB_OK, client_p);
 }
 
 /*
@@ -1451,11 +1244,7 @@ serv_connect_callback(rb_fde_t *F, int status, void *data)
 			sendto_realops_snomask(SNO_GENERAL, is_remote_connect(client_p) ? L_NETWIDE : L_ALL,
 					"Error connecting to %s[%s]: %s",
 					client_p->name, 
-#ifdef HIDE_SERVERS_IPS
 					"255.255.255.255",
-#else
-					client_p->host,
-#endif
 					rb_errstr(status));
 			ilog(L_SERVER, "Error connecting to %s[%s]: %s",
 				client_p->name, client_p->sockhost,
@@ -1467,11 +1256,7 @@ serv_connect_callback(rb_fde_t *F, int status, void *data)
 			sendto_realops_snomask(SNO_GENERAL, is_remote_connect(client_p) ? L_NETWIDE : L_ALL,
 					"Error connecting to %s[%s]: %s (%s)",
 					client_p->name,
-#ifdef HIDE_SERVERS_IPS
 					"255.255.255.255",
-#else
-					client_p->host,
-#endif
 					rb_errstr(status), errstr);
 			ilog(L_SERVER, "Error connecting to %s[%s]: %s (%s)",
 				client_p->name, client_p->sockhost,
@@ -1487,7 +1272,7 @@ serv_connect_callback(rb_fde_t *F, int status, void *data)
 	if((server_p = client_p->localClient->att_sconf) == NULL)
 	{
 		sendto_realops_snomask(SNO_GENERAL, is_remote_connect(client_p) ? L_NETWIDE : L_ALL, "Lost connect{} block for %s",
-				get_server_name(client_p, HIDE_IP));
+				client_p->name);
 		exit_client(client_p, client_p, &me, "Lost connect{} block");
 		return;
 	}

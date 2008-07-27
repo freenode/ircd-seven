@@ -81,7 +81,6 @@ extern struct Client me;
 extern rb_dlink_list global_client_list;
 extern struct Client *local[];
 extern struct Counter Count;
-extern struct timeval SystemTime;
 extern int default_server_capabs;
 
 extern time_t startup_time;
@@ -99,11 +98,6 @@ extern rb_dlink_list global_serv_list;
 extern rb_dlink_list local_oper_list;
 extern rb_dlink_list oper_list;
 extern rb_dlink_list dead_list;
-
-extern rb_bh *channel_heap;
-extern rb_bh *ban_heap;
-extern rb_bh *topic_heap;
-extern rb_bh *member_heap;
 
 extern int testing_conf;
 

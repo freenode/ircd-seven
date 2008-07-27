@@ -321,51 +321,52 @@ find_oper_conf(const char *username, const char *host, const char *locip, const 
 struct oper_flags
 {
 	int flag;
+	const char *name;
 	char has;
 	char hasnt;
 };
 static struct oper_flags oper_flagtable[] =
 {
-        { OPER_HELPER,          'H', 'h' },
-        { OPER_OPERWALL,        'L', 'l' },
-        { OPER_STAFFER,         'F', 'f' },
-        { OPER_KILL,            'C', 'c' },
-        { OPER_KLINE,           'K', 'k' },
-        { OPER_UNKLINE,         'U', 'u' },
-        { OPER_REHASH,          'H', 'h' },
-        { OPER_AUSPEX,          'S', 's' },
-        { OPER_CMODES,          'M', 'm' },
-        { OPER_IMMUNE,          'I', 'i' },
-        { OPER_OVERRIDE,        'O', 'o' },
-        { OPER_MASSNOTICE,      'N', 'n' },
-        { OPER_ROUTING,         'R', 'r' },
-        { OPER_XLINE,           'X', 'x' },
-        { OPER_RESV,            'Q', 'q' },
-        { OPER_REMOTEBAN,       'B', 'b' },
-        { OPER_ADMIN,           'A', 'a' },
-        { OPER_DIE,             'D', 'd' },
-        { OPER_GRANT,           'G', 'g' },
+        { OPER_HELPER,          "helper",       'H', 'h' },
+        { OPER_OPERWALL,        "operwall",     'L', 'l' },
+        { OPER_STAFFER,         "staffer",      'F', 'f' },
+        { OPER_KILL,            "kill",         'C', 'c' },
+        { OPER_KLINE,           "kline",        'K', 'k' },
+        { OPER_UNKLINE,         "unkline",      'U', 'u' },
+        { OPER_REHASH,          "rehash",       'H', 'h' },
+        { OPER_AUSPEX,          "auspex",       'S', 's' },
+        { OPER_CMODES,          "cmodes",       'M', 'm' },
+        { OPER_IMMUNE,          "immune",       'I', 'i' },
+        { OPER_OVERRIDE,        "override",     'O', 'o' },
+        { OPER_MASSNOTICE,      "massnotice",   'N', 'n' },
+        { OPER_ROUTING,         "routing",      'R', 'r' },
+        { OPER_XLINE,           "xline",        'X', 'x' },
+        { OPER_RESV,            "resv",         'Q', 'q' },
+        { OPER_REMOTEBAN,       "remoteban",    'B', 'b' },
+        { OPER_ADMIN,           "admin",        'A', 'a' },
+        { OPER_DIE,             "die",          'D', 'd' },
+        { OPER_GRANT,           "grant",        'G', 'g' },
         { 0,                    '\0', '\0' }
 };
 
 const char *
 get_oper_privs(int flags)
 {
-	static char buf[20];
+	static char buf[BUFSIZE];
 	char *p;
 	int i;
 
 	p = buf;
+	*p = '\0';
 
 	for(i = 0; oper_flagtable[i].flag; i++)
-	{
-		if(flags & oper_flagtable[i].flag)
-			*p++ = oper_flagtable[i].has;
-		else
-			*p++ = oper_flagtable[i].hasnt;
-	}
+		if (flags & oper_flagtable[i].flag)
+		{
+			if(*buf != '\0')
+				rb_strlcat(buf, ", ", sizeof(buf));
 
-	*p = '\0';
+			rb_strlcat(buf, oper_flagtable[i].name, sizeof(buf));
+		}
 
 	return buf;
 }
@@ -491,7 +492,7 @@ detach_server_conf(struct Client *client_p)
 }
 
 void
-set_server_conf_autoconn(struct Client *source_p, char *name, int newval)
+set_server_conf_autoconn(struct Client *source_p, const char *name, int newval)
 {
 	struct server_conf *server_p;
 

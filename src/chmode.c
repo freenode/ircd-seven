@@ -57,10 +57,120 @@
 #define SM_ERR_RPL_Q            0x00000800
 #define SM_ERR_RPL_F            0x00001000
 
+#define MAXMODES_SIMPLE 46 /* a-zA-Z except bqeIov */
+
 static struct ChModeChange mode_changes[BUFSIZE];
 static int mode_count;
 static int mode_limit;
+static int mode_limit_simple;
 static int mask_pos;
+
+char cflagsbuf[256];
+char cflagsmyinfo[256];
+
+int chmode_flags[256];
+
+/* OPTIMIZE ME! -- dwr */
+void
+construct_noparam_modes(void)
+{
+	int i;
+        char *ptr = cflagsbuf;
+	char *ptr2 = cflagsmyinfo;
+        static int prev_chmode_flags[256];
+        
+        *ptr = '\0';
+	*ptr2 = '\0';
+
+	for(i = 0; i < 256; i++)
+	{
+		if( !(chmode_table[i].set_func == chm_ban) && 
+			!(chmode_table[i].set_func == chm_forward) &&
+			!(chmode_table[i].set_func == chm_throttle) &&
+                        !(chmode_table[i].set_func == chm_key) &&
+                        !(chmode_table[i].set_func == chm_limit) &&
+                        !(chmode_table[i].set_func == chm_op) &&
+                        !(chmode_table[i].set_func == chm_voice))
+		{
+			chmode_flags[i] = chmode_table[i].mode_type;
+		}
+		else
+		{
+			chmode_flags[i] = 0;
+		}
+                
+		if (prev_chmode_flags[i] != 0 && prev_chmode_flags[i] != chmode_flags[i])
+		{
+			if (chmode_flags[i] == 0)
+			{
+                                chmode_table[i].set_func = chm_orphaned;
+				sendto_realops_snomask(SNO_DEBUG, L_ALL, "Cmode +%c is now orphaned", i);
+			}
+			else
+			{
+				sendto_realops_snomask(SNO_DEBUG, L_ALL, "Orphaned cmode +%c is picked up by module", i);
+			}
+			chmode_flags[i] = prev_chmode_flags[i];
+		}
+		else
+			prev_chmode_flags[i] = chmode_flags[i];
+                
+		switch (chmode_flags[i])
+		{
+		    case MODE_EXLIMIT:
+		    case MODE_DISFORWARD:
+			if(ConfigChannel.use_forward)
+			{
+			    *ptr++ = (char) i;
+			}
+			
+			break;
+		    case MODE_REGONLY:
+			if(rb_dlink_list_length(&service_list))
+			{
+			    *ptr++ = (char) i;
+			}
+
+			break;
+		    default:
+			if(chmode_flags[i] != 0)
+			{
+			    *ptr++ = (char) i;
+			}
+		}
+		
+		/* Should we leave orphaned check here? -- dwr */
+		if(!(chmode_table[i].set_func == chm_nosuch) && !(chmode_table[i].set_func == chm_orphaned))
+		{
+		    *ptr2++ = (char) i;
+		}
+	}
+        
+        *ptr++ = '\0';
+	*ptr2++ = '\0';
+}
+
+/*
+ * find_umode_slot
+ *
+ * inputs       - NONE
+ * outputs      - an available cflag bitmask or
+ *                0 if no cflags are available
+ * side effects - NONE
+ */
+unsigned int
+find_cflag_slot(void)
+{
+	unsigned int all_cflags = 0, my_cflag = 0, i;
+
+	for (i = 0; i < 256; i++)
+		all_cflags |= chmode_flags[i];
+
+	for (my_cflag = 1; my_cflag && (all_cflags & my_cflag);
+		my_cflag <<= 1);
+
+	return my_cflag;
+}
 
 static int
 get_channel_access(struct Client *source_p, struct membership *msptr)
@@ -391,8 +501,8 @@ chm_simple(struct Client *source_p, struct Channel *chptr,
 		return;
 	}
 
-	/* +ntspmaikl == 9 + MAXMODEPARAMS (4 * +o) */
-	if(MyClient(source_p) && (++mode_limit > (9 + MAXMODEPARAMS)))
+	/* flags (possibly upto 32) + 4 with param */
+	if(MyClient(source_p) && (++mode_limit_simple > MAXMODES_SIMPLE))
 		return;
 
 	/* setting + */
@@ -403,6 +513,40 @@ chm_simple(struct Client *source_p, struct Channel *chptr,
 		   (c == 'Q' || c == 'F'))
 			return;
 
+		chptr->mode.mode |= mode_type;
+
+		mode_changes[mode_count].letter = c;
+		mode_changes[mode_count].dir = MODE_ADD;
+		mode_changes[mode_count].caps = 0;
+		mode_changes[mode_count].nocaps = 0;
+		mode_changes[mode_count].id = NULL;
+		mode_changes[mode_count].mems = ALL_MEMBERS;
+		mode_changes[mode_count++].arg = NULL;
+	}
+	else if((dir == MODE_DEL) && (chptr->mode.mode & mode_type))
+	{
+		chptr->mode.mode &= ~mode_type;
+
+		mode_changes[mode_count].letter = c;
+		mode_changes[mode_count].dir = MODE_DEL;
+		mode_changes[mode_count].caps = 0;
+		mode_changes[mode_count].nocaps = 0;
+		mode_changes[mode_count].mems = ALL_MEMBERS;
+		mode_changes[mode_count].id = NULL;
+		mode_changes[mode_count++].arg = NULL;
+	}
+}
+
+void
+chm_orphaned(struct Client *source_p, struct Channel *chptr,
+	   int alevel, int parc, int *parn,
+	   const char **parv, int *errors, int dir, char c, long mode_type)
+{
+	if(MyClient(source_p))
+		return;
+        
+	if((dir == MODE_ADD) && !(chptr->mode.mode & mode_type))
+	{
 		chptr->mode.mode |= mode_type;
 
 		mode_changes[mode_count].letter = c;
@@ -447,6 +591,9 @@ chm_staff(struct Client *source_p, struct Channel *chptr,
 		*errors |= SM_ERR_NOPRIVS;
 		return;
 	}
+
+	if(MyClient(source_p) && (++mode_limit_simple > MAXMODES_SIMPLE))
+		return;
 
 	/* setting + */
 	if((dir == MODE_ADD) && !(chptr->mode.mode & mode_type))
@@ -850,6 +997,9 @@ chm_limit(struct Client *source_p, struct Channel *chptr,
 	if(dir == MODE_QUERY)
 		return;
 
+	if(MyClient(source_p) && (++mode_limit_simple > MAXMODES_SIMPLE))
+		return;
+
 	if((dir == MODE_ADD) && parc > *parn)
 	{
 		lstr = parv[(*parn)];
@@ -904,6 +1054,9 @@ chm_throttle(struct Client *source_p, struct Channel *chptr,
 	}
 
 	if(dir == MODE_QUERY)
+		return;
+
+	if(MyClient(source_p) && (++mode_limit_simple > MAXMODES_SIMPLE))
 		return;
 
 	if((dir == MODE_ADD) && parc > *parn)
@@ -992,6 +1145,9 @@ chm_forward(struct Client *source_p, struct Channel *chptr,
 	}
 #endif
 
+	if(MyClient(source_p) && (++mode_limit_simple > MAXMODES_SIMPLE))
+		return;
+
 	if(dir == MODE_ADD && parc > *parn)
 	{
 		forward = parv[(*parn)];
@@ -1075,6 +1231,9 @@ chm_key(struct Client *source_p, struct Channel *chptr,
 	if(dir == MODE_QUERY)
 		return;
 
+	if(MyClient(source_p) && (++mode_limit_simple > MAXMODES_SIMPLE))
+		return;
+
 	if((dir == MODE_ADD) && parc > *parn)
 	{
 		key = LOCAL_COPY(parv[(*parn)]);
@@ -1149,14 +1308,17 @@ chm_regonly(struct Client *source_p, struct Channel *chptr,
 	if(dir == MODE_QUERY)
 		return;
 
-	if(((dir == MODE_ADD) && (chptr->mode.mode & MODE_REGONLY)) ||
-	   ((dir == MODE_DEL) && !(chptr->mode.mode & MODE_REGONLY)))
+	if(((dir == MODE_ADD) && (chptr->mode.mode & mode_type)) ||
+	   ((dir == MODE_DEL) && !(chptr->mode.mode & mode_type)))
+		return;
+
+	if(MyClient(source_p) && (++mode_limit_simple > MAXMODES_SIMPLE))
 		return;
 
 	if(dir == MODE_ADD)
-		chptr->mode.mode |= MODE_REGONLY;
+		chptr->mode.mode |= mode_type;
 	else
-		chptr->mode.mode &= ~MODE_REGONLY;
+		chptr->mode.mode &= ~mode_type;
 
 	mode_changes[mode_count].letter = c;
 	mode_changes[mode_count].dir = dir;
@@ -1285,7 +1447,7 @@ struct ChannelMode chmode_table[256] =
   {chm_op,	0 },			/* o */
   {chm_simple,	MODE_PRIVATE },		/* p */
   {chm_ban,	CHFL_QUIET },		/* q */
-  {chm_regonly, 0 },			/* r */
+  {chm_regonly, MODE_REGONLY },		/* r */
   {chm_simple,	MODE_SECRET },		/* s */
   {chm_simple,	MODE_TOPICLIMIT },	/* t */
   {chm_nosuch,	0 },			/* u */
@@ -1469,6 +1631,7 @@ set_channel_mode(struct Client *client_p, struct Client *source_p,
 	mask_pos = 0;
 	mode_count = 0;
 	mode_limit = 0;
+	mode_limit_simple = 0;
 
 	alevel = get_channel_access(source_p, msptr);
 

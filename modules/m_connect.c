@@ -137,14 +137,8 @@ mo_connect(struct Client *client_p, struct Client *source_p, int parc, const cha
 	 */
 	if(serv_connect(server_p, source_p))
 	{
-#ifndef HIDE_SERVERS_IPS
-			sendto_one_notice(source_p, ":*** Connecting to %s[%s].%d",
-				server_p->host, server_p->name, server_p->port);
-#else
 			sendto_one_notice(source_p, ":*** Connecting to %s.%d",
 				server_p->name, server_p->port);
-#endif
-
 	}
 	else
 	{
@@ -234,9 +228,6 @@ ms_connect(struct Client *client_p, struct Client *source_p, int parc, const cha
 	sendto_server(NULL, NULL, CAP_TS6, NOCAPS,
 		      ":%s WALLOPS :Remote CONNECT %s %d from %s",
 		      me.id, parv[1], port, source_p->name);
-	sendto_server(NULL, NULL, NOCAPS, CAP_TS6,
-		      ":%s WALLOPS :Remote CONNECT %s %d from %s",
-		      me.name, parv[1], port, source_p->name);
 
 	ilog(L_SERVER, "CONNECT From %s : %s %d", source_p->name, parv[1], port);
 

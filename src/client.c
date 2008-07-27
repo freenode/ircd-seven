@@ -72,12 +72,12 @@ static int qs_server(struct Client *, struct Client *, struct Client *, const ch
 
 static EVH check_pings;
 
-extern rb_bh *client_heap;
-extern rb_bh *lclient_heap;
-extern rb_bh *pclient_heap;
+static rb_bh *client_heap = NULL;
+static rb_bh *lclient_heap = NULL;
+static rb_bh *pclient_heap = NULL;
+static rb_bh *user_heap = NULL;
 static rb_bh *away_heap = NULL;
-
-extern char current_uid[IDLEN];
+static char current_uid[IDLEN];
 
 struct Dictionary *nd_dict = NULL;
 
@@ -119,6 +119,7 @@ init_client(void)
 	client_heap = rb_bh_create(sizeof(struct Client), CLIENT_HEAP_SIZE, "client_heap");
 	lclient_heap = rb_bh_create(sizeof(struct LocalUser), LCLIENT_HEAP_SIZE, "lclient_heap");
 	pclient_heap = rb_bh_create(sizeof(struct PreClient), PCLIENT_HEAP_SIZE, "pclient_heap");
+	user_heap = rb_bh_create(sizeof(struct User), USER_HEAP_SIZE, "user_heap");
 	away_heap = rb_bh_create(AWAYLEN, AWAY_HEAP_SIZE, "away_heap");
 
 	rb_event_addish("check_pings", check_pings, NULL, 30);
@@ -152,7 +153,7 @@ make_client(struct Client *from)
 	{
 		client_p->from = client_p;	/* 'from' of local client is self! */
 
-		localClient = (struct LocalUser *) rb_bh_alloc(lclient_heap);
+		localClient = rb_bh_alloc(lclient_heap);
 		SetMyConnect(client_p);
 		client_p->localClient = localClient;
 
@@ -160,7 +161,7 @@ make_client(struct Client *from)
 
 		client_p->localClient->F = NULL;
 
-		client_p->preClient = (struct PreClient *) rb_bh_alloc(pclient_heap);
+		client_p->preClient = rb_bh_alloc(pclient_heap);;
 
 		/* as good a place as any... */
 		rb_dlinkAdd(client_p, &client_p->localClient->tnode, &unknown_list);
@@ -322,7 +323,7 @@ check_pings_list(rb_dlink_list * list)
 				{
 					sendto_realops_snomask(SNO_GENERAL, L_ALL,
 							     "No response from %s, closing link",
-							     get_server_name(client_p, HIDE_IP));
+							     client_p->name);
 					ilog(L_SERVER,
 					     "No response from %s, closing link",
 					     log_client_name(client_p, HIDE_IP));
@@ -373,6 +374,11 @@ check_unknowns_list(rb_dlink_list * list)
 		if(IsDead(client_p) || IsClosing(client_p))
 			continue;
 
+		/* still has DNSbls to validate against */
+		if(client_p->preClient != NULL &&
+				rb_dlink_list_length(&client_p->preClient->dnsbl_queries) > 0)
+			continue;
+
 		/*
 		 * Check UNKNOWN connections - if they have been in this state
 		 * for > 30s, close them.
@@ -385,7 +391,7 @@ check_unknowns_list(rb_dlink_list * list)
 			{
 				sendto_realops_snomask(SNO_GENERAL, is_remote_connect(client_p) ? L_NETWIDE : L_ALL,
 						     "No response from %s, closing link",
-						     get_server_name(client_p, HIDE_IP));
+						     client_p->name);
 				ilog(L_SERVER,
 				     "No response from %s, closing link",
 				     log_client_name(client_p, HIDE_IP));
@@ -411,15 +417,7 @@ notify_banned_client(struct Client *client_p, struct ConfItem *aconf, int ban)
 	}
 	else
 	{
-		switch (aconf->status)
-		{
-		case D_LINED:
-			reason = d_lined;
-			break;
-		default:
-			reason = k_lined;
-			break;
-		}
+		reason = aconf->status == D_LINED ? d_lined : k_lined;
 	}
 
 	if(ban == D_LINED && !IsPerson(client_p))
@@ -852,10 +850,8 @@ get_client_name(struct Client *client, int showip)
 		if(ConfigFileEntry.hide_spoof_ips && 
 		   showip == SHOW_IP && IsIPSpoof(client))
 			showip = MASK_IP;
-#ifdef HIDE_SERVERS_IPS
 		if(IsAnyServer(client))
 			showip = MASK_IP;
-#endif
 
 		/* And finally, let's get the host information, ip or name */
 		switch (showip)
@@ -880,49 +876,6 @@ get_client_name(struct Client *client, int showip)
 	 * Neph|l|m@EFnet. Was missing a return here.
 	 */
 	return client->name;
-}
-
-const char *
-get_server_name(struct Client *target_p, int showip)
-{
-	static char nbuf[HOSTLEN * 2 + USERLEN + 5];
-
-	if(target_p == NULL)
-		return NULL;
-
-	if(!MyConnect(target_p) || !irccmp(target_p->name, target_p->host))
-		return target_p->name;
-
-#ifdef HIDE_SERVERS_IPS
-	if(EmptyString(target_p->name))
-	{
-		rb_snprintf(nbuf, sizeof(nbuf), "[%s@255.255.255.255]",
-				target_p->username);
-		return nbuf;
-	}
-	else
-		return target_p->name;
-#endif
-
-	switch (showip)
-	{
-		case SHOW_IP:
-			rb_snprintf(nbuf, sizeof(nbuf), "%s[%s@%s]",
-				target_p->name, target_p->username, 
-				target_p->sockhost);
-			break;
-
-		case MASK_IP:
-			rb_snprintf(nbuf, sizeof(nbuf), "%s[%s@255.255.255.255]",
-				target_p->name, target_p->username);
-
-		default:
-			rb_snprintf(nbuf, sizeof(nbuf), "%s[%s@%s]",
-				target_p->name, target_p->username,
-				target_p->host);
-	}
-
-	return nbuf;
 }
 	
 /* log_client_name()
@@ -1202,7 +1155,7 @@ exit_aborted_clients(void *unused)
  	 	if(IsAnyServer(abt->client))
  	 	 	sendto_realops_snomask(SNO_GENERAL, L_ALL,
   	 	 	                     "Closing link to %s: %s",
-   	 	 	                     get_server_name(abt->client, HIDE_IP), abt->notice);
+   	 	 	                      abt->client->name, abt->notice);
 
 		/* its no longer on abort list - we *must* remove
 		 * FLAGS_CLOSING otherwise exit_client() will not run --fl
@@ -1302,8 +1255,6 @@ exit_remote_client(struct Client *client_p, struct Client *source_p, struct Clie
 	{
 		sendto_server(client_p, NULL, CAP_TS6, NOCAPS,
 			      ":%s QUIT :%s", use_id(source_p), comment);
-		sendto_server(client_p, NULL, NOCAPS, CAP_TS6,
-			      ":%s QUIT :%s", source_p->name, comment);
 	}
 
 	SetDead(source_p);
@@ -1550,8 +1501,6 @@ exit_local_client(struct Client *client_p, struct Client *source_p, struct Clien
 	{
 		sendto_server(client_p, NULL, CAP_TS6, NOCAPS,
 			      ":%s QUIT :%s", use_id(source_p), comment);
-		sendto_server(client_p, NULL, NOCAPS, CAP_TS6,
-			      ":%s QUIT :%s", source_p->name, comment);
 	}
 
 	SetDead(source_p);
@@ -1728,10 +1677,6 @@ show_ip(struct Client *source_p, struct Client *target_p)
 {
 	if(IsAnyServer(target_p))
 	{
-#ifndef HIDE_SERVERS_IPS
-		if(source_p == NULL || IsOper(source_p))
-			return 1;
-#endif
 		return 0;
 	}
 	else if(IsIPSpoof(target_p))
@@ -1762,24 +1707,6 @@ show_ip_conf(struct ConfItem *aconf, struct Client *source_p)
 	}
 	else
 		return 1;
-}
-
-/*
- * initUser
- *
- * inputs	- none
- * outputs	- none
- *
- * side effects - Creates a block heap for struct Users
- *
- */
-static rb_bh *user_heap;
-void
-initUser(void)
-{
-	user_heap = rb_bh_create(sizeof(struct User), USER_HEAP_SIZE, "user_heap");
-	if(!user_heap)
-		rb_outofmemory();
 }
 
 /*
@@ -2037,7 +1964,7 @@ error_exit_client(struct Client *client_p, int error)
 		{
 			sendto_realops_snomask(SNO_GENERAL, is_remote_connect(client_p) && !IsServer(client_p) ? L_NETWIDE : L_ALL,
 					     "Server %s closed the connection",
-					     get_server_name(client_p, SHOW_IP));
+					     client_p->name);
 
 			ilog(L_SERVER, "Server %s closed the connection",
 			     log_client_name(client_p, SHOW_IP));

@@ -50,6 +50,41 @@
 #include "hook.h"
 #include "blacklist.h"
 
+struct AuthRequest
+{
+	rb_dlink_node node;
+	struct Client *client;	/* pointer to client struct for request */
+	struct DNSQuery dns_query; /* DNS Query */
+	unsigned int flags;	/* current state of request */
+	rb_fde_t *F;		/* file descriptor for auth queries */
+	time_t timeout;		/* time when query expires */
+	uint16_t lport;
+	uint16_t rport;
+};
+
+/*
+ * flag values for AuthRequest
+ * NAMESPACE: AM_xxx - Authentication Module
+ */
+#define AM_AUTH_CONNECTING   (1 << 0)
+#define AM_AUTH_PENDING      (1 << 1)
+#define AM_DNS_PENDING       (1 << 2)
+
+#define SetDNSPending(x)     ((x)->flags |= AM_DNS_PENDING)
+#define ClearDNSPending(x)   ((x)->flags &= ~AM_DNS_PENDING)
+#define IsDNSPending(x)      ((x)->flags &  AM_DNS_PENDING)
+
+#define SetAuthConnect(x)    ((x)->flags |= AM_AUTH_CONNECTING)
+#define ClearAuthConnect(x)  ((x)->flags &= ~AM_AUTH_CONNECTING)
+#define IsAuthConnect(x)     ((x)->flags &  AM_AUTH_CONNECTING)
+
+#define SetAuthPending(x)    ((x)->flags |= AM_AUTH_PENDING)
+#define ClearAuthPending(x)  ((x)->flags &= AM_AUTH_PENDING)
+#define IsAuthPending(x)     ((x)->flags &  AM_AUTH_PENDING)
+
+#define ClearAuth(x)         ((x)->flags &= ~(AM_AUTH_PENDING | AM_AUTH_CONNECTING))
+#define IsDoingAuth(x)       ((x)->flags &  (AM_AUTH_PENDING | AM_AUTH_CONNECTING))
+
 /*
  * a bit different approach
  * this replaces the original sendheader macros
@@ -299,26 +334,41 @@ start_auth_query(struct AuthRequest *auth)
 	 * and machines with multiple IP addresses are common now
 	 */
 	memset(&localaddr, 0, locallen);
-	getsockname(rb_get_fd(auth->client->localClient->F),
-		    (struct sockaddr *) &localaddr, &locallen);
+	if(getsockname(rb_get_fd(auth->client->localClient->F),
+		    (struct sockaddr *) &localaddr, &locallen) == -1)
+	{
+		/* can happen if connection was just closed */
+		rb_close(F);
+		return 0;
+	}
 	
 	/* XXX mangle_mapped_sockaddr((struct sockaddr *)&localaddr); */
 #ifdef RB_IPV6
 	if(localaddr.ss_family == AF_INET6)
 	{
+		auth->lport = ntohs(((struct sockaddr_in6 *)&localaddr)->sin6_port);
 		((struct sockaddr_in6 *)&localaddr)->sin6_port = 0;
-	} else
+	}
+	else
 #endif
-	((struct sockaddr_in *)&localaddr)->sin_port = 0;
+	{
+		auth->lport = ntohs(((struct sockaddr_in *)&localaddr)->sin_port);
+		((struct sockaddr_in *)&localaddr)->sin_port = 0;
+	}
 
 	destaddr = auth->client->localClient->ip;
 #ifdef RB_IPV6
 	if(localaddr.ss_family == AF_INET6)
 	{
+		auth->rport = ntohs(((struct sockaddr_in6 *)&destaddr)->sin6_port);
 		((struct sockaddr_in6 *)&destaddr)->sin6_port = htons(113);
-	} else
+	}
+	else
 #endif
-	((struct sockaddr_in *)&destaddr)->sin_port = htons(113);
+	{
+		auth->rport = ntohs(((struct sockaddr_in *)&destaddr)->sin_port);
+		((struct sockaddr_in *)&destaddr)->sin_port = htons(113);
+	}
 	
 	auth->F = F;
 	SetAuthConnect(auth);
@@ -476,11 +526,7 @@ static void
 auth_connect_callback(rb_fde_t *F, int error, void *data)
 {
 	struct AuthRequest *auth = data;
-	struct sockaddr_in us;
-	struct sockaddr_in them;
 	char authbuf[32];
-	socklen_t ulen = sizeof(struct sockaddr_in);
-	socklen_t tlen = sizeof(struct sockaddr_in);
 
 	/* Check the error */
 	if(error != RB_OK)
@@ -490,21 +536,10 @@ auth_connect_callback(rb_fde_t *F, int error, void *data)
 		return;
 	}
 
-	if(getsockname
-	   (rb_get_fd(auth->client->localClient->F), (struct sockaddr *) &us,
-	    (socklen_t *) & ulen)
-	   || getpeername(rb_get_fd(auth->client->localClient->F),
-			  (struct sockaddr *) &them, (socklen_t *) & tlen))
-	{
-		ilog(L_IOERROR, "auth get{sock,peer}name error for %s:%m",
-		     log_client_name(auth->client, SHOW_IP));
-		auth_error(auth);
-		return;
-	}
 	rb_snprintf(authbuf, sizeof(authbuf), "%u , %u\r\n",
-		   (unsigned int) ntohs(them.sin_port), (unsigned int) ntohs(us.sin_port));
+		   auth->rport, auth->lport);
 
-	if(write(rb_get_fd(auth->F), authbuf, strlen(authbuf)) == -1)
+	if(rb_write(auth->F, authbuf, strlen(authbuf)) != strlen(authbuf))
 	{
 		auth_error(auth);
 		return;
@@ -533,7 +568,7 @@ read_auth_reply(rb_fde_t *F, void *data)
 	int count;
 	char buf[AUTH_BUFSIZ + 1];	/* buffer to read auth reply into */
 
-	len = read(rb_get_fd(F), buf, AUTH_BUFSIZ);
+	len = rb_read(F, buf, AUTH_BUFSIZ);
 
 	if(len < 0 && rb_ignore_errno(errno))
 	{

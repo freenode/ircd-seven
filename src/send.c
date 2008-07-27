@@ -73,7 +73,7 @@ _send_linebuf(struct Client *to, buf_head_t *linebuf)
 		{
 			sendto_realops_snomask(SNO_GENERAL, L_ALL,
 					     "Max SendQ limit exceeded for %s: %u > %lu",
-					     get_server_name(to, HIDE_IP),
+					     to->name,
 					     rb_linebuf_len(&to->localClient->buf_sendq), 
 					     get_sendq(to));
 
@@ -467,7 +467,6 @@ sendto_channel_flags(struct Client *one, int type, struct Client *source_p,
 	static char buf[BUFSIZE];
 	va_list args;
 	buf_head_t rb_linebuf_local;
-	buf_head_t rb_linebuf_name;
 	buf_head_t rb_linebuf_id;
 	struct Client *target_p;
 	struct membership *msptr;
@@ -475,7 +474,6 @@ sendto_channel_flags(struct Client *one, int type, struct Client *source_p,
 	rb_dlink_node *next_ptr;
 
 	rb_linebuf_newbuf(&rb_linebuf_local);
-	rb_linebuf_newbuf(&rb_linebuf_name);
 	rb_linebuf_newbuf(&rb_linebuf_id);
 
 	current_serial++;
@@ -493,7 +491,6 @@ sendto_channel_flags(struct Client *one, int type, struct Client *source_p,
 			       source_p->name, source_p->username, 
 			       source_p->host, buf);
 
-	rb_linebuf_putmsg(&rb_linebuf_name, NULL, NULL, ":%s %s", source_p->name, buf);
 	rb_linebuf_putmsg(&rb_linebuf_id, NULL, NULL, ":%s %s", use_id(source_p), buf);
 
 	RB_DLINK_FOREACH_SAFE(ptr, next_ptr, chptr->members.head)
@@ -520,11 +517,7 @@ sendto_channel_flags(struct Client *one, int type, struct Client *source_p,
 
 			if(target_p->from->serial != current_serial)
 			{
-				if(has_id(target_p->from))
-					send_linebuf_remote(target_p, source_p, &rb_linebuf_id);
-				else
-					send_linebuf_remote(target_p, source_p, &rb_linebuf_name);
-
+				send_linebuf_remote(target_p, source_p, &rb_linebuf_id);
 				target_p->from->serial = current_serial;
 			}
 		}
@@ -533,7 +526,6 @@ sendto_channel_flags(struct Client *one, int type, struct Client *source_p,
 	}
 
 	rb_linebuf_donebuf(&rb_linebuf_local);
-	rb_linebuf_donebuf(&rb_linebuf_name);
 	rb_linebuf_donebuf(&rb_linebuf_id);
 }
 
@@ -749,11 +741,9 @@ sendto_match_butone(struct Client *one, struct Client *source_p,
 	rb_dlink_node *ptr;
 	rb_dlink_node *next_ptr;
 	buf_head_t rb_linebuf_local;
-	buf_head_t rb_linebuf_name;
 	buf_head_t rb_linebuf_id;
 
 	rb_linebuf_newbuf(&rb_linebuf_local);
-	rb_linebuf_newbuf(&rb_linebuf_name);
 	rb_linebuf_newbuf(&rb_linebuf_id);
 
 	va_start(args, pattern);
@@ -769,7 +759,6 @@ sendto_match_butone(struct Client *one, struct Client *source_p,
 			       source_p->name, source_p->username, 
 			       source_p->host, buf);
 
-	rb_linebuf_putmsg(&rb_linebuf_name, NULL, NULL, ":%s %s", source_p->name, buf);
 	rb_linebuf_putmsg(&rb_linebuf_id, NULL, NULL, ":%s %s", use_id(source_p), buf);
 
 	if(what == MATCH_HOST)
@@ -799,15 +788,11 @@ sendto_match_butone(struct Client *one, struct Client *source_p,
 		if(target_p == one)
 			continue;
 
-		if(has_id(target_p))
-			send_linebuf_remote(target_p, source_p, &rb_linebuf_id);
-		else
-			send_linebuf_remote(target_p, source_p, &rb_linebuf_name);
+		send_linebuf_remote(target_p, source_p, &rb_linebuf_id);
 	}
 
 	rb_linebuf_donebuf(&rb_linebuf_local);
 	rb_linebuf_donebuf(&rb_linebuf_id);
-	rb_linebuf_donebuf(&rb_linebuf_name);
 }
 
 /* sendto_match_servs()
@@ -825,13 +810,11 @@ sendto_match_servs(struct Client *source_p, const char *mask, int cap,
 	rb_dlink_node *ptr;
 	struct Client *target_p;
 	buf_head_t rb_linebuf_id;
-	buf_head_t rb_linebuf_name;
 
 	if(EmptyString(mask))
 		return;
 
 	rb_linebuf_newbuf(&rb_linebuf_id);
-	rb_linebuf_newbuf(&rb_linebuf_name);
 
 	va_start(args, pattern);
 	rb_vsnprintf(buf, sizeof(buf), pattern, args);
@@ -839,8 +822,6 @@ sendto_match_servs(struct Client *source_p, const char *mask, int cap,
 
 	rb_linebuf_putmsg(&rb_linebuf_id, NULL, NULL, 
 			":%s %s", use_id(source_p), buf);
-	rb_linebuf_putmsg(&rb_linebuf_name, NULL, NULL, 
-			":%s %s", source_p->name, buf);
 
 	current_serial++;
 
@@ -868,15 +849,11 @@ sendto_match_servs(struct Client *source_p, const char *mask, int cap,
 			if(nocap && !NotCapable(target_p->from, nocap))
 				continue;
 
-			if(has_id(target_p->from))
-				_send_linebuf(target_p->from, &rb_linebuf_id);
-			else
-				_send_linebuf(target_p->from, &rb_linebuf_name);
+			_send_linebuf(target_p->from, &rb_linebuf_id);
 		}
 	}
 
 	rb_linebuf_donebuf(&rb_linebuf_id);
-	rb_linebuf_donebuf(&rb_linebuf_name);
 }
 
 /* sendto_monitor()
@@ -988,14 +965,9 @@ sendto_realops_snomask(int flags, int level, const char *pattern, ...)
 				":%s NOTICE * :*** Notice -- %s", me.name, buf);
 		snobuf = construct_snobuf(flags);
 		if (snobuf[1] != '\0')
-		{
 			sendto_server(NULL, NULL, CAP_ENCAP|CAP_TS6, NOCAPS,
 					":%s ENCAP * SNOTE %c :%s",
 					me.id, snobuf[1], buf);
-			sendto_server(NULL, NULL, CAP_ENCAP, CAP_TS6,
-					":%s ENCAP * SNOTE %c :%s",
-					me.name, snobuf[1], buf);
-		}
 	}
 	else
 	{
@@ -1150,17 +1122,13 @@ kill_client_serv_butone(struct Client *one, struct Client *target_p, const char 
 	rb_dlink_node *ptr;
 	rb_dlink_node *next_ptr;
 	buf_head_t rb_linebuf_id;
-	buf_head_t rb_linebuf_name;
 
-	rb_linebuf_newbuf(&rb_linebuf_name);
 	rb_linebuf_newbuf(&rb_linebuf_id);
 	
 	va_start(args, pattern);
 	rb_vsnprintf(buf, sizeof(buf), pattern, args);
 	va_end(args);
 
-	rb_linebuf_putmsg(&rb_linebuf_name, NULL, NULL, ":%s KILL %s :%s",
-		       me.name, target_p->name, buf);
 	rb_linebuf_putmsg(&rb_linebuf_id, NULL, NULL, ":%s KILL %s :%s",
 		       use_id(&me), use_id(target_p), buf);
 
@@ -1175,12 +1143,8 @@ kill_client_serv_butone(struct Client *one, struct Client *target_p, const char 
 			(!has_id(client_p) || !has_id(target_p)))
 			continue;
 
-		if(has_id(client_p))
-			_send_linebuf(client_p, &rb_linebuf_id);
-		else
-			_send_linebuf(client_p, &rb_linebuf_name);
+		_send_linebuf(client_p, &rb_linebuf_id);
 	}
 
 	rb_linebuf_donebuf(&rb_linebuf_id);
-	rb_linebuf_donebuf(&rb_linebuf_name);
 }

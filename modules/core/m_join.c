@@ -40,6 +40,7 @@
 #include "parse.h"
 #include "modules.h"
 #include "packet.h"
+#include "chmode.h"
 
 static int m_join(struct Client *, struct Client *, int, const char **);
 static int ms_join(struct Client *, struct Client *, int, const char **);
@@ -55,7 +56,7 @@ struct Message join_msgtab = {
 
 struct Message sjoin_msgtab = {
 	"SJOIN", 0, 0, 0, MFLG_SLOW,
-	{mg_unreg, mg_ignore, mg_ignore, {ms_sjoin, 0}, mg_ignore, mg_ignore}
+	{mg_unreg, mg_ignore, mg_ignore, {ms_sjoin, 4}, mg_ignore, mg_ignore}
 };
 
 mapi_clist_av1 join_clist[] = { &join_msgtab, &sjoin_msgtab, NULL };
@@ -75,7 +76,7 @@ static void set_final_mode(struct Mode *mode, struct Mode *oldmode);
 static void remove_our_modes(struct Channel *chptr, struct Client *source_p);
 
 static void remove_ban_list(struct Channel *chptr, struct Client *source_p,
-			    rb_dlink_list * list, char c, int cap, int mems);
+			    rb_dlink_list * list, char c, int mems);
 
 static char modebuf[MODEBUFLEN];
 static char parabuf[MODEBUFLEN];
@@ -302,11 +303,18 @@ m_join(struct Client *client_p, struct Client *source_p, int parc, const char *p
 			if ((i != ERR_NEEDREGGEDNICK && i != ERR_THROTTLE && i != ERR_INVITEONLYCHAN && i != ERR_CHANNELISFULL) ||
 			    (!ConfigChannel.use_forward || (chptr = check_forward(source_p, chptr, key)) == NULL))
 			{
-				sendto_one(source_p, form_str(i), me.name, source_p->name, name);
+				/* might be wrong, but is there any other better location for such?
+				 * see extensions/chm_operonly.c for other comments on this
+				 * -- dwr
+				 */
+				if(i != ERR_CUSTOM)
+					sendto_one(source_p, form_str(i), me.name, source_p->name, name);
+
 				if(successful_join_count > 0)
 					successful_join_count--;
 				continue;
 			}
+
 			sendto_one_numeric(source_p, ERR_LINKCHANNEL, form_str(ERR_LINKCHANNEL), name, chptr->chname);
 		}
 
@@ -343,10 +351,6 @@ m_join(struct Client *client_p, struct Client *source_p, int parc, const char *p
 					      ":%s SJOIN %ld %s +nt :@%s",
 					      me.id, (long) chptr->channelts,
 					      chptr->chname, source_p->id);
-				sendto_server(client_p, chptr, NOCAPS, CAP_TS6,
-					      ":%s SJOIN %ld %s +nt :@%s",
-					      me.name, (long) chptr->channelts,
-					      chptr->chname, source_p->name);
 			}
 		}
 		else
@@ -355,11 +359,6 @@ m_join(struct Client *client_p, struct Client *source_p, int parc, const char *p
 				      ":%s JOIN %ld %s +",
 				      use_id(source_p), (long) chptr->channelts,
 				      chptr->chname);
-
-			sendto_server(client_p, chptr, NOCAPS, CAP_TS6,
-				      ":%s SJOIN %ld %s + :%s",
-				      me.name, (long) chptr->channelts,
-				      chptr->chname, source_p->name);
 		}
 
 		del_invite(chptr, source_p);
@@ -518,18 +517,12 @@ ms_join(struct Client *client_p, struct Client *source_p, int parc, const char *
 	sendto_server(client_p, chptr, CAP_TS6, NOCAPS,
 		      ":%s JOIN %ld %s +",
 		      source_p->id, (long) chptr->channelts, chptr->chname);
-	sendto_server(client_p, chptr, NOCAPS, CAP_TS6,
-		      ":%s SJOIN %ld %s %s :%s",
-		      source_p->servptr->name, (long) chptr->channelts,
-		      chptr->chname, keep_new_modes ? "+" : "0",
-		      source_p->name);
 	return 0;
 }
 
 static int
 ms_sjoin(struct Client *client_p, struct Client *source_p, int parc, const char *parv[])
 {
-	static char buf_nick[BUFSIZE];
 	static char buf_uid[BUFSIZE];
 	static const char empty_modes[] = "0";
 	struct Channel *chptr;
@@ -543,13 +536,12 @@ ms_sjoin(struct Client *client_p, struct Client *source_p, int parc, const char 
 	int keep_new_modes = 1;
 	int fl;
 	int isnew;
-	int mlen_nick, mlen_uid;
+	int mlen_uid;
 	int len_nick;
 	int len_uid;
 	int len;
 	int joins = 0;
 	const char *s;
-	char *ptr_nick;
 	char *ptr_uid;
 	char *p;
 	int i, joinc = 0, timeslice = 0;
@@ -580,48 +572,6 @@ ms_sjoin(struct Client *client_p, struct Client *source_p, int parc, const char 
 	{
 		switch (*(s++))
 		{
-		case 'i':
-			mode.mode |= MODE_INVITEONLY;
-			break;
-		case 'n':
-			mode.mode |= MODE_NOPRIVMSGS;
-			break;
-		case 'p':
-			mode.mode |= MODE_PRIVATE;
-			break;
-		case 's':
-			mode.mode |= MODE_SECRET;
-			break;
-		case 'm':
-			mode.mode |= MODE_MODERATED;
-			break;
-		case 't':
-			mode.mode |= MODE_TOPICLIMIT;
-			break;
-		case 'r':
-			mode.mode |= MODE_REGONLY;
-			break;
-		case 'L':
-			mode.mode |= MODE_EXLIMIT;
-			break;
-		case 'P':
-			mode.mode |= MODE_PERMANENT;
-			break;
-		case 'c':
-			mode.mode |= MODE_NOCOLOR;
-			break;
-		case 'g':
-			mode.mode |= MODE_FREEINVITE;
-			break;
-		case 'z':
-			mode.mode |= MODE_OPMODERATE;
-			break;
-		case 'F':
-			mode.mode |= MODE_FREETARGET;
-			break;
-		case 'Q':
-			mode.mode |= MODE_DISFORWARD;
-			break;
 		case 'f':
 			rb_strlcpy(mode.forward, parv[4 + args], sizeof(mode.forward));
 			args++;
@@ -648,6 +598,11 @@ ms_sjoin(struct Client *client_p, struct Client *source_p, int parc, const char 
 			if(parc < 5 + args)
 				return 0;
 			break;
+		default:
+			if(chmode_flags[(int) *s] != 0)
+			{
+				mode.mode |= chmode_flags[(int) *s];
+			}
 		}
 	}
 
@@ -713,10 +668,6 @@ ms_sjoin(struct Client *client_p, struct Client *source_p, int parc, const char 
 			struct membership *msptr;
 			struct Client *who;
 			int l = rb_dlink_list_length(&chptr->members);
-			int b = rb_dlink_list_length(&chptr->banlist) +
-				rb_dlink_list_length(&chptr->exceptlist) +
-				rb_dlink_list_length(&chptr->invexlist) +
-				rb_dlink_list_length(&chptr->quietlist);
 
 			RB_DLINK_FOREACH_SAFE(ptr, next_ptr, chptr->locmembers.head)
 			{
@@ -729,9 +680,6 @@ ms_sjoin(struct Client *client_p, struct Client *source_p, int parc, const char 
 					      ":%s KICK %s %s :Net Rider",
 					      me.id, chptr->chname,
 					      who->id);
-				sendto_server(NULL, chptr, NOCAPS, CAP_TS6,
-					      ":%s KICK %s %s :Net Rider",
-					      me.name, chptr->chname, who->name);
 				remove_user_from_channel(msptr);
 				if (--l == 0)
 					break;
@@ -742,14 +690,6 @@ ms_sjoin(struct Client *client_p, struct Client *source_p, int parc, const char 
 				if((chptr = get_or_create_channel(source_p, parv[2], &isnew)) == NULL)
 					return 0;		/* oops! */
 
-				/* If the source does not do TS6,
-				 * nontimestamped bans have been sent to it,
-				 * but we have just lost those here. Let's
-				 * warn the channel about this. Because
-				 * of the kicks, any users on the channel
-				 * will be at client_p. -- jilles */
-				if (!has_id(source_p) && b > 0)
-					sendto_one(client_p, ":%s NOTICE %s :*** Notice -- possible ban desync on %s, please remove any bans just added by servers", get_id(&me, client_p), parv[2], parv[2]);
 				oldmode = &chptr->mode;
 			}
 		}
@@ -796,6 +736,20 @@ ms_sjoin(struct Client *client_p, struct Client *source_p, int parc, const char 
 		{
 			del_invite(chptr, ptr->data);
 		}
+
+		if(rb_dlink_list_length(&chptr->banlist) > 0)
+			remove_ban_list(chptr, fakesource_p, &chptr->banlist, 'b', ALL_MEMBERS);
+		if(rb_dlink_list_length(&chptr->exceptlist) > 0)
+			remove_ban_list(chptr, fakesource_p, &chptr->exceptlist,
+					'e', ONLY_CHANOPS);
+		if(rb_dlink_list_length(&chptr->invexlist) > 0)
+			remove_ban_list(chptr, fakesource_p, &chptr->invexlist,
+					'I', ONLY_CHANOPS);
+		if(rb_dlink_list_length(&chptr->quietlist) > 0)
+			remove_ban_list(chptr, fakesource_p, &chptr->quietlist,
+					'q', ALL_MEMBERS);
+		chptr->bants++;
+
 		sendto_channel_local(ALL_MEMBERS, chptr,
 				     ":%s NOTICE %s :*** Notice -- TS for %s changed from %ld to %ld",
 				     me.name, chptr->chname, chptr->chname,
@@ -815,10 +769,6 @@ ms_sjoin(struct Client *client_p, struct Client *source_p, int parc, const char 
 		modes = channel_modes(chptr, source_p);
 	else
 		modes = empty_modes;
-
-	mlen_nick = rb_sprintf(buf_nick, ":%s SJOIN %ld %s %s :",
-			       source_p->name, (long) chptr->channelts, parv[2], modes);
-	ptr_nick = buf_nick + mlen_nick;
 
 	/* working on the presumption eventually itll be more efficient to
 	 * build a TS6 buffer without checking its needed..
@@ -869,14 +819,6 @@ ms_sjoin(struct Client *client_p, struct Client *source_p, int parc, const char 
 		/* we assume for these we can fit at least one nick/uid in.. */
 
 		/* check we can fit another status+nick+space into a buffer */
-		if((mlen_nick + len_nick + NICKLEN + 3) > (BUFSIZE - 3))
-		{
-			*(ptr_nick - 1) = '\0';
-			sendto_server(client_p->from, NULL, NOCAPS, CAP_TS6, "%s", buf_nick);
-			ptr_nick = buf_nick + mlen_nick;
-			len_nick = 0;
-		}
-
 		if((mlen_uid + len_uid + IDLEN + 3) > (BUFSIZE - 3))
 		{
 			*(ptr_uid - 1) = '\0';
@@ -889,14 +831,12 @@ ms_sjoin(struct Client *client_p, struct Client *source_p, int parc, const char 
 		{
 			if(fl & CHFL_CHANOP)
 			{
-				*ptr_nick++ = '@';
 				*ptr_uid++ = '@';
 				len_nick++;
 				len_uid++;
 			}
 			if(fl & CHFL_VOICE)
 			{
-				*ptr_nick++ = '+';
 				*ptr_uid++ = '+';
 				len_nick++;
 				len_uid++;
@@ -904,9 +844,6 @@ ms_sjoin(struct Client *client_p, struct Client *source_p, int parc, const char 
 		}
 
 		/* copy the nick to the two buffers */
-		len = rb_sprintf(ptr_nick, "%s ", target_p->name);
-		ptr_nick += len;
-		len_nick += len;
 		len = rb_sprintf(ptr_uid, "%s ", use_id(target_p));
 		ptr_uid += len;
 		len_uid += len;
@@ -1013,36 +950,10 @@ ms_sjoin(struct Client *client_p, struct Client *source_p, int parc, const char 
 	/* Keep the colon if we're sending an SJOIN without nicks -- jilles */
 	if (joins)
 	{
-		*(ptr_nick - 1) = '\0';
 		*(ptr_uid - 1) = '\0';
 	}
 
 	sendto_server(client_p->from, NULL, CAP_TS6, NOCAPS, "%s", buf_uid);
-	sendto_server(client_p->from, NULL, NOCAPS, CAP_TS6, "%s", buf_nick);
-
-	/* if the source does TS6 we have to remove our bans.  Its now safe
-	 * to issue -b's to the non-ts6 servers, as the sjoin we've just
-	 * sent will kill any ops they have.
-	 */
-	if(!keep_our_modes && source_p->id[0] != '\0')
-	{
-		if(rb_dlink_list_length(&chptr->banlist) > 0)
-			remove_ban_list(chptr, fakesource_p, &chptr->banlist, 'b', NOCAPS, ALL_MEMBERS);
-
-		if(rb_dlink_list_length(&chptr->exceptlist) > 0)
-			remove_ban_list(chptr, fakesource_p, &chptr->exceptlist,
-					'e', CAP_EX, ONLY_CHANOPS);
-
-		if(rb_dlink_list_length(&chptr->invexlist) > 0)
-			remove_ban_list(chptr, fakesource_p, &chptr->invexlist,
-					'I', CAP_IE, ONLY_CHANOPS);
-
-		if(rb_dlink_list_length(&chptr->quietlist) > 0)
-			remove_ban_list(chptr, fakesource_p, &chptr->quietlist,
-					'q', NOCAPS, ALL_MEMBERS);
-
-		chptr->bants++;
-	}
 
 	return 0;
 }
@@ -1068,9 +979,7 @@ do_join_0(struct Client *client_p, struct Client *source_p)
 	if(MyClient(source_p) && !IsFloodDone(source_p))
 		flood_endgrace(source_p);
 
-
 	sendto_server(client_p, NULL, CAP_TS6, NOCAPS, ":%s JOIN 0", use_id(source_p));
-	sendto_server(client_p, NULL, NOCAPS, CAP_TS6, ":%s JOIN 0", source_p->name);
 
 	if(source_p->user->channel.head && MyConnect(source_p) &&
 	   !IsOper(source_p) && !IsExemptSpambot(source_p))
@@ -1123,30 +1032,30 @@ set_final_mode(struct Mode *mode, struct Mode *oldmode)
 	int i;
 
 	/* ok, first get a list of modes we need to add */
-	for (i = 0; chmode_flags[i].letter; i++)
+	for (i = 0; i < 256; i++)
 	{
-		if((mode->mode & chmode_flags[i].mode) && !(oldmode->mode & chmode_flags[i].mode))
+		if((mode->mode & chmode_flags[i]) && !(oldmode->mode & chmode_flags[i]))
 		{
 			if(dir != MODE_ADD)
 			{
 				*mbuf++ = '+';
 				dir = MODE_ADD;
 			}
-			*mbuf++ = chmode_flags[i].letter;
+			*mbuf++ = i;
 		}
 	}
 
 	/* now the ones we need to remove. */
-	for (i = 0; chmode_flags[i].letter; i++)
+	for (i = 0; i < 256; i++)
 	{
-		if((oldmode->mode & chmode_flags[i].mode) && !(mode->mode & chmode_flags[i].mode))
+		if((oldmode->mode & chmode_flags[i]) && !(mode->mode & chmode_flags[i]))
 		{
 			if(dir != MODE_DEL)
 			{
 				*mbuf++ = '-';
 				dir = MODE_DEL;
 			}
-			*mbuf++ = chmode_flags[i].letter;
+			*mbuf++ = i;
 		}
 	}
 
@@ -1338,11 +1247,10 @@ remove_our_modes(struct Channel *chptr, struct Client *source_p)
  * inputs	- channel, source, list to remove, char of mode, caps needed
  * outputs	-
  * side effects - given list is removed, with modes issued to local clients
- * 		  and non-TS6 servers.
  */
 static void
 remove_ban_list(struct Channel *chptr, struct Client *source_p,
-		rb_dlink_list * list, char c, int cap, int mems)
+		rb_dlink_list * list, char c, int mems)
 {
 	static char lmodebuf[BUFSIZE];
 	static char lparabuf[BUFSIZE];
@@ -1372,11 +1280,6 @@ remove_ban_list(struct Channel *chptr, struct Client *source_p,
 			*(pbuf - 1) = '\0';
 
 			sendto_channel_local(mems, chptr, "%s %s", lmodebuf, lparabuf);
-			/* Tricky tricky. If we changed source_p to &me
-			 * in ms_sjoin(), this still won't send stuff
-			 * where it should not be sent, because the
-			 * real source_p does TS6 -- jilles */
-			sendto_server(source_p, chptr, cap, CAP_TS6, "%s %s", lmodebuf, lparabuf);
 
 			cur_len = mlen;
 			mbuf = lmodebuf + mlen;
@@ -1395,7 +1298,6 @@ remove_ban_list(struct Channel *chptr, struct Client *source_p,
 	*mbuf = '\0';
 	*(pbuf - 1) = '\0';
 	sendto_channel_local(mems, chptr, "%s %s", lmodebuf, lparabuf);
-	sendto_server(source_p, chptr, cap, CAP_TS6, "%s %s", lmodebuf, lparabuf);
 
 	list->head = list->tail = NULL;
 	list->length = 0;

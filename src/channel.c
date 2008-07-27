@@ -41,6 +41,13 @@
 #include "s_newconf.h"
 #include "logger.h"
 
+struct config_channel_entry ConfigChannel;
+rb_dlink_list global_channel_list;
+static rb_bh *channel_heap;
+static rb_bh *ban_heap;
+static rb_bh *topic_heap;
+static rb_bh *member_heap;
+
 static int channel_capabs[] = { CAP_EX, CAP_IE,
 	CAP_SERVICE,
 	CAP_TS6
@@ -233,8 +240,6 @@ remove_user_from_channel(struct membership *msptr)
 	if(client_p->servptr == &me)
 		rb_dlinkDelete(&msptr->locchannode, &chptr->locmembers);
 
-	chptr->users_last = rb_current_time();
-
 	if(!(chptr->mode.mode & MODE_PERMANENT) && rb_dlink_list_length(&chptr->members) <= 0)
 		destroy_channel(chptr);
 
@@ -269,8 +274,6 @@ remove_user_from_channels(struct Client *client_p)
 
 		if(client_p->servptr == &me)
 			rb_dlinkDelete(&msptr->locchannode, &chptr->locmembers);
-
-		chptr->users_last = rb_current_time();
 
 		if(!(chptr->mode.mode & MODE_PERMANENT) && rb_dlink_list_length(&chptr->members) <= 0)
 			destroy_channel(chptr);
@@ -998,6 +1001,7 @@ check_splitmode(void *unused)
 					     "Network rejoined, deactivating splitmode");
 
 			rb_event_delete(check_splitmode_ev);
+			check_splitmode_ev = NULL;
 		}
 	}
 }
@@ -1077,25 +1081,6 @@ set_channel_topic(struct Channel *chptr, const char *topic, const char *topic_in
 	}
 }
 
-const struct mode_letter chmode_flags[] =
-{
-	{MODE_INVITEONLY, 'i'},
-	{MODE_MODERATED, 'm'},
-	{MODE_NOPRIVMSGS, 'n'},
-	{MODE_PRIVATE, 'p'},
-	{MODE_SECRET, 's'},
-	{MODE_TOPICLIMIT, 't'},
-	{MODE_NOCOLOR, 'c'},
-	{MODE_FREEINVITE, 'g'},
-	{MODE_OPMODERATE, 'z'},
-	{MODE_EXLIMIT, 'L'},
-	{MODE_PERMANENT, 'P'},
-	{MODE_FREETARGET, 'F'},
-	{MODE_DISFORWARD, 'Q'},
-	{MODE_REGONLY, 'r'},
-	{0, '\0'}
-};
-
 /* channel_modes()
  *
  * inputs       - pointer to channel
@@ -1118,9 +1103,9 @@ channel_modes(struct Channel *chptr, struct Client *client_p)
 	*mbuf++ = '+';
 	*pbuf = '\0';
 
-	for (i = 0; chmode_flags[i].mode; ++i)
-		if(chptr->mode.mode & chmode_flags[i].mode)
-			*mbuf++ = chmode_flags[i].letter;
+	for (i = 0; i < 256; i++)
+		if(chptr->mode.mode & chmode_flags[i])
+			*mbuf++ = i;
 
 	if(chptr->mode.limit)
 	{
@@ -1301,13 +1286,9 @@ send_cap_mode_changes(struct Client *client_p, struct Client *source_p,
 		cap = chcap_combos[j].cap_yes;
 		nocap = chcap_combos[j].cap_no;
 
-		if(cap & CAP_TS6)
-			mbl = preflen = rb_sprintf(modebuf, ":%s TMODE %ld %s ",
-						   use_id(source_p), (long) chptr->channelts,
-						   chptr->chname);
-		else
-			mbl = preflen = rb_sprintf(modebuf, ":%s MODE %s ",
-						   source_p->name, chptr->chname);
+		mbl = preflen = rb_sprintf(modebuf, ":%s TMODE %ld %s ",
+					   use_id(source_p), (long) chptr->channelts,
+					   chptr->chname);
 
 		/* loop the list of - modes we have */
 		for (i = 0; i < mode_count; i++)
@@ -1321,7 +1302,7 @@ send_cap_mode_changes(struct Client *client_p, struct Client *source_p,
 			   || ((nocap & mode_changes[i].nocaps) != mode_changes[i].nocaps))
 				continue;
 
-			if((cap & CAP_TS6) && !EmptyString(mode_changes[i].id))
+			if(!EmptyString(mode_changes[i].id))
 				arg = mode_changes[i].id;
 			else
 				arg = mode_changes[i].arg;
