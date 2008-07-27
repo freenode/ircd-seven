@@ -285,7 +285,7 @@ single_whois(struct Client *source_p, struct Client *target_p, int operspy)
 			msptr = ptr->data;
 			chptr = msptr->chptr;
 
-			visible = ShowChannel(source_p, chptr);
+			visible = ShowInChannel(source_p, target_p, chptr);
 
 			if(visible || operspy)
 			{

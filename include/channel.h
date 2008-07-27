@@ -191,6 +191,8 @@ typedef int (*ExtbanFunc)(const char *data, struct Client *client_p,
 
 /* channel visible */
 #define ShowChannel(v,c)        (PubChannel(c) || IsMember((v),(c)))
+/* user visible in channel */
+#define ShowInChannel(v,t,c)    ((PubChannel(c) && !IsInvisible(t)) || IsMember((v),(c)))
 
 #define IsMember(who, chan) ((who && who->user && \
                 find_channel_membership(chan, who)) ? 1 : 0)
