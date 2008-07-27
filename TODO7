@@ -14,5 +14,5 @@
 [ ] forwarding bans, plus translation
 [ ] make umode +i do as hyperion
 [ ] dehelper
-[ ] PASS user:pass support
+[x] PASS user:pass support
 [ ] remove
