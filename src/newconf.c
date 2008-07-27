@@ -383,6 +383,7 @@ static struct mode_table shared_table[] =
 	{ "locops",	SHARED_LOCOPS	},
 	{ "rehash",	SHARED_REHASH	},
 	{ "grant",	SHARED_GRANT	},
+	{ "die",	SHARED_DIE	},
 	{ "all",	SHARED_ALL	},
 	{ "none",	0		},
 	{NULL, 0}
