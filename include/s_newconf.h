@@ -149,7 +149,6 @@ extern void cluster_generic(struct Client *, const char *, int cltype,
 #define OPER_REHASH     0x00080
 #define OPER_AUSPEX     0x00100
 #define OPER_CMODES     0x00200
-#define OPER_IMMUNE     0x00400
 #define OPER_OVERRIDE   0x00800
 #define OPER_MASSNOTICE 0x01000
 #define OPER_ROUTING    0x02000
@@ -171,7 +170,6 @@ extern void cluster_generic(struct Client *, const char *, int cltype,
 #define IsOperRehash(x)         ((x)->operflags & OPER_REHASH)
 #define IsOperAuspex(x)         ((x)->operflags & OPER_AUSPEX)
 #define IsOperCModes(x)         ((x)->operflags & OPER_CMODES)
-#define IsOperImmune(x)         ((x)->operflags & OPER_IMMUNE)
 #define IsOperOverride(x)       ((x)->operflags & OPER_OVERRIDE)
 #define IsOperMassNotice(x)     ((x)->operflags & OPER_MASSNOTICE)
 #define IsOperRouting(x)        ((x)->operflags & OPER_ROUTING)

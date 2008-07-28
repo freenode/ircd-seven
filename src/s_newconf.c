@@ -329,7 +329,6 @@ struct oper_flags oper_flagtable[] =
         { OPER_REHASH,          "rehash",       'H', 'h' },
         { OPER_AUSPEX,          "auspex",       'S', 's' },
         { OPER_CMODES,          "cmodes",       'M', 'm' },
-        { OPER_IMMUNE,          "immune",       'I', 'i' },
         { OPER_OVERRIDE,        "override",     'O', 'o' },
         { OPER_MASSNOTICE,      "massnotice",   'N', 'n' },
         { OPER_ROUTING,         "routing",      'R', 'r' },

@@ -309,7 +309,6 @@ struct mode_table oper_table[] = {
 	{ "rehash",		OPER_REHASH		},
 	{ "auspex",		OPER_AUSPEX		},
 	{ "cmodes",		OPER_CMODES		},
-	{ "immune",		OPER_IMMUNE		},
 	{ "override",		OPER_OVERRIDE		},
 	{ "mass_notice",	OPER_MASSNOTICE		},
 	{ "routing",		OPER_ROUTING		},
