@@ -158,12 +158,25 @@ m_kick(struct Client *client_p, struct Client *source_p, int parc, const char *p
 			return 0;
 		}
 
+#if 0
 		if(MyClient(source_p) && IsImmune(who))
 		{
 			sendto_one_numeric(source_p, ERR_ISCHANSERVICE,
 					   "%s %s :User is immune from kick",
 					   who->name, chptr->chname);
 			return 0;
+		}
+#endif
+		if(MyClient(source_p))
+		{
+			hook_data_channel_approval hookdata;
+			hookdata.client = source_p;
+			hookdata.chptr = chptr;
+			hookdata.target = who;
+			hookdata.approved = 1;
+			call_hook(h_can_kick, &hookdata);
+			if(!hookdata.approved)
+				return 0;
 		}
 
 		comment = LOCAL_COPY((EmptyString(parv[3])) ? who->name : parv[3]);

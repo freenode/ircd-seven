@@ -59,11 +59,11 @@
 
 #define MAXMODES_SIMPLE 46 /* a-zA-Z except bqeIov */
 
-static struct ChModeChange mode_changes[BUFSIZE];
-static int mode_count;
-static int mode_limit;
-static int mode_limit_simple;
-static int mask_pos;
+struct ChModeChange mode_changes[BUFSIZE];
+int mode_count;
+int mode_limit;
+int mode_limit_simple;
+int mask_pos;
 
 char cflagsbuf[256];
 char cflagsmyinfo[256];

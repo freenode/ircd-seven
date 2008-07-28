@@ -436,7 +436,6 @@ struct exit_client_hook
 #define UMODE_SSLCLIENT    0x8000	/* using SSL */
 
 /* oper-controlled privilege umodes. */
-#define UMODE_IMMUNE       0x10000
 #define UMODE_OVERRIDE     0x20000
 
 /* umode/oper mode macros */
@@ -445,7 +444,6 @@ struct exit_client_hook
 #define IsHelper(x)		((x)->umodes & UMODE_HELPER)
 #define IsAnyOper(x)		((x)->umodes & (UMODE_OPER|UMODE_HELPER))
 
-#define IsImmune(x)		((x)->umodes & UMODE_IMMUNE)
 #define IsOverride(x)		((x)->umodes & UMODE_OVERRIDE)
 
 /* Is t an oper, and is s allowed to know this? */

@@ -106,7 +106,7 @@ int user_modes[256] = {
 	0,			/* j */
 	0,			/* k */
 	UMODE_LOCOPS,		/* l */
-	UMODE_IMMUNE,		/* m */
+	0,			/* m */
 	0,			/* n */
 	UMODE_OPER,		/* o */
 	UMODE_OVERRIDE,		/* p */
@@ -1107,12 +1107,6 @@ user_mode(struct Client *client_p, struct Client *source_p, int parc, const char
 	{
 		sendto_one_notice(source_p, ":*** You need oper and admin flag for +a");
 		source_p->umodes &= ~UMODE_ADMIN;
-	}
-
-	if(MyConnect(source_p) && (source_p->umodes & UMODE_IMMUNE) && (!IsOperImmune(source_p)))
-	{
-		sendto_one_notice(source_p, ":*** You need oper and the immune flag for +m");
-		source_p->umodes &= ~UMODE_IMMUNE;
 	}
 
 	if(MyConnect(source_p) && (source_p->umodes & UMODE_OVERRIDE) && (!IsOperOverride(source_p)))
