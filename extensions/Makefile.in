@@ -52,6 +52,8 @@ SRCS =                          \
   sno_whois.c			\
   m_42.c			\
   m_adminwall.c			\
+  m_dehelper.c			\
+  m_extendchans.c		\
   m_findforwards.c		\
   m_identify.c			\
   m_mkpasswd.c                  \
