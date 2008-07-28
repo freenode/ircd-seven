@@ -91,6 +91,7 @@ struct Capability captab[] = {
 	{ "RSFNC",	CAP_RSFNC },
 	{ "SAVE",	CAP_SAVE },
 	{ "EUID",	CAP_EUID },
+	{ "REMOVE",	CAP_REMOVE },
 	{0, 0}
 };
 

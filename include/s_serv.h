@@ -53,29 +53,31 @@ struct Capability
 	unsigned int cap;	/* mask value */
 };
 
-#define CAP_CAP         0x00001	/* received a CAP to begin with */
-#define CAP_QS          0x00002	/* Can handle quit storm removal */
-#define CAP_EX          0x00004	/* Can do channel +e exemptions */
-#define CAP_CHW         0x00008	/* Can do channel wall @# */
-#define CAP_IE          0x00010	/* Can do invite exceptions */
-#define CAP_KLN	        0x00040	/* Can do KLINE message */
-#define CAP_ZIP         0x00100	/* Can do ZIPlinks */
-#define CAP_KNOCK	0x00400	/* supports KNOCK */
-#define CAP_TB		0x00800	/* supports TBURST */
-#define CAP_UNKLN       0x01000	/* supports remote unkline */
-#define CAP_CLUSTER     0x02000	/* supports cluster stuff */
-#define CAP_ENCAP	0x04000	/* supports ENCAP */
-#define CAP_TS6		0x08000 /* supports TS6 or above */
-#define CAP_SERVICE	0x10000
-#define CAP_RSFNC	0x20000 /* rserv FNC */
-#define CAP_SAVE	0x40000 /* supports SAVE (nick collision FNC) */
-#define CAP_EUID	0x80000 /* supports EUID (ext UID + nonencap CHGHOST) */
+#define CAP_CAP         0x000001 /* received a CAP to begin with */
+#define CAP_QS          0x000002 /* Can handle quit storm removal */
+#define CAP_EX          0x000004 /* Can do channel +e exemptions */
+#define CAP_CHW         0x000008 /* Can do channel wall @# */
+#define CAP_IE          0x000010 /* Can do invite exceptions */
+#define CAP_KLN	        0x000040 /* Can do KLINE message */
+#define CAP_ZIP         0x000100 /* Can do ZIPlinks */
+#define CAP_KNOCK	0x000400 /* supports KNOCK */
+#define CAP_TB		0x000800 /* supports TBURST */
+#define CAP_UNKLN       0x001000 /* supports remote unkline */
+#define CAP_CLUSTER     0x002000 /* supports cluster stuff */
+#define CAP_ENCAP	0x004000 /* supports ENCAP */
+#define CAP_TS6		0x008000 /* supports TS6 or above */
+#define CAP_SERVICE	0x010000
+#define CAP_RSFNC	0x020000 /* rserv FNC */
+#define CAP_SAVE	0x040000 /* supports SAVE (nick collision FNC) */
+#define CAP_EUID	0x080000 /* supports EUID (ext UID + nonencap CHGHOST) */
+#define CAP_REMOVE	0x100000 /* supports REMOVE */
 
 #define CAP_MASK        (CAP_QS  | CAP_EX   | CAP_CHW  | \
                          CAP_IE  | CAP_KLN  | CAP_SERVICE |\
                          CAP_CLUSTER | CAP_ENCAP | \
                          CAP_ZIP  | CAP_KNOCK  | CAP_UNKLN | \
-			 CAP_RSFNC | CAP_SAVE | CAP_EUID)
+			 CAP_RSFNC | CAP_SAVE | CAP_EUID | \
+			 CAP_REMOVE)
 
 #ifdef HAVE_LIBZ
 #define CAP_ZIP_SUPPORTED       CAP_ZIP
