@@ -62,6 +62,7 @@ SRCS =                          \
   m_okick.c			\
   m_omode.c			\
   m_opme.c			\
+  m_sendbans.c			\
   m_webirc.c			\
   no_locops.c			\
   spy_admin_notice.c		\

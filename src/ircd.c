@@ -1,10 +1,11 @@
 /*
- *  ircd-ratbox: A slightly useful ircd.
+ *  charybdis: A slightly useful ircd.
  *  ircd.c: Starts up and runs the ircd.
  *
  *  Copyright (C) 1990 Jarkko Oikarinen and University of Oulu, Co Center
  *  Copyright (C) 1996-2002 Hybrid Development Team
- *  Copyright (C) 2002-2005 ircd-ratbox development team
+ *  Copyright (C) 2002-2008 ircd-ratbox development team
+ *  Copyright (C) 2005-2008 charybdis development team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,7 +22,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
  *  USA
  *
- *  $Id: ircd.c 3380 2007-04-03 22:25:11Z jilles $
+ *  $Id$
  */
 
 #include "ratbox_lib.h"
@@ -166,39 +167,6 @@ print_startup(int pid)
 	open("/dev/null", O_RDWR);
 	dup2(0, 1);
 	dup2(0, 2);
-}
-
-static void
-ircd_log_cb(const char *str)
-{
-	ilog(L_MAIN, "%s", str);
-}
-
-static void
-ircd_restart_cb(const char *str)
-{
-	restart(str);
-}
-
-/*
- * Why EXIT_FAILURE here?
- * Because if ircd_die_cb() is called it's because of a fatal
- * error inside libcharybdis, and we don't know how to handle the
- * exception, so it is logical to return a FAILURE exit code here.
- *    --nenolod
- */
-static void
-ircd_die_cb(const char *str)
-{
-	if(str != NULL)
-	{
-		/* Try to get the message out to currently logged in operators. */
-		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "Server panic! %s", str);
-		inotice("server panic: %s", str);
-	}
-
-	unlink(pidFileName);
-	exit(EXIT_FAILURE);
 }
 
 /*
@@ -479,6 +447,39 @@ setup_corefile(void)
 #endif
 }
 
+static void
+ircd_log_cb(const char *str)
+{
+	ilog(L_MAIN, "%s", str);
+}
+
+static void
+ircd_restart_cb(const char *str)
+{
+	restart(str);
+}
+
+/*
+ * Why EXIT_FAILURE here?
+ * Because if ircd_die_cb() is called it's because of a fatal
+ * error inside libcharybdis, and we don't know how to handle the
+ * exception, so it is logical to return a FAILURE exit code here.
+ *    --nenolod
+ */
+static void
+ircd_die_cb(const char *str)
+{
+	if(str != NULL)
+	{
+		/* Try to get the message out to currently logged in operators. */
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "Server panic! %s", str);
+		inotice("server panic: %s", str);
+	}
+
+	unlink(pidFileName);
+	exit(EXIT_FAILURE);
+}
+
 struct ev_entry *check_splitmode_ev = NULL;
 
 static int
@@ -543,6 +544,19 @@ main(int argc, char *argv[])
 		return -1;
 	}
 
+	init_sys();
+
+
+
+	myargv = argv;
+	parseargs(&argc, &argv, myopts);
+
+	if(chdir(ConfigFileEntry.dpath))
+	{
+		fprintf(stderr, "Unable to chdir to %s: %s\n", ConfigFileEntry.dpath, strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+
 	rb_set_time();
 
 	/*
@@ -579,10 +593,10 @@ main(int argc, char *argv[])
 	ConfigFileEntry.xlinefile = XPATH;
 	ConfigFileEntry.resvfile = RESVPATH;
 	ConfigFileEntry.connect_timeout = 30;	/* Default to 30 */
-	myargv = argv;
+	
 	umask(077);		/* better safe than sorry --SRB */
 
-	parseargs(&argc, &argv, myopts);
+
 
 	if(printVersion)
 	{
@@ -590,11 +604,7 @@ main(int argc, char *argv[])
 		exit(EXIT_SUCCESS);
 	}
 
-	if(chdir(ConfigFileEntry.dpath))
-	{
-		fprintf(stderr, "Unable to chdir to %s: %s\n", ConfigFileEntry.dpath, strerror(errno));
-		exit(EXIT_FAILURE);
-	}
+
 
 	setup_signals();
 
@@ -622,7 +632,6 @@ main(int argc, char *argv[])
 	}
 
 	/* Init the event subsystem */
-	init_sys();
 	rb_lib_init(ircd_log_cb, ircd_restart_cb, ircd_die_cb, !server_state_foreground, maxconnections, DNODE_HEAP_SIZE, FD_HEAP_SIZE);
 	rb_linebuf_init(LINEBUF_HEAP_SIZE);
 
