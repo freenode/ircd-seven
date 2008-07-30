@@ -56,6 +56,7 @@ const char *generation = "$generation";
 const char *creation = "$creation";
 const char *platform = "$uname";
 const char *ircd_version = PATCHLEVEL;
+const char *charybdis_version = CHARYBDIS_VERSION;
 const char *serno = SERNO;
 
 const char *infotext[] =
@@ -66,6 +67,7 @@ const char *infotext[] =
   "Copyright (c) 1996-2001 Hybrid Development Team", 
   "Copyright (c) 2002-2007 ircd-ratbox Development Team",
   "Copyright (c) 2005-2008 charybdis development team",
+  "Copyright (c) 2007-2008 ircd-seven development team",
   "",
   "This program is free software; you can redistribute it and/or",
   "modify it under the terms of the GNU General Public License as",

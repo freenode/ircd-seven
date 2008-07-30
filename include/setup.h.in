@@ -12,6 +12,9 @@
 /* Define this if you are profiling. */
 #undef CHARYBDIS_PROFILE
 
+/* Version of charybdis on which this release is based */
+#undef CHARYBDIS_VERSION
+
 /* Size of the client heap. */
 #undef CLIENT_HEAP_SIZE
 

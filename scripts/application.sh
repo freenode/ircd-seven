@@ -20,14 +20,13 @@
 #
 
 if [ "x$TIP" = "x" ]; then
-	echo "Please don't run me directly."
-	exit
+       echo "Please don't run me directly."
+       exit
 fi
 
 # Charybdis wants the hg tip to be in include/serno.h, in its own format.
-MYTIP=`hg parents --template '#date|shortdate#_#node|short#' 2>/dev/null | sed -e s/-//g -e s/_/-/`
-echo "[atheme-services] Generating include/serno.h for tip $MYTIP."
-cat << _EOF_ > include/serno.h
+MYTIP="$(date +%Y%m%d)-$(git show |sed -nr '1{s/.* (.{16}).*/\1/p; q}')"
+cat <<EOF >../include/serno.h
 /* Generated automatically by makepackage. Any changes made here will be lost. */
 #define SERNO "$MYTIP"
-_EOF_
+EOF

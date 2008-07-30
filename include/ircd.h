@@ -66,6 +66,7 @@ extern const char *platform;
 extern const char *infotext[];
 extern const char *serno;
 extern const char *ircd_version;
+extern const char *charybdis_version;
 extern const char *logFileName;
 extern const char *pidFileName;
 extern int cold_start;

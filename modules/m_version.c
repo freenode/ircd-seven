@@ -76,7 +76,7 @@ m_version(struct Client *client_p, struct Client *source_p, int parc, const char
 	}
 
 	sendto_one_numeric(source_p, RPL_VERSION, form_str(RPL_VERSION),
-			   ircd_version, serno,
+			   ircd_version, serno, charybdis_version,
 			   me.name, confopts(source_p), TS_CURRENT,
 			   ServerInfo.sid);
 

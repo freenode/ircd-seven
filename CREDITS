@@ -1,5 +1,10 @@
 $Id: CREDITS 3133 2007-01-21 15:38:16Z jilles $
  
+ircd-seven is closely derived from Charybdis (http://www.ircd-charybdis.net/)
+modified for the needs of the freenode IRC network. Development of the
+freenode-specific portions is currently led by Stephen Bennett (spb),
+building on top of the main Charybdis code, whose own credits follow.
+ 
 Charybdis started as an evolution from ircd-ratbox. Its development
 is led by a team of dedicated developers who have put a lot of time
 into the project, and it has seen use on a variety of different
