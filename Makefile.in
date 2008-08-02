@@ -67,7 +67,7 @@ build:
 		sh configure; \
 	fi
 	@if [ -d .git ] ; then \
-		revh=`date +%Y%m%d`-`git show |sed -nr '1{s/.* (.{16}).*/\1/p; q}'`; \
+		revh=`git show --pretty=format:"%H-%ci" |sed -r 's/^(.{12})[^-]+-([0-9]+)-([0-9]+)-([0-9]+) .*/\2\3\4-\1/; q'`; \
 		[ -z "$$revh" ] || echo '#define SERNO "'$$revh'"' >include/serno.h ; \
 	fi
 	@[ -f include/serno.h ] || echo '#define SERNO "unknown"' >include/serno.h
