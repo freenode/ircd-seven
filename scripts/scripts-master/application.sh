@@ -19,14 +19,14 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-if [ "x$COMMIT" = "x" ]; then
+if [ "x$TIP" = "x" ]; then
        echo "Please don't run me directly."
        exit
 fi
 
 # Charybdis wants the hg tip to be in include/serno.h, in its own format.
-MYTIP="$(git show --pretty=format:"%H-%ci" $COMMIT |sed -r 's/^(.{12})[^-]+-([0-9]+)-([0-9]+)-([0-9]+) .*/\2\3\4-\1/; q')"
-cat <<EOF >include/serno.h
+MYTIP="$(git show --pretty=format:"%H-%ci" |sed -r 's/^(.{12})[^-]+-([0-9]+)-([0-9]+)-([0-9]+) .*/\2\3\4-\1/; q')"
+cat <<EOF >../include/serno.h
 /* Generated automatically by makepackage. Any changes made here will be lost. */
 #define SERNO "$MYTIP"
 EOF
