@@ -23,6 +23,7 @@ src/lex.yy.c
 src/version.c.last
 src/y.tab.c
 src/y.tab.h
+include/serno.h
 ssld/ssld
 tags
 tools/convertilines
