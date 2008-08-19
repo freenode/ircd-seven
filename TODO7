@@ -1,8 +1,8 @@
-[?] make snotes global. how many, which?
+[/] make snotes global. how many, which?
 [x] reorganise oper privileges
 [x] Add umode +O / helper status
 [x] umode +h
-[?] propagate OPER
+[-] propagate OPER
 [x] operhide
 [x] umodes +p, +m
 [x] GRANT
