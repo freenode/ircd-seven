@@ -773,7 +773,6 @@ set_default_conf(void)
 	ConfigFileEntry.hide_error_messages = 1;
 	ConfigFileEntry.dots_in_ident = 0;
 	ConfigFileEntry.max_targets = MAX_TARGETS_DEFAULT;
-	ConfigFileEntry.servlink_path = rb_strdup(SLPATH);
 	ConfigFileEntry.egdpool_path = NULL;
 	ConfigFileEntry.use_whois_actually = YES;
 	ConfigFileEntry.burst_away = NO;
@@ -822,7 +821,8 @@ set_default_conf(void)
         ConfigFileEntry.reject_after_count = 5;
 	ConfigFileEntry.reject_ban_time = 300;  
 	ConfigFileEntry.reject_duration = 120;
-	ConfigFileEntry.max_unknown_ip = 2;
+	ConfigFileEntry.throttle_count = 4;
+	ConfigFileEntry.throttle_duration = 60;
 	ConfigFileEntry.operhide = 0;
 
 	ServerInfo.default_max_clients = MAXCONNECTIONS;
@@ -859,9 +859,6 @@ validate_conf(void)
 
 	if(ConfigFileEntry.ts_max_delta < TS_MAX_DELTA_MIN)
 		ConfigFileEntry.ts_max_delta = TS_MAX_DELTA_DEFAULT;
-
-	if(ConfigFileEntry.servlink_path == NULL)
-		ConfigFileEntry.servlink_path = rb_strdup(SLPATH);
 
 	if(ServerInfo.network_name == NULL)
 		ServerInfo.network_name = rb_strdup(NETWORK_NAME_DEFAULT);
@@ -1237,9 +1234,6 @@ clear_out_old_conf(void)
 	 */
 
 	/* clean out general */
-	rb_free(ConfigFileEntry.servlink_path);
-	ConfigFileEntry.servlink_path = NULL;
-
 	RB_DLINK_FOREACH_SAFE(ptr, next_ptr, service_list.head)
 	{
 		rb_free(ptr->data);

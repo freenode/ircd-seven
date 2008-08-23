@@ -73,23 +73,24 @@ static void show_privs(struct Client *source_p, struct Client *target_p)
 	struct mode_table *p;
 
 	buf[0] = '\0';
-	p = &oper_table[0];
-	while (p->name != NULL)
-	{
-		if (target_p->operflags & p->mode)
-		{
-			if (buf[0] != '\0')
-				rb_strlcat(buf, " ", sizeof buf);
-			rb_strlcat(buf, p->name, sizeof buf);
-		}
-		p++;
-	}
+
+	if (target_p->localClient->privset)
+		rb_strlcat(buf, target_p->localClient->privset->privs, sizeof buf);
+
 	if (IsOper(target_p))
 	{
 		if (buf[0] != '\0')
 			rb_strlcat(buf, " ", sizeof buf);
 		rb_strlcat(buf, "operator:", sizeof buf);
 		rb_strlcat(buf, target_p->localClient->opername, sizeof buf);
+
+		if (target_p->localClient->privset)
+		{
+			if (buf[0] != '\0')
+				rb_strlcat(buf, " ", sizeof buf);
+			rb_strlcat(buf, "privset:", sizeof buf);
+			rb_strlcat(buf, target_p->localClient->privset->name, sizeof buf);
+		}
 	}
 	p = &auth_client_table[0];
 	while (p->name != NULL)

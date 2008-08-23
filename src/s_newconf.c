@@ -318,51 +318,6 @@ find_oper_conf(const char *username, const char *host, const char *locip, const 
 	return NULL;
 }
 
-struct oper_flags oper_flagtable[] =
-{
-        { OPER_HELPER,          "helper",       'H', 'h' },
-        { OPER_OPERWALL,        "operwall",     'L', 'l' },
-        { OPER_STAFFER,         "staffer",      'F', 'f' },
-        { OPER_KILL,            "kill",         'C', 'c' },
-        { OPER_KLINE,           "kline",        'K', 'k' },
-        { OPER_UNKLINE,         "unkline",      'U', 'u' },
-        { OPER_REHASH,          "rehash",       'H', 'h' },
-        { OPER_AUSPEX,          "auspex",       'S', 's' },
-        { OPER_CMODES,          "cmodes",       'M', 'm' },
-        { OPER_OVERRIDE,        "override",     'O', 'o' },
-        { OPER_MASSNOTICE,      "massnotice",   'N', 'n' },
-        { OPER_ROUTING,         "routing",      'R', 'r' },
-        { OPER_XLINE,           "xline",        'X', 'x' },
-        { OPER_RESV,            "resv",         'Q', 'q' },
-        { OPER_REMOTEBAN,       "remoteban",    'B', 'b' },
-        { OPER_ADMIN,           "admin",        'A', 'a' },
-        { OPER_DIE,             "die",          'D', 'd' },
-        { OPER_GRANT,           "grant",        'G', 'g' },
-        { 0,                    '\0', '\0' }
-};
-
-const char *
-get_oper_privs(int flags)
-{
-	static char buf[BUFSIZE];
-	char *p;
-	int i;
-
-	p = buf;
-	*p = '\0';
-
-	for(i = 0; oper_flagtable[i].flag; i++)
-		if (flags & oper_flagtable[i].flag)
-		{
-			if(*buf != '\0')
-				rb_strlcat(buf, ", ", sizeof(buf));
-
-			rb_strlcat(buf, oper_flagtable[i].name, sizeof(buf));
-		}
-
-	return buf;
-}
-
 struct server_conf *
 make_server_conf(void)
 {

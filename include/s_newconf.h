@@ -36,6 +36,7 @@
 #define INCLUDED_s_newconf_h
 
 #include "setup.h"
+#include "privilege.h"
 
 #ifdef HAVE_LIBCRYPTO
 #include <openssl/rsa.h>
@@ -123,6 +124,8 @@ struct oper_conf
 
 	unsigned int snomask;
 
+	struct PrivilegeSet *privset;
+
 #ifdef HAVE_LIBCRYPTO
 	char *rsa_pubkey_file;
 	RSA *rsa_pubkey;
@@ -161,24 +164,26 @@ extern void cluster_generic(struct Client *, const char *, int cltype,
 
 #define IsOperConfEncrypted(x)	((x)->flags & OPER_ENCRYPTED)
 
-#define IsOperHelper(x)         ((x)->operflags & OPER_HELPER)
-#define IsOperOperwall(x)       ((x)->operflags & OPER_OPERWALL)
-#define IsOperStaffer(x)        ((x)->operflags & OPER_STAFFER)
-#define IsOperKill(x)           ((x)->operflags & OPER_KILL)
-#define IsOperKline(x)          ((x)->operflags & OPER_KLINE)
-#define IsOperUnkline(x)        ((x)->operflags & OPER_UNKLINE)
-#define IsOperRehash(x)         ((x)->operflags & OPER_REHASH)
-#define IsOperAuspex(x)         ((x)->operflags & OPER_AUSPEX)
-#define IsOperCModes(x)         ((x)->operflags & OPER_CMODES)
-#define IsOperOverride(x)       ((x)->operflags & OPER_OVERRIDE)
-#define IsOperMassNotice(x)     ((x)->operflags & OPER_MASSNOTICE)
-#define IsOperRouting(x)        ((x)->operflags & OPER_ROUTING)
-#define IsOperXline(x)          ((x)->operflags & OPER_XLINE)
-#define IsOperResv(x)           ((x)->operflags & OPER_RESV)
-#define IsOperRemoteBan(x)      ((x)->operflags & OPER_REMOTEBAN)
-#define IsOperAdmin(x)          ((x)->operflags & OPER_ADMIN)
-#define IsOperDie(x)            ((x)->operflags & OPER_DIE)
-#define IsOperGrant(x)          ((x)->operflags & OPER_GRANT)
+#define HasPrivilege(x, y)	((x)->localClient != NULL && (x)->localClient->privset != NULL && privilegeset_in_set((x)->localClient->privset, (y)))
+
+#define IsOperHelper(x)         HasPrivilege(x, "oper:helpop")
+#define IsOperOperwall(x)       HasPrivilege(x, "oper:operwall")
+#define IsOperStaffer(x)        HasPrivilege(x, "oper:staffer")
+#define IsOperKill(x)           HasPrivilege(x, "oper:kill")
+#define IsOperKline(x)          HasPrivilege(x, "oper:kline")
+#define IsOperUnkline(x)        HasPrivilege(x, "oper:unkline")
+#define IsOperRehash(x)         HasPrivilege(x, "oper:rehash")
+#define IsOperAuspex(x)         HasPrivilege(x, "oper:auspex")
+#define IsOperCModes(x)         HasPrivilege(x, "oper:cmodes")
+#define IsOperOverride(x)       HasPrivilege(x, "oper:override")
+#define IsOperMassNotice(x)     HasPrivilege(x, "oper:massnotice")
+#define IsOperRouting(x)        HasPrivilege(x, "oper:routing")
+#define IsOperXline(x)          HasPrivilege(x, "oper:xline")
+#define IsOperResv(x)           HasPrivilege(x, "oper:resv")
+#define IsOperRemoteBan(x)      HasPrivilege(x, "oper:remoteban")
+#define IsOperAdmin(x)          HasPrivilege(x, "oper:admin")
+#define IsOperDie(x)            HasPrivilege(x, "oper:die")
+#define IsOperGrant(x)          HasPrivilege(x, "oper:grant")
 
 extern struct oper_conf *make_oper_conf(void);
 extern void free_oper_conf(struct oper_conf *);

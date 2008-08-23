@@ -527,7 +527,6 @@ register_local_user(struct Client *client_p, struct Client *source_p, const char
 		Count.invisi++;
 
 	s_assert(!IsClient(source_p));
-	del_unknown_ip(source_p);
 	rb_dlinkMoveNode(&source_p->localClient->tnode, &unknown_list, &lclient_list);
 	SetClient(source_p);
 
@@ -1306,6 +1305,7 @@ oper_up(struct Client *source_p, struct oper_conf *oper_p)
 
 	source_p->operflags |= oper_p->flags;
 	source_p->localClient->opername = rb_strdup(oper_p->name);
+	source_p->localClient->privset = privilegeset_ref(oper_p->privset);
 
 	if(IsOper(source_p))
 		rb_dlinkAddAlloc(source_p, &local_oper_list);
@@ -1332,7 +1332,8 @@ oper_up(struct Client *source_p, struct oper_conf *oper_p)
 	sendto_one_numeric(source_p, RPL_SNOMASK, form_str(RPL_SNOMASK),
 		   construct_snobuf(source_p->snomask));
 	sendto_one(source_p, form_str(RPL_YOUREOPER), me.name, source_p->name);
-	sendto_one_notice(source_p, ":*** Oper privs are %s", get_oper_privs(oper_p->flags));
+	sendto_one_notice(source_p, ":*** Oper privilege set is %s", oper_p->privset->name);
+	sendto_one_notice(source_p, ":*** Oper privs are %s", oper_p->privset->privs);
 	send_oper_motd(source_p);
 
 	return (1);
