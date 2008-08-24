@@ -331,8 +331,8 @@ single_whois(struct Client *source_p, struct Client *target_p, int operspy)
 	   (IsOper(source_p) || (source_p == target_p)))
 	{
 		char buf[512];
-		rb_snprintf(buf, sizeof(buf), "Opered as %s, privileges %s",
-			    target_p->localClient->opername, get_oper_privs(target_p->operflags));
+		rb_snprintf(buf, sizeof(buf), "Opered as %s, privset %s",
+			    target_p->localClient->opername, target_p->localClient->privset->name);
 		sendto_one_numeric(source_p, RPL_WHOISSPECIAL, form_str(RPL_WHOISSPECIAL),
 				   target_p->name, buf);
 	}
