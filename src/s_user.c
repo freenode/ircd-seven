@@ -1270,7 +1270,7 @@ oper_up(struct Client *source_p, struct oper_conf *oper_p)
 	unsigned int old = source_p->umodes, oldsnomask = source_p->snomask;
 	hook_data_umode_changed hdata;
 
-	if(oper_p->flags & OPER_STAFFER)
+	if(privilegeset_in_set(oper_p->privset, "oper:staffer"))
 	{
 		SetOper(source_p);
 
