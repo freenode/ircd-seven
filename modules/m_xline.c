@@ -145,6 +145,12 @@ mo_xline(struct Client *client_p, struct Client *source_p, int parc, const char 
 
 	if(target_server != NULL)
 	{
+		if (temp_time)
+			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "%s is adding a temporary %d min. X-Line for [%s] on %s [%s]",
+					get_oper_name(source_p), temp_time / 60, name, target_server, reason);
+		else
+			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "%s is adding a permanent X-Line for [%s] on %s [%s]",
+					get_oper_name(source_p), name, target_server, reason);
 		propagate_xline(source_p, target_server, temp_time,
 				name, "2", reason);
 
@@ -365,7 +371,7 @@ write_xline(struct Client *source_p, struct ConfItem *aconf)
 
 	if((out = fopen(filename, "a")) == NULL)
 	{
-		sendto_realops_snomask(SNO_GENERAL, L_ALL, "*** Problem opening %s ", filename);
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "*** Problem opening %s ", filename);
 		sendto_one_notice(source_p, ":*** Problem opening file, xline added temporarily only");
 		return;
 	}
@@ -376,7 +382,7 @@ write_xline(struct Client *source_p, struct ConfItem *aconf)
 
 	if(fputs(buffer, out) == -1)
 	{
-		sendto_realops_snomask(SNO_GENERAL, L_ALL, "*** Problem writing to %s", filename);
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "*** Problem writing to %s", filename);
 		sendto_one_notice(source_p, ":*** Problem writing to file, xline added temporarily only");
 		fclose(out);
 		return;
@@ -384,7 +390,7 @@ write_xline(struct Client *source_p, struct ConfItem *aconf)
 
 	if(fclose(out))
 	{
-		sendto_realops_snomask(SNO_GENERAL, L_ALL, "*** Problem writing to %s", filename);
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "*** Problem writing to %s", filename);
 		sendto_one_notice(source_p, ":*** Problem writing to file, xline added temporarily only");
 		return;
 	}
@@ -465,6 +471,9 @@ mo_unxline(struct Client *client_p, struct Client *source_p, int parc, const cha
 				me.name, source_p->name, "remoteban");
 			return 0;
 		}
+
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "%s is removing the X-Line for [%s] on %s.",
+				get_oper_name(source_p), parv[1], parv[3]);
 
 		propagate_generic(source_p, "UNXLINE", parv[3], CAP_CLUSTER,
 				"%s", parv[1]);

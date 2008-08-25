@@ -337,6 +337,9 @@ mo_rehash(struct Client *client_p, struct Client *source_p, int parc, const char
 				me.name, source_p->name, "remoteban");
 			return 0;
 		}
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "%s is rehashing %s on %s",
+				get_oper_name(source_p), type != NULL ? type : "server config files", target_server);
+
 		sendto_match_servs(source_p, target_server,
 				CAP_ENCAP, NOCAPS,
 				"ENCAP %s REHASH %s",

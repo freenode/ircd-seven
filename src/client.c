@@ -389,7 +389,7 @@ check_unknowns_list(rb_dlink_list * list)
 		{
 			if(IsAnyServer(client_p))
 			{
-				sendto_realops_snomask(SNO_GENERAL, is_remote_connect(client_p) ? L_NETWIDE : L_ALL,
+				sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 						     "No response from %s, closing link",
 						     client_p->name);
 				ilog(L_SERVER,
@@ -473,7 +473,7 @@ check_banned_lines(void)
 		{
 			if(IsExemptKline(client_p))
 			{
-				sendto_realops_snomask(SNO_GENERAL, L_ALL,
+				sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 						"KLINE over-ruled for %s, client is kline_exempt [%s@%s]",
 						get_client_name(client_p, HIDE_IP),
 						aconf->user, aconf->host);
@@ -490,7 +490,7 @@ check_banned_lines(void)
 		{
 			if(IsExemptKline(client_p))
 			{
-				sendto_realops_snomask(SNO_GENERAL, L_ALL,
+				sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 						"XLINE over-ruled for %s, client is kline_exempt [%s]",
 						get_client_name(client_p, HIDE_IP),
 						aconf->name);
@@ -559,7 +559,7 @@ check_klines(void)
 		{
 			if(IsExemptKline(client_p))
 			{
-				sendto_realops_snomask(SNO_GENERAL, L_ALL,
+				sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 						     "KLINE over-ruled for %s, client is kline_exempt",
 						     get_client_name(client_p, HIDE_IP));
 				continue;
@@ -650,7 +650,7 @@ check_xlines(void)
 		{
 			if(IsExemptKline(client_p))
 			{
-				sendto_realops_snomask(SNO_GENERAL, L_ALL,
+				sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 						     "XLINE over-ruled for %s, client is kline_exempt",
 						     get_client_name(client_p, HIDE_IP));
 				continue;
@@ -1961,7 +1961,7 @@ error_exit_client(struct Client *client_p, int error)
 	{
 		if(error == 0)
 		{
-			sendto_realops_snomask(SNO_GENERAL, is_remote_connect(client_p) && !IsServer(client_p) ? L_NETWIDE : L_ALL,
+			sendto_realops_snomask(SNO_GENERAL, !IsServer(client_p) ? L_NETWIDE : L_ALL,
 					     "Server %s closed the connection",
 					     client_p->name);
 
@@ -1970,7 +1970,7 @@ error_exit_client(struct Client *client_p, int error)
 		}
 		else
 		{
-			sendto_realops_snomask(SNO_GENERAL, is_remote_connect(client_p) && !IsServer(client_p) ? L_NETWIDE : L_ALL,
+			sendto_realops_snomask(SNO_GENERAL, !IsServer(client_p) ? L_NETWIDE : L_ALL,
 					"Lost connection to %s: %s",
 					client_p->name, strerror(current_error));
 			ilog(L_SERVER, "Lost connection to %s: %s",

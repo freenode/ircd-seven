@@ -541,7 +541,7 @@ remove_unknown(struct Client *client_p, char *lsender, char *lbuffer)
 	if((IsDigit(lsender[0]) && slen == 3) || 
 	   (strchr(lsender, '.') != NULL))
 	{
-		sendto_realops_snomask(SNO_DEBUG, L_ALL,
+		sendto_realops_snomask(SNO_DEBUG, L_NETWIDE,
 				     "Unknown prefix (%s) from %s, Squitting %s",
 				     lbuffer, client_p->name, lsender);
 
@@ -631,7 +631,7 @@ do_numeric(char numeric[], struct Client *client_p, struct Client *source_p, int
 			 */
 			if(atoi(numeric) != ERR_NOSUCHNICK &&
 			   atoi(numeric) != ERR_NOSUCHSERVER)
-				sendto_realops_snomask(SNO_GENERAL, L_ADMIN,
+				sendto_realops_snomask(SNO_GENERAL, L_ADMIN | L_NETWIDE,
 						     "*** %s(via %s) sent a %s numeric to me: %s",
 						     source_p->name,
 						     client_p->name, numeric, buffer);

@@ -84,7 +84,7 @@ static void blacklist_dns_callback(void *vptr, struct DNSReply *reply)
 			listed = TRUE;
 		else if (blcptr->blacklist->lastwarning + 3600 < rb_current_time())
 		{
-			sendto_realops_snomask(SNO_GENERAL, L_ALL,
+			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 					"Garbage reply from blacklist %s",
 					blcptr->blacklist->host);
 			blcptr->blacklist->lastwarning = rb_current_time();

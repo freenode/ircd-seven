@@ -399,7 +399,7 @@ register_local_user(struct Client *client_p, struct Client *source_p, const char
 	if(rb_dlink_list_length(&lclient_list) >=
 	    (unsigned long)GlobalSetOptions.maxclients && !IsConfExemptLimits(aconf))
 	{
-		sendto_realops_snomask(SNO_FULL, L_ALL,
+		sendto_realops_snomask(SNO_FULL, L_NETWIDE,
 				     "Too many clients, rejecting %s[%s].", source_p->name, source_p->host);
 
 		ServerStats.is_ref++;
@@ -454,7 +454,7 @@ register_local_user(struct Client *client_p, struct Client *source_p, const char
 
 	if(!valid_username(source_p->username))
 	{
-		sendto_realops_snomask(SNO_REJ, L_ALL,
+		sendto_realops_snomask(SNO_REJ, L_NETWIDE,
 				     "Invalid username: %s (%s@%s)",
 				     source_p->name, source_p->username, source_p->host);
 		ServerStats.is_ref++;
@@ -547,7 +547,7 @@ register_local_user(struct Client *client_p, struct Client *source_p, const char
 	{
 		Count.max_loc = rb_dlink_list_length(&lclient_list);
 		if(!(Count.max_loc % 10))
-			sendto_realops_snomask(SNO_GENERAL, L_ALL,
+			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 					     "New Max Local Clients: %d", Count.max_loc);
 	}
 
@@ -895,7 +895,7 @@ user_mode(struct Client *client_p, struct Client *source_p, int parc, const char
 
 	if(IsServer(source_p))
 	{
-		sendto_realops_snomask(SNO_GENERAL, L_ADMIN,
+		sendto_realops_snomask(SNO_GENERAL, L_ADMIN | L_NETWIDE,
 				     "*** Mode for User %s from %s", parv[1], source_p->name);
 		return 0;
 	}
@@ -1379,12 +1379,12 @@ construct_umodebuf(void)
 			if (user_modes[i] == 0)
 			{
 				orphaned_umodes |= prev_user_modes[i];
-				sendto_realops_snomask(SNO_DEBUG, L_ALL, "Umode +%c is now orphaned", i);
+				sendto_realops_snomask(SNO_DEBUG, L_NETWIDE, "Umode +%c is now orphaned", i);
 			}
 			else
 			{
 				orphaned_umodes &= ~prev_user_modes[i];
-				sendto_realops_snomask(SNO_DEBUG, L_ALL, "Orphaned umode +%c is picked up by module", i);
+				sendto_realops_snomask(SNO_DEBUG, L_NETWIDE, "Orphaned umode +%c is picked up by module", i);
 			}
 			user_modes[i] = prev_user_modes[i];
 		}

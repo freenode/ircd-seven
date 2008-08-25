@@ -60,7 +60,7 @@
 static int	challenge_load(void)
 {
 #ifndef STATIC_MODULES
-	sendto_realops_snomask(SNO_GENERAL, L_ALL, 
+	sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, 
 		"Challenge module not loaded because OpenSSL is not available.");
 	ilog(L_MAIN, "Challenge module not loaded because OpenSSL is not available.");
 	return -1;

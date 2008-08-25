@@ -439,7 +439,7 @@ ms_join(struct Client *client_p, struct Client *source_p, int parc, const char *
 #ifdef IGNORE_BOGUS_TS
 	if(newts < 800000000)
 	{
-		sendto_realops_snomask(SNO_DEBUG, L_ALL,
+		sendto_realops_snomask(SNO_DEBUG, L_NETWIDE,
 				     "*** Bogus TS %ld on %s ignored from %s",
 				     (long) newts, chptr->chname, client_p->name);
 		newts = (oldts == 0) ? oldts : 800000000;
@@ -626,7 +626,7 @@ ms_sjoin(struct Client *client_p, struct Client *source_p, int parc, const char 
 #ifdef IGNORE_BOGUS_TS
 	if(newts < 800000000)
 	{
-		sendto_realops_snomask(SNO_DEBUG, L_ALL,
+		sendto_realops_snomask(SNO_DEBUG, L_NETWIDE,
 				     "*** Bogus TS %ld on %s ignored from %s",
 				     (long) newts, chptr->chname, client_p->name);
 

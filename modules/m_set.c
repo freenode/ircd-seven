@@ -157,7 +157,7 @@ quote_autoconnall(struct Client *source_p, const char *arg, int newval)
 {
 	if(newval >= 0)
 	{
-		sendto_realops_snomask(SNO_GENERAL, L_ALL, "%s has changed AUTOCONNALL to %i",
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "%s has changed AUTOCONNALL to %i",
 				     source_p->name, newval);
 
 		GlobalSetOptions.autoconn = newval;
@@ -177,7 +177,7 @@ quote_floodcount(struct Client *source_p, const char *arg, int newval)
 	if(newval >= 0)
 	{
 		GlobalSetOptions.floodcount = newval;
-		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 				     "%s has changed FLOODCOUNT to %i", source_p->name,
 				     GlobalSetOptions.floodcount);
 	}
@@ -201,7 +201,7 @@ quote_identtimeout(struct Client *source_p, const char *arg, int newval)
 
 	if(newval > 0)
 	{
-		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 				     "%s has changed IDENTTIMEOUT to %d",
 				     get_oper_name(source_p), newval);
 		GlobalSetOptions.ident_timeout = newval;
@@ -234,7 +234,7 @@ quote_max(struct Client *source_p, const char *arg, int newval)
 
 		GlobalSetOptions.maxclients = newval;
 
-		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 				     "%s!%s@%s set new MAXCLIENTS to %d (%lu current)",
 				     source_p->name, source_p->username, source_p->host,
 				     GlobalSetOptions.maxclients, 
@@ -262,7 +262,7 @@ quote_helperstring(struct Client *source_p, const char *arg, int newval)
 		rb_strlcpy(GlobalSetOptions.helperstring, arg,
 			sizeof(GlobalSetOptions.helperstring));
 		
-		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 				     "%s has changed HELPERSTRING to '%s'",
 				     get_oper_name(source_p), arg);
 	}
@@ -281,7 +281,7 @@ quote_operstring(struct Client *source_p, const char *arg, int newval)
 		rb_strlcpy(GlobalSetOptions.operstring, arg,
 			sizeof(GlobalSetOptions.operstring));
 		
-		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 				     "%s has changed OPERSTRING to '%s'",
 				     get_oper_name(source_p), arg);
 	}
@@ -300,7 +300,7 @@ quote_adminstring(struct Client *source_p, const char *arg, int newval)
 		rb_strlcpy(GlobalSetOptions.adminstring, arg,
 			sizeof(GlobalSetOptions.adminstring));
 		
-		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 				     "%s has changed ADMINSTRING to '%s'",
 				     get_oper_name(source_p), arg);
 	}
@@ -314,7 +314,7 @@ quote_spamnum(struct Client *source_p, const char *arg, int newval)
 	{
 		if(newval == 0)
 		{
-			sendto_realops_snomask(SNO_GENERAL, L_ALL,
+			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 					     "%s has disabled ANTI_SPAMBOT", source_p->name);
 			GlobalSetOptions.spam_num = newval;
 			return;
@@ -327,7 +327,7 @@ quote_spamnum(struct Client *source_p, const char *arg, int newval)
 		{
 			GlobalSetOptions.spam_num = newval;
 		}
-		sendto_realops_snomask(SNO_GENERAL, L_ALL, "%s has changed SPAMNUM to %i",
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "%s has changed SPAMNUM to %i",
 				     source_p->name, GlobalSetOptions.spam_num);
 	}
 	else
@@ -350,7 +350,7 @@ quote_spamtime(struct Client *source_p, const char *arg, int newval)
 		{
 			GlobalSetOptions.spam_time = newval;
 		}
-		sendto_realops_snomask(SNO_GENERAL, L_ALL, "%s has changed SPAMTIME to %i",
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "%s has changed SPAMTIME to %i",
 				     source_p->name, GlobalSetOptions.spam_time);
 	}
 	else
@@ -393,7 +393,7 @@ quote_splitmode(struct Client *source_p, const char *charval, int intval)
 		/* OFF */
 		if(newval == 0)
 		{
-			sendto_realops_snomask(SNO_GENERAL, L_ALL,
+			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 					     "%s is disabling splitmode", get_oper_name(source_p));
 
 			splitmode = 0;
@@ -405,7 +405,7 @@ quote_splitmode(struct Client *source_p, const char *charval, int intval)
 		/* ON */
 		else if(newval == 1)
 		{
-			sendto_realops_snomask(SNO_GENERAL, L_ALL,
+			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 					     "%s is enabling and activating splitmode",
 					     get_oper_name(source_p));
 
@@ -419,7 +419,7 @@ quote_splitmode(struct Client *source_p, const char *charval, int intval)
 		/* AUTO */
 		else if(newval == 2)
 		{
-			sendto_realops_snomask(SNO_GENERAL, L_ALL,
+			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 					     "%s is enabling automatic splitmode",
 					     get_oper_name(source_p));
 
@@ -442,7 +442,7 @@ quote_splitnum(struct Client *source_p, const char *arg, int newval)
 {
 	if(newval >= 0)
 	{
-		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 				     "%s has changed SPLITNUM to %i", source_p->name, newval);
 		split_servers = newval;
 
@@ -459,7 +459,7 @@ quote_splitusers(struct Client *source_p, const char *arg, int newval)
 {
 	if(newval >= 0)
 	{
-		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 				     "%s has changed SPLITUSERS to %i", source_p->name, newval);
 		split_users = newval;
 

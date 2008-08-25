@@ -206,7 +206,7 @@ mr_server(struct Client *client_p, struct Client *source_p, int parc, const char
 		 * Definitely don't do that here. This is from an unregistered
 		 * connect - A1kmm.
 		 */
-		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 				     "Attempt to re-introduce server %s from %s",
 				     name, client_p->name);
 		ilog(L_SERVER, "Attempt to re-introduce server %s from %s",
@@ -219,7 +219,7 @@ mr_server(struct Client *client_p, struct Client *source_p, int parc, const char
 
 	if(has_id(client_p) && (target_p = find_id(client_p->id)) != NULL)
 	{
-		sendto_realops_snomask(SNO_GENERAL, is_remote_connect(client_p) ? L_NETWIDE : L_ALL,
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 				     "Attempt to re-introduce SID %s from %s%s",
 				     client_p->id,
 				     EmptyString(client_p->name) ? name : "",
@@ -300,7 +300,7 @@ ms_server(struct Client *client_p, struct Client *source_p, int parc, const char
 
 		sendto_one(client_p, "ERROR :Server %s already exists", name);
 
-		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 				     "Link %s cancelled, server %s already exists",
 				     client_p->name, name);
 		ilog(L_SERVER, "Link %s cancelled, server %s already exists",
@@ -322,7 +322,7 @@ ms_server(struct Client *client_p, struct Client *source_p, int parc, const char
 		 * for a while and servers to send stuff to the wrong place.
 		 */
 		sendto_one(client_p, "ERROR :Nickname %s already exists!", name);
-		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 				     "Link %s cancelled: Server/nick collision on %s",
 				     client_p->name, name);
 		ilog(L_SERVER, "Link %s cancelled: Server/nick collision on %s",
@@ -416,7 +416,7 @@ ms_server(struct Client *client_p, struct Client *source_p, int parc, const char
 
 	if(strlen(name) > HOSTLEN)
 	{
-		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 				     "Link %s introduced server with invalid servername %s",
 				     client_p->name, name);
 		ilog(L_SERVER, "Link %s introduced server with invalid servername %s",
@@ -480,7 +480,7 @@ ms_sid(struct Client *client_p, struct Client *source_p, int parc, const char *p
 	if((target_p = find_server(NULL, parv[1])) != NULL)
 	{
 		sendto_one(client_p, "ERROR :Server %s already exists", parv[1]);
-		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 				     "Link %s cancelled, server %s already exists",
 				     client_p->name, parv[1]);
 		ilog(L_SERVER, "Link %s cancelled, server %s already exists",
@@ -494,7 +494,7 @@ ms_sid(struct Client *client_p, struct Client *source_p, int parc, const char *p
 	if((target_p = find_id(parv[3])) != NULL)
 	{
 		sendto_one(client_p, "ERROR :SID %s already exists", parv[3]);
-		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 				     "Link %s cancelled, SID %s already exists",
 				     client_p->name, parv[3]);
 		ilog(L_SERVER, "Link %s cancelled, SID %s already exists",
@@ -507,7 +507,7 @@ ms_sid(struct Client *client_p, struct Client *source_p, int parc, const char *p
 	if(bogus_host(parv[1]) || strlen(parv[1]) > HOSTLEN)
 	{
 		sendto_one(client_p, "ERROR :Invalid servername");
-		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 				     "Link %s cancelled, servername %s invalid",
 				     client_p->name, parv[1]);
 		ilog(L_SERVER, "Link %s cancelled, servername %s invalid",
@@ -521,7 +521,7 @@ ms_sid(struct Client *client_p, struct Client *source_p, int parc, const char *p
 	   !IsIdChar(parv[3][2]) || parv[3][3] != '\0')
 	{
 		sendto_one(client_p, "ERROR :Invalid SID");
-		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 				     "Link %s cancelled, SID %s invalid",
 				     client_p->name, parv[3]);
 		ilog(L_SERVER, "Link %s cancelled, SID %s invalid",

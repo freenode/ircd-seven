@@ -259,7 +259,7 @@ check_client(struct Client *client_p, struct Client *source_p, const char *usern
 			static char ipaddr[HOSTIPLEN];
 			rb_inet_ntop_sock(&source_p->localClient->ip, ipaddr, sizeof(ipaddr));
 #endif
-			sendto_realops_snomask(SNO_UNAUTH, L_ALL,
+			sendto_realops_snomask(SNO_UNAUTH, L_NETWIDE,
 					"Unauthorised client connection from "
 					"%s!%s%s@%s [%s] on [%s/%u].",
 					source_p->name, IsGotId(source_p) ? "" : "~",
@@ -344,7 +344,7 @@ verify_access(struct Client *client_p, const char *username)
 
 			if(IsConfSpoofNotice(aconf))
 			{
-				sendto_realops_snomask(SNO_GENERAL, L_ALL,
+				sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 						"%s spoofing: %s as %s",
 						client_p->name,
 						show_ip(NULL, client_p) ? client_p->host : aconf->name,
@@ -608,7 +608,7 @@ rehash(int sig)
 {
 	if(sig != 0)
 	{
-		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 				     "Got signal SIGHUP, reloading ircd conf. file");
 	}
 
@@ -650,7 +650,7 @@ rehash_bans(int sig)
 	int i;
 
 	if(sig != 0)
-		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 				"Got signal SIGUSR2, reloading ban confs");
 
 	clear_out_address_conf_bans();
@@ -670,7 +670,7 @@ rehash_bans(int sig)
 
 			ilog(L_MAIN, "Failed reading ban file %s",
 				*banconfs[i].filename);
-			sendto_realops_snomask(SNO_GENERAL, L_ALL,
+			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 					"Can't open %s file bans could be missing!",
 					*banconfs[i].filename);
 		}
@@ -1145,7 +1145,7 @@ read_conf_files(int cold)
 		}
 		else
 		{
-			sendto_realops_snomask(SNO_GENERAL, L_ALL,
+			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 					     "Can't open file '%s' - aborting rehash!", filename);
 			return;
 		}
@@ -1304,7 +1304,7 @@ write_confitem(KlineType type, struct Client *source_p, char *user,
 	{
 		if(EmptyString(oper_reason))
 		{
-			sendto_realops_snomask(SNO_GENERAL, L_ALL,
+			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 					"%s added D-Line for [%s] [%s]",
 					get_oper_name(source_p), host, reason);
 			ilog(L_KLINE, "D %s 0 %s %s",
@@ -1312,7 +1312,7 @@ write_confitem(KlineType type, struct Client *source_p, char *user,
 		}
 		else
 		{
-			sendto_realops_snomask(SNO_GENERAL, L_ALL,
+			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 					"%s added D-Line for [%s] [%s|%s]",
 					get_oper_name(source_p), host, 
 					reason, oper_reason);
@@ -1338,7 +1338,7 @@ write_confitem(KlineType type, struct Client *source_p, char *user,
 
 	if((out = fopen(filename, "a")) == NULL)
 	{
-		sendto_realops_snomask(SNO_GENERAL, L_ALL, "*** Problem opening %s ", filename);
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "*** Problem opening %s ", filename);
 		sendto_one_notice(source_p, ":*** Problem opening file, added temporarily only");
 		return;
 	}
@@ -1367,7 +1367,7 @@ write_confitem(KlineType type, struct Client *source_p, char *user,
 
 	if(fputs(buffer, out) == -1)
 	{
-		sendto_realops_snomask(SNO_GENERAL, L_ALL, "*** Problem writing to %s", filename);
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "*** Problem writing to %s", filename);
 		sendto_one_notice(source_p, ":*** Problem writing to file, added temporarily only");
 		fclose(out);
 		return;
@@ -1429,7 +1429,7 @@ conf_add_class_to_conf(struct ConfItem *aconf)
 	{
 		if(aconf->status == CONF_CLIENT)
 		{
-			sendto_realops_snomask(SNO_GENERAL, L_ALL,
+			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 					     "Warning -- Using default class for missing class \"%s\" in auth{} for %s@%s",
 					     aconf->className, aconf->user, aconf->host);
 		}
@@ -1510,7 +1510,7 @@ yyerror(const char *msg)
 
 	strip_tabs(newlinebuf, linebuf, strlen(linebuf));
 
-	sendto_realops_snomask(SNO_GENERAL, L_ALL, "\"%s\", line %d: %s at '%s'",
+	sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "\"%s\", line %d: %s at '%s'",
 			     conffilebuf, lineno + 1, msg, newlinebuf);
 
 	ilog(L_MAIN, "\"%s\", line %d: %s at '%s'", conffilebuf, lineno + 1, msg, newlinebuf);

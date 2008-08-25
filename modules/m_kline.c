@@ -150,6 +150,15 @@ mo_kline(struct Client *client_p, struct Client *source_p,
 
 	if(target_server != NULL)
 	{
+		if (tkline_time)
+			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
+					"%s is adding a temporary %d min. K-Line for [%s@%s] on %s [%s]",
+					get_oper_name(source_p), tkline_time / 60, user, host, target_server, reason);
+		else
+			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
+					"%s is adding a K-Line for [%s@%s] on %s [%s]",
+					get_oper_name(source_p), user, host, target_server, reason);
+
 		propagate_generic(source_p, "KLINE", target_server, CAP_KLN,
 				"%d %s %s :%s",
 				tkline_time, user, host, reason);
@@ -398,6 +407,9 @@ mo_unkline(struct Client *client_p, struct Client *source_p, int parc, const cha
 				me.name, source_p->name, "remoteban");
 			return 0;
 		}
+
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "%s is removing the K-Line for [%s@%s] on %s",
+				get_oper_name(source_p), user, host, parv[3]);
 
 		propagate_generic(source_p, "UNKLINE", parv[3], CAP_UNKLN,
 				"%s %s", user, host);

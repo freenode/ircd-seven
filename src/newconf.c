@@ -1786,7 +1786,7 @@ conf_report_error(const char *fmt, ...)
 	}
 
 	ierror("\"%s\", line %d: %s", current_file, lineno + 1, msg);
-	sendto_realops_snomask(SNO_GENERAL, L_ALL, "\"%s\", line %d: %s", current_file, lineno + 1, msg);
+	sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "\"%s\", line %d: %s", current_file, lineno + 1, msg);
 }
 
 int
