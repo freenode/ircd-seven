@@ -31,7 +31,7 @@ h_sgo_umode_changed(void *vdata)
 	if (MyConnect(source_p) || !HasSentEob(source_p->servptr))
 		return;
 
-	if (!(data->oldumodes & UMODE_OPER) && IsOper(source_p))
+	if (!(data->oldumodes & (UMODE_OPER|UMODE_HELPER)) && IsAnyOper(source_p))
 		sendto_realops_snomask_from(SNO_GENERAL, L_ALL, source_p->servptr,
 				"%s (%s@%s) is now an operator",
 				source_p->name, source_p->username, source_p->host);
