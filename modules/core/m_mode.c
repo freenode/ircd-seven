@@ -212,7 +212,7 @@ ms_bmask(struct Client *client_p, struct Client *source_p, int parc, const char 
 	static char parabuf[BUFSIZE];
 	struct Channel *chptr;
 	rb_dlink_list *banlist;
-	const char *s;
+	char *s, *forward;
 	char *t;
 	char *mbuf;
 	char *pbuf;
@@ -307,7 +307,14 @@ ms_bmask(struct Client *client_p, struct Client *source_p, int parc, const char 
 		if(tlen > MODEBUFLEN)
 			break;
 
-		if(add_id(fakesource_p, chptr, s, banlist, mode_type))
+		if((forward = strchr(s+1, '$')) != NULL)
+		{
+			*forward++ = '\0';
+			if(*forward == '\0')
+				forward = NULL;
+		}
+
+		if(add_id(fakesource_p, chptr, s, banlist, forward, mode_type))
 		{
 			/* this new one wont fit.. */
 			if(mlen + MAXMODEPARAMS + plen + tlen > BUFSIZE - 5 ||

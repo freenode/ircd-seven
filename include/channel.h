@@ -94,6 +94,7 @@ struct membership
 struct Ban
 {
 	char *banstr;
+	char *forward;
 	char *who;
 	time_t when;
 	rb_dlink_node node;
@@ -207,7 +208,7 @@ void init_channels(void);
 
 struct Channel *allocate_channel(const char *chname);
 void free_channel(struct Channel *chptr);
-struct Ban *allocate_ban(const char *, const char *);
+struct Ban *allocate_ban(const char *, const char *, const char *);
 void free_ban(struct Ban *bptr);
 
 
@@ -260,9 +261,9 @@ extern void set_channel_mode(struct Client *client_p, struct Client *source_p,
 extern struct ChannelMode chmode_table[256];
 
 extern int add_id(struct Client *source_p, struct Channel *chptr, const char *banid,
-       rb_dlink_list * list, long mode_type);
+       const char *forward, rb_dlink_list * list, long mode_type);
 
-extern int del_id(struct Channel *chptr, const char *banid, rb_dlink_list * list, long mode_type);
+extern struct Ban * del_id(struct Channel *chptr, const char *banid, rb_dlink_list * list, long mode_type);
 
 extern ExtbanFunc extban_table[256];
 
