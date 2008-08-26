@@ -817,6 +817,41 @@ chm_ban(struct Client *source_p, struct Channel *chptr,
 				return;
 		}
 
+		if (forward)
+		{
+			struct Channel *targptr;
+			struct membership *msptr;
+
+			/* Do the whole lot of forward checks for the target channel. */
+			if(!check_channel_name(forward) ||
+				(MyClient(source_p) && strlen(forward) > LOC_CHANNELLEN || hash_find_resv(forward)))
+			{
+				sendto_one_numeric(source_p, ERR_BADCHANNAME, form_str(ERR_BADCHANNAME), forward);
+				return;
+			}
+			if(chptr->chname[0] == '#' && forward[0] == '&')
+			{
+				sendto_one_numeric(source_p, ERR_BADCHANNAME, form_str(ERR_BADCHANNAME), forward);
+				return;
+			}
+			if(MyClient(source_p) && (targptr = find_channel(forward)) == NULL)
+			{
+				sendto_one_numeric(source_p, ERR_NOSUCHCHANNEL,
+						   form_str(ERR_NOSUCHCHANNEL), forward);
+				return;
+			}
+			if(MyClient(source_p) && !(targptr->mode.mode & MODE_FREETARGET))
+			{
+				if((msptr = find_channel_membership(targptr, source_p)) == NULL ||
+					get_channel_access(source_p, msptr) != CHFL_CHANOP)
+				{
+					sendto_one(source_p, form_str(ERR_CHANOPRIVSNEEDED),
+						   me.name, source_p->name, targptr->chname);
+					return;
+				}
+			}
+		}
+
 		/* dont allow local clients to overflow the banlist, dont
 		 * let remote servers set duplicate bans
 		 */
