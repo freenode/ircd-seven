@@ -343,11 +343,15 @@ single_whois(struct Client *source_p, struct Client *target_p, int operspy)
 
 	if(MyClient(target_p))
 	{
-		if (IsDynSpoof(target_p) && (IsOper(source_p) || source_p == target_p))
+		if (IsOper(source_p) || source_p == target_p)
 		{
 			/* trick here: show a nonoper their own IP if
 			 * dynamic spoofed but not if auth{} spoofed
 			 * -- jilles */
+			/* For seven, always show the IP regardless
+			 * of type of spoof, if they should be able
+			 * to see it.
+			 * --spb */
 			ClearDynSpoof(target_p);
 			sendto_one_numeric(source_p, RPL_WHOISHOST,
 					   form_str(RPL_WHOISHOST),
