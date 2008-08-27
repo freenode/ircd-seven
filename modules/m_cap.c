@@ -68,6 +68,7 @@ static struct clicap
 	int flags;
 	int namelen;
 } clicap_list[] = {
+	_CLICAP("identify-msg", CLICAP_IDENTIFY_MSG, 0, 0),
 	_CLICAP("multi-prefix",	CLICAP_MULTI_PREFIX, 0, 0),
 	_CLICAP("sasl", CLICAP_SASL, 0, 0)
 };
