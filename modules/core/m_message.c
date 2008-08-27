@@ -753,13 +753,17 @@ msg_client(int p_or_n, const char *command,
 			 * we dont give warnings.. we then check if theyre opered 
 			 * (to avoid flood warnings), lastly if theyre our client
 			 * and flooding    -- fl */
-			if(!do_floodcount ||
-			   !flood_attack_client(p_or_n, source_p, target_p))
-				sendto_anywhere(target_p, source_p, command, ":%s", text);
+			if(!do_floodcount || !flood_attack_client(p_or_n, source_p, target_p))
+			{
+				if(IsCapable(target_p, CLICAP_IDENTIFY_MSG))
+					sendto_anywhere(target_p, source_p, command, ":%c%s",
+							EmptyString(source_p->user->suser) ? '-' : '+', text);
+				else
+					sendto_anywhere(target_p, source_p, command, ":%s", text);
+			}
 		}
 	}
-	else if(!do_floodcount ||
-		!flood_attack_client(p_or_n, source_p, target_p))
+	else if(!do_floodcount || !flood_attack_client(p_or_n, source_p, target_p))
 		sendto_anywhere(target_p, source_p, command, ":%s", text);
 
 	return;
