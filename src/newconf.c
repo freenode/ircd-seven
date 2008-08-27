@@ -2184,7 +2184,6 @@ static struct ConfEntry conf_channel_table[] =
 	{ "use_except",		CF_YESNO, NULL, 0, &ConfigChannel.use_except		},
 	{ "use_invex",		CF_YESNO, NULL, 0, &ConfigChannel.use_invex		},
 	{ "use_knock",		CF_YESNO, NULL, 0, &ConfigChannel.use_knock		},
-	{ "use_forward",	CF_YESNO, NULL, 0, &ConfigChannel.use_forward		},
 	{ "\0", 		0, 	  NULL, 0, NULL }
 };
 

@@ -1142,7 +1142,7 @@ channel_modes(struct Channel *chptr, struct Client *client_p)
 					   chptr->mode.join_time);
 	}
 
-	if(*chptr->mode.forward && (ConfigChannel.use_forward || !IsClient(client_p)))
+	if(*chptr->mode.forward)
 	{
 		*mbuf++ = 'f';
 

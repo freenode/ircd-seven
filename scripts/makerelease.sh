@@ -8,7 +8,7 @@ else
 fi
 
 if [ "x$2" = "x" ]; then
-    COMMIT=master
+    COMMIT=HEAD
 else
     COMMIT=$2
 fi
