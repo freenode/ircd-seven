@@ -94,6 +94,7 @@ struct membership
 struct Ban
 {
 	char *banstr;
+	char *forward;
 	char *who;
 	time_t when;
 	rb_dlink_node node;
@@ -207,7 +208,7 @@ void init_channels(void);
 
 struct Channel *allocate_channel(const char *chname);
 void free_channel(struct Channel *chptr);
-struct Ban *allocate_ban(const char *, const char *);
+struct Ban *allocate_ban(const char *, const char *, const char *);
 void free_ban(struct Ban *bptr);
 
 
@@ -216,10 +217,10 @@ extern void destroy_channel(struct Channel *);
 extern int can_send(struct Channel *chptr, struct Client *who, 
 		    struct membership *);
 extern int is_banned(struct Channel *chptr, struct Client *who,
-		     struct membership *msptr, const char *, const char *);
+		     struct membership *msptr, const char *, const char *, const char **);
 extern int is_quieted(struct Channel *chptr, struct Client *who,
 		     struct membership *msptr, const char *, const char *);
-extern int can_join(struct Client *source_p, struct Channel *chptr, char *key);
+extern int can_join(struct Client *source_p, struct Channel *chptr, char *key, const char **forward);
 
 extern struct membership *find_channel_membership(struct Channel *, struct Client *);
 extern const char *find_channel_status(struct membership *msptr, int combine);
@@ -260,9 +261,9 @@ extern void set_channel_mode(struct Client *client_p, struct Client *source_p,
 extern struct ChannelMode chmode_table[256];
 
 extern int add_id(struct Client *source_p, struct Channel *chptr, const char *banid,
-       rb_dlink_list * list, long mode_type);
+       const char *forward, rb_dlink_list * list, long mode_type);
 
-extern int del_id(struct Channel *chptr, const char *banid, rb_dlink_list * list, long mode_type);
+extern struct Ban * del_id(struct Channel *chptr, const char *banid, rb_dlink_list * list, long mode_type);
 
 extern ExtbanFunc extban_table[256];
 

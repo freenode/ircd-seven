@@ -64,6 +64,7 @@ static int mode_count;
 static int mode_limit;
 static int mode_limit_simple;
 static int mask_pos;
+static int removed_mask_pos;
 
 char cflagsbuf[256];
 char cflagsmyinfo[256];
@@ -117,14 +118,6 @@ construct_noparam_modes(void)
                 
 		switch (chmode_flags[i])
 		{
-		    case MODE_EXLIMIT:
-		    case MODE_DISFORWARD:
-			if(ConfigChannel.use_forward)
-			{
-			    *ptr++ = (char) i;
-			}
-			
-			break;
 		    case MODE_REGONLY:
 			if(rb_dlink_list_length(&service_list))
 			{
@@ -188,7 +181,7 @@ get_channel_access(struct Client *source_p, struct membership *msptr)
  * side effects - given id is added to the appropriate list
  */
 int
-add_id(struct Client *source_p, struct Channel *chptr, const char *banid,
+add_id(struct Client *source_p, struct Channel *chptr, const char *banid, const char *forward,
        rb_dlink_list * list, long mode_type)
 {
 	struct Ban *actualBan;
@@ -232,7 +225,7 @@ add_id(struct Client *source_p, struct Channel *chptr, const char *banid,
 	else
 		rb_strlcpy(who, source_p->name, sizeof(who));
 
-	actualBan = allocate_ban(realban, who);
+	actualBan = allocate_ban(realban, who, forward);
 	actualBan->when = rb_current_time();
 
 	rb_dlinkAdd(actualBan, &actualBan->node, list);
@@ -247,17 +240,17 @@ add_id(struct Client *source_p, struct Channel *chptr, const char *banid,
 /* del_id()
  *
  * inputs	- channel, id to remove, type
- * outputs	- 0 on failure, 1 on success
- * side effects - given id is removed from the appropriate list
+ * outputs	- pointer to ban that was removed, if any
+ * side effects - given id is removed from the appropriate list and returned
  */
-int
+struct Ban *
 del_id(struct Channel *chptr, const char *banid, rb_dlink_list * list, long mode_type)
 {
 	rb_dlink_node *ptr;
 	struct Ban *banptr;
 
 	if(EmptyString(banid))
-		return 0;
+		return NULL;
 
 	RB_DLINK_FOREACH(ptr, list->head)
 	{
@@ -266,17 +259,16 @@ del_id(struct Channel *chptr, const char *banid, rb_dlink_list * list, long mode
 		if(irccmp(banid, banptr->banstr) == 0)
 		{
 			rb_dlinkDelete(&banptr->node, list);
-			free_ban(banptr);
 
 			/* invalidate the can_send() cache */
 			if(mode_type == CHFL_BAN || mode_type == CHFL_QUIET || mode_type == CHFL_EXCEPTION)
 				chptr->bants++;
 
-			return 1;
+			return banptr;
 		}
 	}
 
-	return 0;
+	return NULL;
 }
 
 /* check_string()
@@ -320,10 +312,11 @@ pretty_mask(const char *idmask)
 {
 	static char mask_buf[BUFSIZE];
 	int old_mask_pos;
-	char *nick, *user, *host;
+	char *nick, *user, *host, *forward = NULL;
 	char splat[] = "*";
-	char *t, *at, *ex;
-	char ne = 0, ue = 0, he = 0;	/* save values at nick[NICKLEN], et all */
+	char *t, *at, *ex, *ex2;
+	char ne = 0, ue = 0, he = 0, fe = 0;	/* save values at nick[NICKLEN], et all */
+	char e2 = 0;				/* save value that delimits forward channel */
 	char *mask;
 
 	mask = LOCAL_COPY(idmask);
@@ -349,7 +342,7 @@ pretty_mask(const char *idmask)
 		return mask_buf + old_mask_pos;
 	}
 
-	at = ex = NULL;
+	at = ex = ex2 = NULL;
 	if((t = strchr(mask, '@')) != NULL)
 	{
 		at = t;
@@ -371,6 +364,15 @@ pretty_mask(const char *idmask)
 			if(*mask != '\0')
 				user = mask;
 		}
+
+		if((t = strchr(host, '!')) != NULL || (t = strchr(host, '$')) != NULL)
+		{
+			ex2 = t;
+			e2 = *t;
+			*t++= '\0';
+			if (*t != '\0')
+				forward = t;
+		}
 	}
 	else if((t = strchr(mask, '!')) != NULL)
 	{
@@ -381,7 +383,7 @@ pretty_mask(const char *idmask)
 		if(*t != '\0')
 			user = t;
 	}
-	else if(strchr(mask, '.') != NULL || strchr(mask, ':') != NULL || strchr(mask, '/') != NULL)
+	else if(strchr(mask, '.') != NULL || strchr(mask, ':') != NULL)
 	{
 		if(*mask != '\0')
 			host = mask;
@@ -408,20 +410,32 @@ pretty_mask(const char *idmask)
 		he = host[HOSTLEN];
 		host[HOSTLEN] = '\0';
 	}
+	if(forward && strlen(forward) > CHANNELLEN)
+	{
+		fe = forward[CHANNELLEN];
+		forward[CHANNELLEN] = '\0';
+	}
 
-	mask_pos += rb_sprintf(mask_buf + mask_pos, "%s!%s@%s", nick, user, host) + 1;
+	if (forward)
+		mask_pos += rb_sprintf(mask_buf + mask_pos, "%s!%s@%s$%s", nick, user, host, forward) + 1;
+	else
+		mask_pos += rb_sprintf(mask_buf + mask_pos, "%s!%s@%s", nick, user, host) + 1;
 
 	/* restore mask, since we may need to use it again later */
 	if(at)
 		*at = '@';
 	if(ex)
 		*ex = '!';
+	if(ex2)
+		*ex2 = e2;
 	if(ne)
 		nick[NICKLEN - 1] = ne;
 	if(ue)
 		user[USERLEN] = ue;
 	if(he)
 		host[HOSTLEN] = he;
+	if(fe)
+		forward[CHANNELLEN] = fe;
 
 	return mask_buf + old_mask_pos;
 }
@@ -508,11 +522,6 @@ chm_simple(struct Client *source_p, struct Channel *chptr,
 	/* setting + */
 	if((dir == MODE_ADD) && !(chptr->mode.mode & mode_type))
 	{
-		/* if +f is disabled, ignore an attempt to set +QF locally */
-		if(!ConfigChannel.use_forward && MyClient(source_p) &&
-		   (c == 'Q' || c == 'F'))
-			return;
-
 		chptr->mode.mode |= mode_type;
 
 		mode_changes[mode_count].letter = c;
@@ -627,8 +636,9 @@ chm_ban(struct Client *source_p, struct Channel *chptr,
 	int alevel, int parc, int *parn,
 	const char **parv, int *errors, int dir, char c, long mode_type)
 {
-	const char *mask;
-	const char *raw_mask;
+	char *mask;
+	char *raw_mask;
+	char *forward;
 	rb_dlink_list *list;
 	rb_dlink_node *ptr;
 	struct Ban *banptr;
@@ -719,10 +729,16 @@ chm_ban(struct Client *source_p, struct Channel *chptr,
 
 		RB_DLINK_FOREACH(ptr, list->head)
 		{
+			char buf[BANLEN];
 			banptr = ptr->data;
+			if(banptr->forward)
+				rb_snprintf(buf, sizeof(buf), "%s$%s", banptr->banstr, banptr->forward);
+			else
+				rb_strlcpy(buf, banptr->banstr, sizeof(buf));
+
 			sendto_one(source_p, form_str(rpl_list),
 				   me.name, source_p->name, chptr->chname,
-				   banptr->banstr, banptr->who, banptr->when);
+				   buf, banptr->who, banptr->when);
 		}
 		if (mode_type == CHFL_QUIET)
 			sendto_one(source_p, ":%s %d %s %s :End of Channel Quiet List", me.name, rpl_endlist, source_p->name, chptr->chname);
@@ -760,6 +776,17 @@ chm_ban(struct Client *source_p, struct Channel *chptr,
 	else
 		mask = pretty_mask(raw_mask);
 
+	/* Look for a $ after the first character.
+	 * As the first character, it marks an extban; afterwards
+	 * it delimits a forward channel.
+	 */
+	if ((forward = strchr(mask+1, '$')) != NULL)
+	{
+		*forward++ = '\0';
+		if (*forward == '\0')
+			forward = NULL;
+	}
+
 	/* we'd have problems parsing this, hyb6 does it too
 	 * also make sure it will always fit on a line with channel
 	 * name etc.
@@ -777,11 +804,49 @@ chm_ban(struct Client *source_p, struct Channel *chptr,
 				return;
 		}
 
+		if (forward)
+		{
+			struct Channel *targptr;
+			struct membership *msptr;
+
+			/* Do the whole lot of forward checks for the target channel. */
+			if(!check_channel_name(forward) ||
+				(MyClient(source_p) && strlen(forward) > LOC_CHANNELLEN || hash_find_resv(forward)))
+			{
+				sendto_one_numeric(source_p, ERR_BADCHANNAME, form_str(ERR_BADCHANNAME), forward);
+				return;
+			}
+			if(chptr->chname[0] == '#' && forward[0] == '&')
+			{
+				sendto_one_numeric(source_p, ERR_BADCHANNAME, form_str(ERR_BADCHANNAME), forward);
+				return;
+			}
+			if(MyClient(source_p) && (targptr = find_channel(forward)) == NULL)
+			{
+				sendto_one_numeric(source_p, ERR_NOSUCHCHANNEL,
+						   form_str(ERR_NOSUCHCHANNEL), forward);
+				return;
+			}
+			if(MyClient(source_p) && !(targptr->mode.mode & MODE_FREETARGET))
+			{
+				if((msptr = find_channel_membership(targptr, source_p)) == NULL ||
+					get_channel_access(source_p, msptr) != CHFL_CHANOP)
+				{
+					sendto_one(source_p, form_str(ERR_CHANOPRIVSNEEDED),
+						   me.name, source_p->name, targptr->chname);
+					return;
+				}
+			}
+		}
+
 		/* dont allow local clients to overflow the banlist, dont
 		 * let remote servers set duplicate bans
 		 */
-		if(!add_id(source_p, chptr, mask, list, mode_type))
+		if(!add_id(source_p, chptr, mask, forward, list, mode_type))
 			return;
+
+		if(forward)
+			forward[-1]= '$';
 
 		mode_changes[mode_count].letter = c;
 		mode_changes[mode_count].dir = MODE_ADD;
@@ -793,11 +858,26 @@ chm_ban(struct Client *source_p, struct Channel *chptr,
 	}
 	else if(dir == MODE_DEL)
 	{
-		if(del_id(chptr, mask, list, mode_type) == 0)
+		struct Ban *removed;
+		static char buf[BANLEN * MAXMODEPARAMS];
+		int old_removed_mask_pos = removed_mask_pos;
+
+		if((removed = del_id(chptr, mask, list, mode_type)) == NULL)
 		{
 			/* mask isn't a valid ban, check raw_mask */
-			if(del_id(chptr, raw_mask, list, mode_type))
+			if((removed = del_id(chptr, raw_mask, list, mode_type)) != NULL)
 				mask = raw_mask;
+		}
+
+		if(removed && removed->forward)
+			removed_mask_pos += rb_snprintf(buf, sizeof(buf), "%s$%s", removed->banstr, removed->forward);
+		else
+			removed_mask_pos += rb_strlcpy(buf, mask, sizeof(buf));
+
+		if(removed)
+		{
+			free_ban(removed);
+			removed = NULL;
 		}
 
 		mode_changes[mode_count].letter = c;
@@ -806,7 +886,7 @@ chm_ban(struct Client *source_p, struct Channel *chptr,
 		mode_changes[mode_count].nocaps = 0;
 		mode_changes[mode_count].mems = mems;
 		mode_changes[mode_count].id = NULL;
-		mode_changes[mode_count++].arg = mask;
+		mode_changes[mode_count++].arg = buf + old_removed_mask_pos;
 	}
 }
 
@@ -1108,11 +1188,6 @@ chm_forward(struct Client *source_p, struct Channel *chptr,
 	struct membership *msptr;
 	const char *forward;
 
-	/* if +f is disabled, ignore local attempts to set it */
-	if(!ConfigChannel.use_forward && MyClient(source_p) &&
-	   (dir == MODE_ADD) && (parc > *parn))
-		return;
-
 	if(dir == MODE_QUERY || (dir == MODE_ADD && parc <= *parn))
 	{
 		if (!(*errors & SM_ERR_RPL_F))
@@ -1191,7 +1266,7 @@ chm_forward(struct Client *source_p, struct Channel *chptr,
 		mode_changes[mode_count].dir = MODE_ADD;
 		mode_changes[mode_count].caps = 0;
 		mode_changes[mode_count].nocaps = 0;
-		mode_changes[mode_count].mems = ConfigChannel.use_forward ? ALL_MEMBERS : ONLY_SERVERS;
+		mode_changes[mode_count].mems = ALL_MEMBERS;
 		mode_changes[mode_count].id = NULL;
 		mode_changes[mode_count++].arg = forward;
 	}
@@ -1629,6 +1704,7 @@ set_channel_mode(struct Client *client_p, struct Client *source_p,
 	struct Client *fakesource_p;
 
 	mask_pos = 0;
+	removed_mask_pos = 0;
 	mode_count = 0;
 	mode_limit = 0;
 	mode_limit_simple = 0;

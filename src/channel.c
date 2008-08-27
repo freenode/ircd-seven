@@ -100,12 +100,13 @@ free_channel(struct Channel *chptr)
 }
 
 struct Ban *
-allocate_ban(const char *banstr, const char *who)
+allocate_ban(const char *banstr, const char *who, const char *forward)
 {
 	struct Ban *bptr;
 	bptr = rb_bh_alloc(ban_heap);
 	bptr->banstr = rb_strdup(banstr);
 	bptr->who = rb_strdup(who);
+	bptr->forward = forward ? rb_strdup(forward) : NULL;
 
 	return (bptr);
 }
@@ -115,6 +116,7 @@ free_ban(struct Ban *bptr)
 {
 	rb_free(bptr->banstr);
 	rb_free(bptr->who);
+	rb_free(bptr->forward);
 	rb_bh_free(ban_heap, bptr);
 }
 
@@ -496,7 +498,7 @@ del_invite(struct Channel *chptr, struct Client *who)
  */
 int
 is_banned(struct Channel *chptr, struct Client *who, struct membership *msptr,
-	  const char *s, const char *s2)
+	  const char *s, const char *s2, const char **forward)
 {
 	char src_host[NICKLEN + USERLEN + HOSTLEN + 6];
 	char src_iphost[NICKLEN + USERLEN + HOSTLEN + 6];
@@ -589,6 +591,9 @@ is_banned(struct Channel *chptr, struct Client *who, struct membership *msptr,
 			return 0;
 		}
 	}
+
+	if (actualBan && actualBan->forward && forward)
+		*forward = actualBan->forward;
 
 	return ((actualBan ? CHFL_BAN : 0));
 }
@@ -702,11 +707,11 @@ is_quieted(struct Channel *chptr, struct Client *who, struct membership *msptr,
 /* can_join()
  *
  * input	- client to check, channel to check for, key
- * output	- reason for not being able to join, else 0
+ * output	- reason for not being able to join, else 0, channel name to forward to
  * side effects -
  */
 int
-can_join(struct Client *source_p, struct Channel *chptr, char *key)
+can_join(struct Client *source_p, struct Channel *chptr, char *key, const char **forward)
 {
 	rb_dlink_node *invite = NULL;
 	rb_dlink_node *ptr;
@@ -742,8 +747,15 @@ can_join(struct Client *source_p, struct Channel *chptr, char *key)
 		}
 	}
 
-	if((is_banned(chptr, source_p, NULL, src_host, src_iphost)) == CHFL_BAN)
+	if((is_banned(chptr, source_p, NULL, src_host, src_iphost, forward)) == CHFL_BAN)
 		return (ERR_BANNEDFROMCHAN);
+
+	if(*chptr->mode.key && (EmptyString(key) || irccmp(chptr->mode.key, key)))
+		return (ERR_BADCHANNELKEY);
+
+	/* All checks from this point on will forward... */
+	if(forward)
+		*forward = chptr->mode.forward;
 
 	if(chptr->mode.mode & MODE_INVITEONLY)
 	{
@@ -762,7 +774,7 @@ can_join(struct Client *source_p, struct Channel *chptr, char *key)
 				if(match(invex->banstr, src_host)
 				   || match(invex->banstr, src_iphost)
 				   || match_cidr(invex->banstr, src_iphost)
-			   	   || match_extban(invex->banstr, source_p, chptr, CHFL_INVEX)
+				   || match_extban(invex->banstr, source_p, chptr, CHFL_INVEX)
 				   || (use_althost && match(invex->banstr, src_althost)))
 					break;
 			}
@@ -770,9 +782,6 @@ can_join(struct Client *source_p, struct Channel *chptr, char *key)
 				return (ERR_INVITEONLYCHAN);
 		}
 	}
-
-	if(*chptr->mode.key && (EmptyString(key) || irccmp(chptr->mode.key, key)))
-		return (ERR_BADCHANNELKEY);
 
 	if(chptr->mode.limit &&
 	   rb_dlink_list_length(&chptr->members) >= (unsigned long) chptr->mode.limit)
@@ -859,7 +868,7 @@ can_send(struct Channel *chptr, struct Client *source_p, struct membership *mspt
 			if(can_send_banned(msptr))
 				return CAN_SEND_NO;
 		}
-		else if(is_banned(chptr, source_p, msptr, NULL, NULL) == CHFL_BAN
+		else if(is_banned(chptr, source_p, msptr, NULL, NULL, NULL) == CHFL_BAN
 			|| is_quieted(chptr, source_p, msptr, NULL, NULL) == CHFL_BAN)
 			return CAN_SEND_NO;
 	}
@@ -898,7 +907,7 @@ find_bannickchange_channel(struct Client *client_p)
 			if (can_send_banned(msptr))
 				return chptr;
 		}
-		else if (is_banned(chptr, client_p, msptr, src_host, src_iphost) == CHFL_BAN
+		else if (is_banned(chptr, client_p, msptr, src_host, src_iphost, NULL) == CHFL_BAN
 			|| is_quieted(chptr, client_p, msptr, src_host, src_iphost) == CHFL_BAN)
 			return chptr;
 	}
@@ -1133,7 +1142,7 @@ channel_modes(struct Channel *chptr, struct Client *client_p)
 					   chptr->mode.join_time);
 	}
 
-	if(*chptr->mode.forward && (ConfigChannel.use_forward || !IsClient(client_p)))
+	if(*chptr->mode.forward)
 	{
 		*mbuf++ = 'f';
 
