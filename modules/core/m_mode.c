@@ -314,7 +314,7 @@ ms_bmask(struct Client *client_p, struct Client *source_p, int parc, const char 
 				forward = NULL;
 		}
 
-		if(add_id(fakesource_p, chptr, s, banlist, forward, mode_type))
+		if(add_id(fakesource_p, chptr, s, forward, banlist, mode_type))
 		{
 			/* this new one wont fit.. */
 			if(mlen + MAXMODEPARAMS + plen + tlen > BUFSIZE - 5 ||
