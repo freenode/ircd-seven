@@ -1684,7 +1684,7 @@ show_ip(struct Client *source_p, struct Client *target_p)
 		 * to local opers.
 		 */
 		if(!ConfigFileEntry.hide_spoof_ips &&
-		   (source_p == NULL || MyOper(source_p)))
+		   (source_p == NULL || IsOper(source_p)))
 			return 1;
 		return 0;
 	}
@@ -1699,7 +1699,7 @@ show_ip_conf(struct ConfItem *aconf, struct Client *source_p)
 {
 	if(IsConfDoSpoofIp(aconf))
 	{
-		if(!ConfigFileEntry.hide_spoof_ips && MyOper(source_p))
+		if(!ConfigFileEntry.hide_spoof_ips && IsOper(source_p))
 			return 1;
 
 		return 0;
