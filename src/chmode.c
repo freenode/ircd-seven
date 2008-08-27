@@ -809,6 +809,10 @@ chm_ban(struct Client *source_p, struct Channel *chptr,
 			struct Channel *targptr;
 			struct membership *msptr;
 
+			/* Forwards only make sense for bans. */
+			if(mode_type != CHFL_BAN)
+				return;
+
 			/* Do the whole lot of forward checks for the target channel. */
 			if(!check_channel_name(forward) ||
 				(MyClient(source_p) && strlen(forward) > LOC_CHANNELLEN || hash_find_resv(forward)))
