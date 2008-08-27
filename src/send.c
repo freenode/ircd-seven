@@ -467,6 +467,7 @@ sendto_channel_flags(struct Client *one, int type, struct Client *source_p,
 	static char buf[BUFSIZE];
 	va_list args;
 	buf_head_t rb_linebuf_local;
+	buf_head_t rb_linebuf_local_id;
 	buf_head_t rb_linebuf_id;
 	struct Client *target_p;
 	struct membership *msptr;
@@ -474,6 +475,7 @@ sendto_channel_flags(struct Client *one, int type, struct Client *source_p,
 	rb_dlink_node *next_ptr;
 
 	rb_linebuf_newbuf(&rb_linebuf_local);
+	rb_linebuf_newbuf(&rb_linebuf_local_id);
 	rb_linebuf_newbuf(&rb_linebuf_id);
 
 	current_serial++;
@@ -483,13 +485,24 @@ sendto_channel_flags(struct Client *one, int type, struct Client *source_p,
 	va_end(args);
 
 	if(IsServer(source_p))
+	{
 		rb_linebuf_putmsg(&rb_linebuf_local, NULL, NULL,
 			       ":%s %s %s :%s", source_p->name, command, target, buf);
+		rb_linebuf_putmsg(&rb_linebuf_local_id, NULL, NULL,
+			       ":%s %s %s :%s", source_p->name, command, target, buf);
+	}
 	else
+	{
 		rb_linebuf_putmsg(&rb_linebuf_local, NULL, NULL,
 			       ":%s!%s@%s %s %s :%s",
 			       source_p->name, source_p->username, 
 			       source_p->host, command, target, buf);
+		rb_linebuf_putmsg(&rb_linebuf_local_id, NULL, NULL,
+			       ":%s!%s@%s %s %s :%c%s",
+			       source_p->name, source_p->username, 
+			       source_p->host, command, target,
+			       EmptyString(source_p->user->suser) ? '-' : '+', buf);
+	}
 
 	rb_linebuf_putmsg(&rb_linebuf_id, NULL, NULL, ":%s %s %s %s", use_id(source_p), command, target, buf);
 
@@ -522,10 +535,12 @@ sendto_channel_flags(struct Client *one, int type, struct Client *source_p,
 			}
 		}
 		else
-			_send_linebuf(target_p, &rb_linebuf_local);
+			_send_linebuf(target_p,
+				IsCapable(target_p, CLICAP_IDENTIFY_MSG) ? &rb_linebuf_local_id : &rb_linebuf_local);
 	}
 
 	rb_linebuf_donebuf(&rb_linebuf_local);
+	rb_linebuf_donebuf(&rb_linebuf_local_id);
 	rb_linebuf_donebuf(&rb_linebuf_id);
 }
 
