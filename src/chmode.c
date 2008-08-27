@@ -946,7 +946,7 @@ chm_op(struct Client *source_p, struct Channel *chptr,
 
 	if(dir == MODE_ADD)
 	{
-		if(targ_p == source_p)
+		if(targ_p == source_p && !IsOverride(source_p))
 			return;
 
 		mode_changes[mode_count].letter = c;
