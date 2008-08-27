@@ -473,7 +473,7 @@ msg_channel(int p_or_n, const char *command,
 		   !flood_attack_channel(p_or_n, source_p, chptr, chptr->chname))
 		{
 			sendto_channel_flags(client_p, ALL_MEMBERS, source_p, chptr,
-					     "%s %s :%s", command, chptr->chname, text);
+					     command, chptr->chname, "%s", text);
 		}
 	}
 	else if(chptr->mode.mode & MODE_OPMODERATE &&
@@ -485,7 +485,7 @@ msg_channel(int p_or_n, const char *command,
 		if(!flood_attack_channel(p_or_n, source_p, chptr, chptr->chname))
 		{
 			sendto_channel_flags(client_p, ONLY_CHANOPS, source_p, chptr,
-					     "%s %s :%s", command, chptr->chname, text);
+					     command, chptr->chname, "%s", text);
 		}
 	}
 	else
@@ -516,6 +516,7 @@ msg_channel_flags(int p_or_n, const char *command, struct Client *client_p,
 {
 	int type;
 	char c;
+	char target[CHANNELLEN+2];
 
 	if(flags & CHFL_VOICE)
 	{
@@ -528,6 +529,9 @@ msg_channel_flags(int p_or_n, const char *command, struct Client *client_p,
 		c = '@';
 	}
 
+	target[0] = c;
+	rb_strlcpy(target+1, chptr->chname, sizeof(target)-1);
+
 	if(MyClient(source_p))
 	{
 		/* idletime shouldnt be reset by notice --fl */
@@ -535,8 +539,7 @@ msg_channel_flags(int p_or_n, const char *command, struct Client *client_p,
 			source_p->localClient->last = rb_current_time();
 	}
 
-	sendto_channel_flags(client_p, type, source_p, chptr, "%s %c%s :%s",
-			     command, c, chptr->chname, text);
+	sendto_channel_flags(client_p, type, source_p, chptr, command, target, "%s", text);
 }
 
 #define PREV_FREE_TARGET(x) ((FREE_TARGET(x) == 0) ? 9 : FREE_TARGET(x) - 1)

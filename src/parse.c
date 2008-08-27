@@ -657,8 +657,7 @@ do_numeric(char numeric[], struct Client *client_p, struct Client *source_p, int
 	}
 	else if((chptr = find_channel(parv[1])) != NULL)
 		sendto_channel_flags(client_p, ALL_MEMBERS, source_p, chptr,
-				     "%s %s%s",
-				     numeric, chptr->chname, buffer);
+				     numeric, chptr->chname, "%s", buffer);
 }
 
 static void do_alias(struct alias_entry *aptr, struct Client *source_p, char *text)

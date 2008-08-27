@@ -462,7 +462,7 @@ sendto_server(struct Client *one, struct Channel *chptr, unsigned long caps,
  */
 void
 sendto_channel_flags(struct Client *one, int type, struct Client *source_p,
-		     struct Channel *chptr, const char *pattern, ...)
+		     struct Channel *chptr, const char *command, const char *target, const char *pattern, ...)
 {
 	static char buf[BUFSIZE];
 	va_list args;
@@ -484,14 +484,14 @@ sendto_channel_flags(struct Client *one, int type, struct Client *source_p,
 
 	if(IsServer(source_p))
 		rb_linebuf_putmsg(&rb_linebuf_local, NULL, NULL,
-			       ":%s %s", source_p->name, buf);
+			       ":%s %s %s :%s", source_p->name, command, target, buf);
 	else
 		rb_linebuf_putmsg(&rb_linebuf_local, NULL, NULL,
-			       ":%s!%s@%s %s",
+			       ":%s!%s@%s %s %s :%s",
 			       source_p->name, source_p->username, 
-			       source_p->host, buf);
+			       source_p->host, command, target, buf);
 
-	rb_linebuf_putmsg(&rb_linebuf_id, NULL, NULL, ":%s %s", use_id(source_p), buf);
+	rb_linebuf_putmsg(&rb_linebuf_id, NULL, NULL, ":%s %s %s %s", use_id(source_p), command, target, buf);
 
 	RB_DLINK_FOREACH_SAFE(ptr, next_ptr, chptr->members.head)
 	{
