@@ -504,7 +504,7 @@ sendto_channel_flags(struct Client *one, int type, struct Client *source_p,
 			       EmptyString(source_p->user->suser) ? '-' : '+', buf);
 	}
 
-	rb_linebuf_putmsg(&rb_linebuf_id, NULL, NULL, ":%s %s %s %s", use_id(source_p), command, target, buf);
+	rb_linebuf_putmsg(&rb_linebuf_id, NULL, NULL, ":%s %s %s :%s", use_id(source_p), command, target, buf);
 
 	RB_DLINK_FOREACH_SAFE(ptr, next_ptr, chptr->members.head)
 	{
