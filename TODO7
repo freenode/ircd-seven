@@ -12,7 +12,7 @@
 [x] remote mod* commands
 [x] show privs in whois
 [x] / in spoofs
-[ ] forwarding bans, plus translation
+[x] forwarding bans, plus translation
 [x] make umode +i do as hyperion
 [x] dehelper
 [x] PASS user:pass support
