@@ -57,6 +57,7 @@ SRCS =                          \
   m_extendchans.c		\
   m_findforwards.c		\
   m_identify.c			\
+  m_listenoff.c			\
   m_mkpasswd.c                  \
   m_ojoin.c			\
   m_olist.c			\
