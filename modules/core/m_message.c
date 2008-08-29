@@ -924,7 +924,6 @@ handle_special(int p_or_n, const char *command, struct Client *client_p,
 	struct Client *target_p;
 	char *server;
 	char *s;
-	int count;
 
 	/* user[%host]@server addressed?
 	 * NOTE: users can send to user@server, but not user%host@server
@@ -938,8 +937,6 @@ handle_special(int p_or_n, const char *command, struct Client *client_p,
 					   form_str(ERR_NOSUCHSERVER), server + 1);
 			return;
 		}
-
-		count = 0;
 
 		if(!IsOper(source_p))
 		{
