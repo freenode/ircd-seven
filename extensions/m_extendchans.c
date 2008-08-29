@@ -60,6 +60,7 @@ me_extendchans(struct Client *client_p, struct Client *source_p, int parc, const
 	if(!MyClient(target_p))
 		return 0;
 
+	sendto_one_notice(target_p, ":*** %s is extending your channel limit");
 	SetExtendChans(target_p);
 
 	return 0;
