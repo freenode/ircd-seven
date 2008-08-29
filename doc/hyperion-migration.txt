@@ -1,0 +1,280 @@
+# vim: set sw=4 sts=4 tw=72 et :
+
+For users / channel operators
+=============================
+
+Things that are new
+-------------------
+
+- Extended ban types. Modules can add new ban types which can match on
+  any information the ircd can access. Several are available in the
+  source distribution, including realname, services account name, IRC
+  operator status, channel membership and ability to join other
+  channels. These can all be used for +b, +q, +e and +I.
+- User mode +g (callerid) is supported.
+- SSL support, for clients and servers.
+
+Things that are gone
+--------------------
+
+- SILENCE. The replacement is user mode +g and /accept.
+
+Things that are different
+-------------------------
+
+- channel mode +d (realname ban) is replaced by +b $r:<foo> -- see
+  'Extended ban types' above. This means that quiets, exempts and
+  invexes can also be set based on realname, and forward channels can be
+  used with realname bans.
+- CAPAB IDENTIFY-MSG is present, but the commands to enable it are
+  different -- use ``CAP REQ :identify-msg `` to enable it; the response
+  if successful will be ``:server.name CAP <nick> ACK :identify-msg``.
+  An updated version of format_identify.pl for Irssi, which understands
+  both the ircd-seven and hyperion methods, is at
+  http://adipose.attenuate.org/~stephen/ircd-seven/format_identify.pl.txt.
+  This client capability can now also be turned off -- use
+  ``CAP REQ :-identify-msg``.
+- Channel modes +q and +b, which were always separate internally, are no
+  longer presented to the client in the same list. Prepending '%' to a
+  ban mask to make a quiet will no longer work.
+- Forwarding bans now use $ instead of ! to delimit the forward channel,
+  and can be used in conjunction with extended ban types. Setting and
+  unsetting of forwarding bans using the hyperion syntax still works,
+  however -- the ircd translates them into its own format.
+- Join throttling has changed slightly -- where hyperion uses +J x,y
+  seven has +j x:y. The algorithm is rather simpler as well: x joins in
+  y seconds.
+- Setting of channel forwards, whether by mode +f or by a forwarding
+  ban, requires channel operator status in both the source and target
+  channels, unless the latter has channel mode +F (free forwarding).
+
+For opers
+=========
+
+Things that are new
+-------------------
+
+- seven is modular -- the core is relatively small; almost all commands
+  are handled by loadable modules. Changes to these modules can be
+  deployed without any disruption to users, and new commands, ban types
+  and certain user/channel modes can be added without needing to restart
+  any daemons.
+- DIE and RESTART can be used remotely.
+- D:lines can be added and removed remotely.
+- X:lines can be added and removed via IRC, in the same way as K:lines
+- Q:lines and channel jupes are replaced by RESVs, which can similarly
+  be added and removed via IRC.
+- All server notice umodes have been collapsed into a parameter to user
+  mode +s. Use /quote help snomask for a list of the available masks.
+- A new auth_user option for I:line blocks. If a user connects
+  specifying a server password that contains a colon, then the part of
+  the password field before the colon will be used as a 'username' to
+  select their I:line, while the part after the colon is used as a
+  password. This allows people to be given spoofed I:lines without being
+  restricted to a given host range (or, in hyperion, nickname), and
+  without affecting any other users who share that range (or happen to
+  connect with that nick).
+- A new channel mode +M, which disallows kicking any IRC operators. It
+  can only be set or unset by operators with the 'cmodes' flag (see
+  below), and is intended as a replacement for user mode +m.
+
+Things that are gone
+--------------------
+
+- channel mode +D. Use services instead.
+- Most of the functionality in SCAN -- only SCAN UMODES is supported.
+- Nickname-based I:lines. See the section on auth_user above for the
+  replacement.
+- User mode +m. See channel mode +M, above.
+- It is not possible to change another user's modes.
+- The over-zealous serverhide implementation. seven's server hiding is
+  much more moderate, showing which client servers are present but
+  hiding routing layout and hub names.
+
+Things that are different
+-------------------------
+
+- The whole oper privilege system. With one exception (+p), user modes
+  do not confer any privilege. Instead, each operator is assigned one
+  privilege set, either by their O:line or the GRANT command. This set
+  is defined in the ircd configuration, and contains a list of privilege
+  flags conferred to that operator. See full description below.
+- User mode +p is slightly less ridiculous in scope. It still allows the
+  user to join any channel, and allows sending to, and most operator
+  actions in, any channel that the user is in. It does not, however,
+  bypass channel mode +n, nor does it allow operator status in channels
+  that the user has not joined.
+- User mode +T has been replaced by +h. Same purpose, less silly mode
+  letter.
+- User auspex (hyperion's +a umode) operates slightly differently. An
+  operator with the auspex flag will not automatically see all channels
+  a user is in with /whois; by default they will see the same list a
+  normal user would. Ditto for /who and /names on a channel, and so
+  forth. Most of these commands have an 'operspy' variant accessed by
+  prepending a ! to the target name -- for instance, ``/whois !user`` or
+  ``/who !#channel``, which will show the restricted information. However,
+  items not accessible to normal users will be prefixed with '!', and a
+  server notice will be sent out to opers with snomask +Z active when it
+  is used.
+- Unlike in hyperion, rehash is *not* required after removing a K:line.
+
+The operator privilege system
+=============================
+
+Forget completely, for the moment, how Hyperion handles operator
+privilege. Trying to compare the two system side by side is more
+confusing than helpful.
+
+In ircd-seven, there are essentially two types of IRC operator. For want
+of better words, they are known internally as 'opers' and 'helpers'. A
+helper is an IRC operator who does not have the 'oper:staffer' privilege
+flag. When a helper opers up, instead of user mode +o, they get mode +O.
+This denotes them as being opered up in a helper role, and confers none
+of the privilege that +o does. Dependent upon the other flags granted in
+their privilege set, helpers can get access to some subset of operator
+functionality, though the user mode itself grants none. Operwall access
+can be granted to helpers, though most other restricted commands will
+not be accessible even if the appropriate privilege is given. Most
+operator privileges that affect the behaviour of normal user commands
+can be granted to helpers, including the oper:helpop flag to appear in
+/stats p output.
+
+For the operator who does have the oper:staffer flag, he can gain
+access to user mode +o, but not +O. This mode does confer a fairly
+sizeable chunk of privilege, including:
+- Immunity from rate-limiting for most commands.
+- The ability to use most restricted STATS commands, as well as most
+  informational commands that are restricted, such as MAP, TESTLINE,
+  unadulterated LINKS output, {E,MASK,CHAN}TRACE and various others.
+- Access to server notices. A small number are sent only to server
+  administrators (those with user mode +a, granted by the 'oper:admin'
+  flag), but the vast majority are accessible to all operators.
+- The ability to see the real hostname and IP address of cloaked users.
+  This information is accessible via various server notices anyway, so
+  further restricting it is relatively pointless.
+- The ability to see, but not to change, routing information.
+- The ability to bypass most restrictions on private messages, including
+  user mode +g.
+
+Whichever mode an operator has, O or o, the method for granting
+privilege is the same. The ircd configuration contains one or more
+'privset' blocks, which define a privilege set and the flags that make
+up that set. For example:
+
+  privset "levelone" {
+      privs = oper:operwall, oper:helpop;
+  };
+
+  privset "staffer" {
+      extends = "levelone";
+      privs = oper:staffer, oper:kill, oper:kline;
+  };
+
+Instead of a user's O:line (or operator block) defining a set of user
+modes, as in hyperion, or flags, as in hybrid/ratbox, it contains the
+name of a single privilege set, which will be granted to the operator
+when he/she opers up. It is the privilege set that determines his or her
+precise privileges.
+
+And so, to the current list of available privileges, and their
+(approximate) equivalent user modes in hyperion.
+
+oper:helpop
+    Allows access to user mode +h, to appear in /stats p output.
+    Equivalent to hyperion +T.
+
+oper:operwall
+    Allows use of the /operwall command, and access to umode +z to
+    receive operwalls.
+    Equivalent to hyperion +zZ.
+
+oper:staffer
+    Grants user mode +o instead of +O on oper-up. This confers several
+    miscellaneous privileges. Roughly equivalent to hyperion
+    +AbcdfhklnorsvVxXyY01234569.
+
+oper:kill
+    Allows use of the /kill command, locally and globally.
+    Equivalent to hyperion +G and part of +K.
+
+oper:kline
+    Allows setting of K:lines with the default cluster settings (i.e.
+    netwide). Equivalent to the other part of hyperion +K.
+
+oper:unkline
+    Allows removal of K:lines. Equivalent to hyperion +U.
+
+oper:rehash
+    Allows use of /rehash and /set commands. Equivalent to hyperion +H.
+
+oper:auspex
+    Allows use of operspy variants of various commands. Approximately
+    analogous to hyperion +a.
+
+oper:cmodes
+    Allows setting of operator-only channel modes -- +L, +P, +M. I
+    don't remember which modes in hyperion grant this.
+
+oper:override
+    Allows access to user mode +p. Roughly equivalent, surprisingly, to
+    hyperion's +p.
+
+oper:massnotice
+    Allows use of NOTICE and PRIVMSG to host masks, as well as WALLOPS.
+    Equivalent to hyperion +MW.
+
+oper:routing
+    Allows use of routing commands -- CONNECT and SQUIT. Equivalent to
+    hyperion +R.
+
+oper:xline
+    Allows use of the XLINE command to add X:lines. No equivalent in
+    hyperion.
+
+oper:resv
+    Allows use of the RESV command to forbid use of a given nickname or
+    channel name. No equivalent in hyperion.
+
+oper:remoteban
+    Allows use of KLINE, XLINE, DLINE, RESV, and the corresponding UN*
+    commands, on specific named servers. Without this, they can only be
+    added or removed according to the cluster settings in the
+    configuration -- most likely network-wide.
+
+oper:admin
+    Allows access to user mode +a. Allows use of various stats commands
+    and server notices that are denied to other operators. Most notably,
+    allows use of module commands -- MODLOAD, MODUNLOAD, MODRELOAD and
+    MODRESTART. No equivalent in hyperion.
+
+oper:die
+    Allows use of DIE and RESTART commands, locally and remotely.
+    Equivalent to hyperion's +D.
+
+oper:grant
+    Allows use of the GRANT command, to change the privilege set of
+    another user. Approximately analagous to +B* in hyperion.
+
+
+For quick reference, the privilege sets currently in use on the
+ircd-seven test net are:
+
+    privset "levelone" {
+        privs = oper:operwall, oper:helpop;
+    };
+
+    privset "staffer" {
+        extends = "levelone";
+        privs = oper:staffer, oper:kill, oper:kline;
+    };
+
+    privset "staffer2" {
+        extends = "staffer";
+        privs = oper:unkline, oper:rehash, oper:auspex, oper:cmodes, oper:override, oper:routing;
+    };
+
+    privset "admin" {
+        extends = "staffer2";
+        privs = oper:massnotice, oper:xline, oper:resv, oper:remoteban, oper:admin, oper:die, oper:grant;
+    };
+
