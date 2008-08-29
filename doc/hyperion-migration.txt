@@ -1,5 +1,3 @@
-# vim: set sw=4 sts=4 tw=72 et :
-
 For users / channel operators
 =============================
 
@@ -142,6 +140,7 @@ can be granted to helpers, including the oper:helpop flag to appear in
 For the operator who does have the oper:staffer flag, he can gain
 access to user mode +o, but not +O. This mode does confer a fairly
 sizeable chunk of privilege, including:
+
 - Immunity from rate-limiting for most commands.
 - The ability to use most restricted STATS commands, as well as most
   informational commands that are restricted, such as MAP, TESTLINE,
@@ -159,8 +158,8 @@ sizeable chunk of privilege, including:
 Whichever mode an operator has, O or o, the method for granting
 privilege is the same. The ircd configuration contains one or more
 'privset' blocks, which define a privilege set and the flags that make
-up that set. For example:
-
+up that set. For example::
+  
   privset "levelone" {
       privs = oper:operwall, oper:helpop;
   };
@@ -257,7 +256,7 @@ oper:grant
 
 
 For quick reference, the privilege sets currently in use on the
-ircd-seven test net are:
+ircd-seven test net are::
 
     privset "levelone" {
         privs = oper:operwall, oper:helpop;
@@ -277,4 +276,7 @@ ircd-seven test net are:
         extends = "staffer2";
         privs = oper:massnotice, oper:xline, oper:resv, oper:remoteban, oper:admin, oper:die, oper:grant;
     };
+
+.. 
+  vim: set sw=4 sts=4 tw=72 et :
 
