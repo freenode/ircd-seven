@@ -163,6 +163,10 @@ m_cmessage(int p_or_n, const char *command,
 	if(p_or_n != NOTICE)
 		source_p->localClient->last = rb_current_time();
 
-	sendto_anywhere(target_p, source_p, command, ":%s", parv[3]);
+	if(IsCapable(target_p, CLICAP_IDENTIFY_MSG))
+		sendto_anywhere(target_p, source_p, command, ":%c%s", EmptyString(source_p->user->suser) ? '-' : '+', parv[3]);
+	else
+		sendto_anywhere(target_p, source_p, command, ":%s", parv[3]);
+
 	return 0;
 }
