@@ -135,7 +135,7 @@ m_invite(struct Client *client_p, struct Client *source_p, int parc, const char 
 
 	/* unconditionally require ops, unless the channel is +g */
 	/* treat remote clients as chanops */
-	if(MyClient(source_p) && !is_chanop(msptr) &&
+	if(MyClient(source_p) && !is_chanop(msptr) && !IsOverride(source_p) &&
 			!(chptr->mode.mode & MODE_FREEINVITE))
 	{
 		sendto_one(source_p, form_str(ERR_CHANOPRIVSNEEDED),
