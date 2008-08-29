@@ -815,7 +815,7 @@ chm_ban(struct Client *source_p, struct Channel *chptr,
 
 			/* Do the whole lot of forward checks for the target channel. */
 			if(!check_channel_name(forward) ||
-				(MyClient(source_p) && strlen(forward) > LOC_CHANNELLEN || hash_find_resv(forward)))
+				(MyClient(source_p) && (strlen(forward) > LOC_CHANNELLEN || hash_find_resv(forward))))
 			{
 				sendto_one_numeric(source_p, ERR_BADCHANNAME, form_str(ERR_BADCHANNAME), forward);
 				return;
