@@ -1788,7 +1788,10 @@ set_channel_mode(struct Client *client_p, struct Client *source_p,
 				*mbuf = '\0';
 
 				if(cur_len > mlen)
-					sendto_channel_local(flags, chptr, "%s %s", modebuf,
+					/* +p opers should see +eI changes, as otherwise their own
+					 * modes don't get echoed.
+					 */
+					sendto_channel_local_plus_opers(flags, chptr, "%s %s", modebuf,
 							     parabuf);
 				else
 					continue;
@@ -1825,7 +1828,12 @@ set_channel_mode(struct Client *client_p, struct Client *source_p,
 
 		*mbuf = '\0';
 		if(cur_len > mlen)
-			sendto_channel_local(flags, chptr, "%s %s", modebuf, parabuf);
+		{
+			/* +p opers should see +eI changes, as otherwise their own
+			 * modes don't get echoed.
+			 */
+			sendto_channel_local_plus_opers(flags, chptr, "%s %s", modebuf, parabuf);
+		}
 	}
 
 	/* only propagate modes originating locally, or if we're hubbing */

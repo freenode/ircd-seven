@@ -163,7 +163,7 @@ m_cmessage(int p_or_n, const char *command,
 	if(p_or_n != NOTICE)
 		source_p->localClient->last = rb_current_time();
 
-	sendto_anywhere_idmsg(target_p, source_p, command, "%s", parv[3]);
+	sendto_anywhere_message(target_p, source_p, command, "%s", parv[3]);
 
 	return 0;
 }

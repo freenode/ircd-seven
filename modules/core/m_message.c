@@ -472,7 +472,7 @@ msg_channel(int p_or_n, const char *command,
 		if(result == CAN_SEND_OPV ||
 		   !flood_attack_channel(p_or_n, source_p, chptr, chptr->chname))
 		{
-			sendto_channel_flags(client_p, ALL_MEMBERS, source_p, chptr,
+			sendto_channel_message(client_p, ALL_MEMBERS, source_p, chptr,
 					     command, chptr->chname, "%s", text);
 		}
 	}
@@ -484,7 +484,7 @@ msg_channel(int p_or_n, const char *command,
 		 * aren't tested for remote clients -- jilles */
 		if(!flood_attack_channel(p_or_n, source_p, chptr, chptr->chname))
 		{
-			sendto_channel_flags(client_p, ONLY_CHANOPS, source_p, chptr,
+			sendto_channel_message(client_p, ONLY_CHANOPS, source_p, chptr,
 					     command, chptr->chname, "%s", text);
 		}
 	}
@@ -539,7 +539,7 @@ msg_channel_flags(int p_or_n, const char *command, struct Client *client_p,
 			source_p->localClient->last = rb_current_time();
 	}
 
-	sendto_channel_flags(client_p, type, source_p, chptr, command, target, "%s", text);
+	sendto_channel_message(client_p, type, source_p, chptr, command, target, "%s", text);
 }
 
 #define PREV_FREE_TARGET(x) ((FREE_TARGET(x) == 0) ? 9 : FREE_TARGET(x) - 1)
@@ -702,7 +702,7 @@ msg_client(int p_or_n, const char *command,
 			/* Here is the anti-flood bot/spambot code -db */
 			if(accept_message(source_p, target_p) || IsOper(source_p))
 			{
-				sendto_anywhere_idmsg(target_p, source_p, command, "%s", text);
+				sendto_anywhere_message(target_p, source_p, command, "%s", text);
 			}
 			else if (IsSetRegOnlyMsg(target_p) && !source_p->user->suser[0])
 			{
@@ -752,7 +752,7 @@ msg_client(int p_or_n, const char *command,
 			 * and flooding    -- fl */
 			if(!do_floodcount || !flood_attack_client(p_or_n, source_p, target_p))
 			{
-				sendto_anywhere_idmsg(target_p, source_p, command, "%s", text);
+				sendto_anywhere_message(target_p, source_p, command, "%s", text);
 			}
 		}
 	}

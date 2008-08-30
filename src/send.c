@@ -462,6 +462,83 @@ sendto_server(struct Client *one, struct Channel *chptr, unsigned long caps,
  */
 void
 sendto_channel_flags(struct Client *one, int type, struct Client *source_p,
+		     struct Channel *chptr, const char *pattern, ...)
+{
+	static char buf[BUFSIZE];
+	va_list args;
+	buf_head_t rb_linebuf_local;
+	buf_head_t rb_linebuf_id;
+	struct Client *target_p;
+	struct membership *msptr;
+	rb_dlink_node *ptr;
+	rb_dlink_node *next_ptr;
+
+	rb_linebuf_newbuf(&rb_linebuf_local);
+	rb_linebuf_newbuf(&rb_linebuf_id);
+
+	current_serial++;
+
+	va_start(args, pattern);
+	rb_vsnprintf(buf, sizeof(buf), pattern, args);
+	va_end(args);
+
+	if(IsServer(source_p))
+		rb_linebuf_putmsg(&rb_linebuf_local, NULL, NULL,
+			       ":%s %s", source_p->name, buf);
+	else
+		rb_linebuf_putmsg(&rb_linebuf_local, NULL, NULL,
+			       ":%s!%s@%s %s",
+			       source_p->name, source_p->username, 
+			       source_p->host, buf);
+
+	rb_linebuf_putmsg(&rb_linebuf_id, NULL, NULL, ":%s %s", use_id(source_p), buf);
+
+	RB_DLINK_FOREACH_SAFE(ptr, next_ptr, chptr->members.head)
+	{
+		msptr = ptr->data;
+		target_p = msptr->client_p;
+
+		if(IsIOError(target_p->from) || target_p->from == one)
+			continue;
+
+		if(type && ((msptr->flags & type) == 0))
+			continue;
+
+		if(IsDeaf(target_p))
+			continue;
+
+		if(!MyClient(target_p))
+		{
+			/* if we've got a specific type, target must support
+			 * CHW.. --fl
+			 */
+			if(type && NotCapable(target_p->from, CAP_CHW))
+				continue;
+
+			if(target_p->from->serial != current_serial)
+			{
+				send_linebuf_remote(target_p, source_p, &rb_linebuf_id);
+				target_p->from->serial = current_serial;
+			}
+		}
+		else
+			_send_linebuf(target_p, &rb_linebuf_local);
+	}
+
+	rb_linebuf_donebuf(&rb_linebuf_local);
+	rb_linebuf_donebuf(&rb_linebuf_id);
+}
+
+
+/* sendto_channel_message()
+ *
+ * inputs	- server not to send to, flags needed, source, channel, va_args
+ * outputs	- message is sent to channel members, with identify-msg prefix added
+ *		  where appropriate. Only to be used for message/notice text, therefore.
+ * side effects -
+ */
+void
+sendto_channel_message(struct Client *one, int type, struct Client *source_p,
 		     struct Channel *chptr, const char *command, const char *target, const char *pattern, ...)
 {
 	static char buf[BUFSIZE];
@@ -584,11 +661,54 @@ sendto_channel_local(int type, struct Channel *chptr, const char *pattern, ...)
 	rb_linebuf_donebuf(&linebuf);
 }
 
+
+/* sendto_channel_local_plus_opers()
+ *
+ * inputs	- flags to send to, channel to send to, va_args
+ * outputs	- message to local channel members. If type is non-zero,
+ *		  send to +p opers as well -- hence use this only for mode changes
+ *		  and other informational messages, not message/notice text.
+ * side effects -
+ */
+void
+sendto_channel_local_plus_opers(int type, struct Channel *chptr, const char *pattern, ...)
+{
+	va_list args;
+	buf_head_t linebuf;
+	struct membership *msptr;
+	struct Client *target_p;
+	rb_dlink_node *ptr;
+	rb_dlink_node *next_ptr;
+	
+	rb_linebuf_newbuf(&linebuf); 
+	
+	va_start(args, pattern);
+	rb_linebuf_putmsg(&linebuf, pattern, &args, NULL);
+	va_end(args);
+
+	RB_DLINK_FOREACH_SAFE(ptr, next_ptr, chptr->locmembers.head)
+	{
+		msptr = ptr->data;
+		target_p = msptr->client_p;
+
+		if(IsIOError(target_p))
+			continue;
+
+		if(type && ((msptr->flags & type) == 0) && !IsOverride(target_p))
+			continue;
+
+		_send_linebuf(target_p, &linebuf);
+	}
+
+	rb_linebuf_donebuf(&linebuf);
+}
+
 /* sendto_channel_local_butone()
  *
  * inputs	- flags to send to, channel to send to, va_args
  *		- user to ignore when sending
- * outputs	- message to local channel members
+ * outputs	- message to local channel members. If type is non-zero,
+ *		  send to +p opers as well -- hence use this only for mode changes
  * side effects -
  */
 void
@@ -949,7 +1069,7 @@ sendto_anywhere(struct Client *target_p, struct Client *source_p,
 	rb_linebuf_donebuf(&linebuf);
 }
 
-/* sendto_anywhere_idmsg()
+/* sendto_anywhere_message()
  *
  * inputs	- target, source, va_args
  * outputs	-
@@ -957,7 +1077,7 @@ sendto_anywhere(struct Client *target_p, struct Client *source_p,
  *                and the appropriate identify-msg character prepended
  */
 void
-sendto_anywhere_idmsg(struct Client *target_p, struct Client *source_p, 
+sendto_anywhere_message(struct Client *target_p, struct Client *source_p, 
 		const char *command, const char *pattern, ...)
 {
 	va_list args;
