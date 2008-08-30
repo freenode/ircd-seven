@@ -702,10 +702,7 @@ msg_client(int p_or_n, const char *command,
 			/* Here is the anti-flood bot/spambot code -db */
 			if(accept_message(source_p, target_p) || IsOper(source_p))
 			{
-				sendto_one(target_p, ":%s!%s@%s %s %s :%s",
-					   source_p->name,
-					   source_p->username,
-					   source_p->host, command, target_p->name, text);
+				sendto_anywhere_idmsg(target_p, source_p, command, "%s", text);
 			}
 			else if (IsSetRegOnlyMsg(target_p) && !source_p->user->suser[0])
 			{
@@ -755,11 +752,7 @@ msg_client(int p_or_n, const char *command,
 			 * and flooding    -- fl */
 			if(!do_floodcount || !flood_attack_client(p_or_n, source_p, target_p))
 			{
-				if(IsCapable(target_p, CLICAP_IDENTIFY_MSG))
-					sendto_anywhere(target_p, source_p, command, ":%c%s",
-							EmptyString(source_p->user->suser) ? '-' : '+', text);
-				else
-					sendto_anywhere(target_p, source_p, command, ":%s", text);
+				sendto_anywhere_idmsg(target_p, source_p, command, "%s", text);
 			}
 		}
 	}

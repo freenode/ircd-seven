@@ -949,6 +949,62 @@ sendto_anywhere(struct Client *target_p, struct Client *source_p,
 	rb_linebuf_donebuf(&linebuf);
 }
 
+/* sendto_anywhere_idmsg()
+ *
+ * inputs	- target, source, va_args
+ * outputs	-
+ * side effects - client is sent message with correct prefix 
+ *                and the appropriate identify-msg character prepended
+ */
+void
+sendto_anywhere_idmsg(struct Client *target_p, struct Client *source_p, 
+		const char *command, const char *pattern, ...)
+{
+	va_list args;
+	buf_head_t linebuf;
+
+	rb_linebuf_newbuf(&linebuf);
+
+	va_start(args, pattern);
+
+	if(MyClient(target_p))
+	{
+		if(IsServer(source_p))
+			rb_linebuf_putmsg(&linebuf, pattern, &args, ":%s %s %s :",
+				       source_p->name, command, 
+				       target_p->name);
+		else
+		{
+			if(IsCapable(target_p, CLICAP_IDENTIFY_MSG))
+				rb_linebuf_putmsg(&linebuf, pattern, &args, 
+					       ":%s!%s@%s %s %s :%c", 
+					       source_p->name, source_p->username,
+					       source_p->host, command,
+					       target_p->name,
+					       EmptyString(source_p->user->suser)? '-' : '+');
+			else
+				rb_linebuf_putmsg(&linebuf, pattern, &args, 
+					       ":%s!%s@%s %s %s :", 
+					       source_p->name, source_p->username,
+					       source_p->host, command,
+					       target_p->name);
+		}
+	}
+	else
+		rb_linebuf_putmsg(&linebuf, pattern, &args, ":%s %s %s :",
+			       get_id(source_p, target_p), command,
+			       get_id(target_p, target_p));
+
+	va_end(args);
+
+	if(MyClient(target_p))
+		_send_linebuf(target_p, &linebuf);
+	else
+		send_linebuf_remote(target_p, source_p, &linebuf);
+
+	rb_linebuf_donebuf(&linebuf);
+}
+
 /* sendto_realops_snomask()
  *
  * inputs	- snomask needed, level (opers/admin), va_args
