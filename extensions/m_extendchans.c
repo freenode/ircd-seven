@@ -47,9 +47,6 @@ me_extendchans(struct Client *client_p, struct Client *source_p, int parc, const
 {
 	struct Client *target_p;
 
-	sendto_realops_snomask(SNO_DEBUG, L_NETWIDE, "%s is extending channel limit on %s",
-			source_p->name, parv[1]);
-
 	target_p = find_person(parv[1]);
 	if(target_p == NULL)
 	{
