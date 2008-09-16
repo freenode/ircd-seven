@@ -18,3 +18,6 @@
 [x] PASS user:pass support
 [x] remove
 [x] identify-msg
+[ ] make +p noisy (use OMODE code)
+[ ] restrict snotes
+[ ] icky kline hack
