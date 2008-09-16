@@ -198,9 +198,6 @@ struct oper_flags
 	char hasnt;
 };
 
-extern struct mode_table oper_table[];
-extern struct oper_flags oper_flagtable[];
-
 struct server_conf
 {
 	char *name;
