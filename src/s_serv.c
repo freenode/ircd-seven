@@ -551,6 +551,11 @@ burst_TS6(struct Client *client_p)
 				   use_id(target_p),
 				   target_p->user->away);
 
+		if(!EmptyString(target_p->user->opername))
+			sendto_one(client_p, ":%s ENCAP * OPER %s",
+				   use_id(target_p),
+				   target_p->user->opername);
+
 		hclientinfo.target = target_p;
 		call_hook(h_burst_client, &hclientinfo);
 	}

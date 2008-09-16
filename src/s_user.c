@@ -1342,6 +1342,8 @@ oper_up(struct Client *source_p, struct oper_conf *oper_p)
 	hdata.oldsnomask = oldsnomask;
 	call_hook(h_umode_changed, &hdata);
 
+	sendto_server(NULL, NULL, CAP_TS6, NOCAPS, ":%s ENCAP * OPER :%s",
+			use_id(source_p), source_p->user->opername);
 	sendto_realops_snomask(SNO_GENERAL, L_ALL,
 			     "%s (%s@%s) is now an operator", source_p->name,
 			     source_p->username, source_p->host);

@@ -42,10 +42,11 @@
 #include "cache.h"
 
 static int m_oper(struct Client *, struct Client *, int, const char **);
+static int me_oper(struct Client *, struct Client *, int, const char **);
 
 struct Message oper_msgtab = {
 	"OPER", 0, 0, 0, MFLG_SLOW,
-	{mg_unreg, {m_oper, 3}, mg_ignore, mg_ignore, mg_ignore, {m_oper, 3}}
+	{mg_unreg, {m_oper, 3}, mg_ignore, mg_ignore, {me_oper, 1}, {m_oper, 3}}
 };
 
 mapi_clist_av1 oper_clist[] = { &oper_msgtab, NULL };
@@ -141,6 +142,18 @@ m_oper(struct Client *client_p, struct Client *source_p, int parc, const char *p
 					     source_p->name, source_p->username, source_p->host);
 		}
 	}
+
+	return 0;
+}
+
+static int
+me_oper(struct Client *client_p, struct Client *source_p, int parc, const char **parv)
+{
+	if(!IsOper(source_p))
+		return 0;
+	sendto_realops_snomask(SNO_DEBUG, L_NETWIDE, "%s ENCAP OPER %s", source_p->name, parv[1]);
+	if(IsClient(source_p))
+		source_p->user->opername = rb_strdup(parv[1]);
 
 	return 0;
 }
