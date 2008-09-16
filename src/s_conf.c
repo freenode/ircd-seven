@@ -1049,11 +1049,11 @@ get_oper_name(struct Client *client_p)
 	/* +5 for !,@,{,} and null */
 	static char buffer[NICKLEN + USERLEN + HOSTLEN + HOSTLEN + 5];
 
-	if(MyOper(client_p))
+	if(!EmptyString(client_p->user->opername))
 	{
 		rb_snprintf(buffer, sizeof(buffer), "%s!%s@%s{%s}",
 				client_p->name, client_p->username,
-				client_p->host, client_p->localClient->opername);
+				client_p->host, client_p->user->opername);
 		return buffer;
 	}
 

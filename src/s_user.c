@@ -993,12 +993,14 @@ user_mode(struct Client *client_p, struct Client *source_p, int parc, const char
 					}
 					source_p->operflags = 0;
 
-					rb_free(source_p->localClient->opername);
-					source_p->localClient->opername = NULL;
-
 					rb_dlinkFindDestroy(source_p, &local_oper_list);
 					privilegeset_unref(source_p->localClient->privset);
 					source_p->localClient->privset = NULL;
+				}
+				if(source_p->user->opername)
+				{
+					rb_free(source_p->user->opername);
+					source_p->user->opername = NULL;
 				}
 
 				rb_dlinkFindDestroy(source_p, &oper_list);
@@ -1025,9 +1027,13 @@ user_mode(struct Client *client_p, struct Client *source_p, int parc, const char
 
 				if(MyConnect(source_p))
 				{
-					source_p->operflags = 0;
-					rb_free(source_p->localClient->opername);
-					source_p->localClient->opername = NULL;
+					privilegeset_unref(source_p->localClient->privset);
+					source_p->localClient->privset = NULL;
+				}
+				if(source_p->user->opername)
+				{
+					rb_free(source_p->user->opername);
+					source_p->user->opername = NULL;
 				}
 
 				rb_dlinkFindDestroy(source_p, &oper_list);
@@ -1319,7 +1325,7 @@ oper_up(struct Client *source_p, struct oper_conf *oper_p)
 	SetExtendChans(source_p);
 
 	source_p->operflags |= oper_p->flags;
-	source_p->localClient->opername = rb_strdup(oper_p->name);
+	source_p->user->opername = rb_strdup(oper_p->name);
 	source_p->localClient->privset = privilegeset_ref(oper_p->privset);
 
 	if(IsOper(source_p))

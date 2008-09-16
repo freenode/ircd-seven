@@ -82,7 +82,7 @@ static void show_privs(struct Client *source_p, struct Client *target_p)
 		if (buf[0] != '\0')
 			rb_strlcat(buf, " ", sizeof buf);
 		rb_strlcat(buf, "operator:", sizeof buf);
-		rb_strlcat(buf, target_p->localClient->opername, sizeof buf);
+		rb_strlcat(buf, target_p->user->opername, sizeof buf);
 
 		if (target_p->localClient->privset)
 		{

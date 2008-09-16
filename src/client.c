@@ -233,7 +233,6 @@ free_local_client(struct Client *client_p)
 
 	rb_free(client_p->localClient->challenge);
 	rb_free(client_p->localClient->fullcaps);
-	rb_free(client_p->localClient->opername);
 	rb_free(client_p->localClient->mangledhost);
 
 	ssld_decrement_clicount(client_p->localClient->ssl_ctl);
@@ -1787,6 +1786,12 @@ free_user(struct User *user, struct Client *client_p)
 			s_assert(!user->refcnt);
 			s_assert(!user->invited.head);
 			s_assert(!user->channel.head);
+		}
+
+		if(user->opername)
+		{
+			rb_free(user->opername);
+			user->opername = NULL;
 		}
 
 		rb_bh_free(user_heap, user);

@@ -96,6 +96,7 @@ struct User
 	int refcnt;		/* Number of times this block is referenced */
 
 	char suser[NICKLEN+1];
+	char *opername; /* name of operator{} block being used or tried (challenge) */
 };
 
 struct Server
@@ -235,7 +236,6 @@ struct LocalUser
 	 */
 	char *passwd;
 	char *auth_user;
-	char *opername; /* name of operator{} block being used or tried (challenge) */
 	char *challenge;
 	char *fullcaps;
 
