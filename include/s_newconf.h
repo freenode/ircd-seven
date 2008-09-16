@@ -146,27 +146,13 @@ extern void propagate_generic(struct Client *source_p, const char *command,
 extern void cluster_generic(struct Client *, const char *, int cltype,
 			int cap, const char *format, ...);
 
-#define OPER_ENCRYPTED  0x00001
-#define OPER_HELPER     0x00002
-#define OPER_OPERWALL   0x00004
-#define OPER_STAFFER    0x00008
-#define OPER_KILL       0x00010
-#define OPER_KLINE      0x00020
-#define OPER_UNKLINE    0x00040
-#define OPER_REHASH     0x00080
-#define OPER_AUSPEX     0x00100
-#define OPER_CMODES     0x00200
-#define OPER_OVERRIDE   0x00800
-#define OPER_MASSNOTICE 0x01000
-#define OPER_ROUTING    0x02000
-#define OPER_XLINE      0x04000
-#define OPER_RESV       0x08000
-#define OPER_REMOTEBAN  0x10000
-#define OPER_ADMIN      0x20000
-#define OPER_DIE        0x40000
-#define OPER_GRANT      0x80000
+#define OPER_ENCRYPTED	0x00001
+#define OPER_NEEDSSL    0x00002
+
+#define OPER_FLAGS	0 /* no oper privs in Client.flags2/oper_conf.flags currently */
 
 #define IsOperConfEncrypted(x)	((x)->flags & OPER_ENCRYPTED)
+#define IsOperConfNeedSSL(x)	((x)->flags & OPER_NEEDSSL)
 
 #define HasPrivilege(x, y)	((x)->localClient != NULL && (x)->localClient->privset != NULL && privilegeset_in_set((x)->localClient->privset, (y)))
 

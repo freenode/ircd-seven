@@ -301,26 +301,9 @@ static struct mode_table umode_table[] = {
 	{NULL, 0}
 };
 
-struct mode_table oper_table[] = {
-	{ "encrypted",		OPER_ENCRYPTED		},
-	{ "helper",		OPER_HELPER		},
-	{ "operwall",		OPER_OPERWALL		},
-	{ "staffer",		OPER_STAFFER		},
-	{ "kill",		OPER_KILL		},
-	{ "kline",		OPER_KLINE		},
-	{ "unkline",		OPER_UNKLINE		},
-	{ "rehash",		OPER_REHASH		},
-	{ "auspex",		OPER_AUSPEX		},
-	{ "cmodes",		OPER_CMODES		},
-	{ "override",		OPER_OVERRIDE		},
-	{ "mass_notice",	OPER_MASSNOTICE		},
-	{ "routing",		OPER_ROUTING		},
-	{ "xline",		OPER_XLINE		},
-	{ "resv",		OPER_RESV		},
-	{ "remoteban",		OPER_REMOTEBAN		},
-	{ "admin",		OPER_ADMIN		},
-	{ "die",		OPER_DIE		},
-	{ "grant",		OPER_GRANT		},
+static struct mode_table oper_table[] = {
+	{"encrypted",		OPER_ENCRYPTED		},
+	{"need_ssl",		OPER_NEEDSSL		},
 	{NULL, 0}
 };
 
@@ -338,6 +321,7 @@ static struct mode_table auth_table[] = {
 	{"no_tilde",		CONF_FLAGS_NO_TILDE	},
 	{"need_ident",		CONF_FLAGS_NEED_IDENTD	},
 	{"have_ident",		CONF_FLAGS_NEED_IDENTD	},
+	{"need_ssl", 		CONF_FLAGS_NEED_SSL	},
 	{"need_sasl",		CONF_FLAGS_NEED_SASL	},
 	{"extend_chans",	CONF_FLAGS_EXTEND_CHANS },
 	{NULL, 0}
