@@ -135,12 +135,19 @@ m_invite(struct Client *client_p, struct Client *source_p, int parc, const char 
 
 	/* unconditionally require ops, unless the channel is +g */
 	/* treat remote clients as chanops */
-	if(MyClient(source_p) && !is_chanop(msptr) && !IsOverride(source_p) &&
+	if(MyClient(source_p) && !is_chanop(msptr) &&
 			!(chptr->mode.mode & MODE_FREEINVITE))
 	{
-		sendto_one(source_p, form_str(ERR_CHANOPRIVSNEEDED),
-			   me.name, source_p->name, parv[2]);
-		return 0;
+		if(IsOverride(source_p))
+			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
+					"%s is overriding INVITE [%s] on [%s]",
+					get_oper_name(source_p), target_p->name, chptr->chname);
+		else
+		{
+			sendto_one(source_p, form_str(ERR_CHANOPRIVSNEEDED),
+				   me.name, source_p->name, parv[2]);
+			return 0;
+		}
 	}
 
 	/* store invites when they could affect the ability to join
