@@ -37,6 +37,7 @@
 #include "hash.h"
 #include "packet.h"
 #include "s_serv.h"
+#include "s_conf.h"
 
 static int m_kick(struct Client *, struct Client *, int, const char **);
 #define mg_kick { m_kick, 3 }
@@ -69,6 +70,7 @@ m_kick(struct Client *client_p, struct Client *source_p, int parc, const char *p
 	char *p = NULL;
 	const char *user;
 	static char buf[BUFSIZE];
+	int is_override = 0;
 
 	if(MyClient(source_p) && !IsFloodDone(source_p))
 		flood_endgrace(source_p);
@@ -97,18 +99,22 @@ m_kick(struct Client *client_p, struct Client *source_p, int parc, const char *p
 			return 0;
 		}
 
-		if(!is_chanop(msptr) && !IsOverride(source_p))
+		if(!is_chanop(msptr))
 		{
 			if(MyConnect(source_p))
 			{
-				sendto_one(source_p, form_str(ERR_CHANOPRIVSNEEDED),
-					   me.name, source_p->name, name);
-				return 0;
+				if(IsOverride(source_p))
+					is_override = 1;
+				else
+				{
+					sendto_one(source_p, form_str(ERR_CHANOPRIVSNEEDED),
+						   me.name, source_p->name, name);
+					return 0;
+				}
 			}
-
-			/* If its a TS 0 channel, do it the old way */
-			if(chptr->channelts == 0)
+			else if(chptr->channelts == 0)
 			{
+				/* If its a TS 0 channel, do it the old way */
 				sendto_one(source_p, form_str(ERR_CHANOPRIVSNEEDED),
 					   get_id(&me, source_p), get_id(source_p, source_p), name);
 				return 0;
@@ -173,6 +179,11 @@ m_kick(struct Client *client_p, struct Client *source_p, int parc, const char *p
 		comment = LOCAL_COPY((EmptyString(parv[3])) ? who->name : parv[3]);
 		if(strlen(comment) > (size_t) REASONLEN)
 			comment[REASONLEN] = '\0';
+
+		if(is_override)
+			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
+					"%s is overriding KICK [%s] on [%s] [%s]",
+					get_oper_name(source_p), who->name, chptr->chname, comment);
 
 		/* jdc
 		 * - In the case of a server kicking a user (i.e. CLEARCHAN),
