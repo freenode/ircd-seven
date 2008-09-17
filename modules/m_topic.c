@@ -88,6 +88,8 @@ m_topic(struct Client *client_p, struct Client *source_p, int parc, const char *
 	/* setting topic */
 	if(parc > 2)
 	{
+		char topic_info[USERHOST_REPLYLEN];
+
 		msptr = find_channel_membership(chptr, source_p);
 
 		if(msptr == NULL)
@@ -97,26 +99,33 @@ m_topic(struct Client *client_p, struct Client *source_p, int parc, const char *
 			return 0;
 		}
 
-		if((chptr->mode.mode & MODE_TOPICLIMIT) == 0 || is_chanop(msptr) || IsOverride(source_p))
+		if(MyClient(source_p) && (chptr->mode.mode & MODE_TOPICLIMIT) && !is_chanop(msptr))
 		{
-			char topic_info[USERHOST_REPLYLEN];
-			rb_sprintf(topic_info, "%s!%s@%s",
-					source_p->name, source_p->username, source_p->host);
-			set_channel_topic(chptr, parv[2], topic_info, rb_current_time());
-
-			sendto_server(client_p, chptr, CAP_TS6, NOCAPS,
-					":%s TOPIC %s :%s",
-					use_id(source_p), chptr->chname,
-					chptr->topic == NULL ? "" : chptr->topic);
-			sendto_channel_local(ALL_MEMBERS,
-					chptr, ":%s!%s@%s TOPIC %s :%s",
-					source_p->name, source_p->username,
-					source_p->host, chptr->chname,
-					chptr->topic == NULL ? "" : chptr->topic);
+			if(IsOverride(source_p))
+				sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
+						"%s is overriding TOPIC on [%s]",
+						get_oper_name(source_p), chptr->chname);
+			else
+			{
+				sendto_one(source_p, form_str(ERR_CHANOPRIVSNEEDED),
+						me.name, source_p->name, parv[1]);
+				return 0;
+			}
 		}
-		else
-			sendto_one(source_p, form_str(ERR_CHANOPRIVSNEEDED),
-					me.name, source_p->name, parv[1]);
+
+		rb_sprintf(topic_info, "%s!%s@%s",
+				source_p->name, source_p->username, source_p->host);
+		set_channel_topic(chptr, parv[2], topic_info, rb_current_time());
+
+		sendto_server(client_p, chptr, CAP_TS6, NOCAPS,
+				":%s TOPIC %s :%s",
+				use_id(source_p), chptr->chname,
+				chptr->topic == NULL ? "" : chptr->topic);
+		sendto_channel_local(ALL_MEMBERS,
+				chptr, ":%s!%s@%s TOPIC %s :%s",
+				source_p->name, source_p->username,
+				source_p->host, chptr->chname,
+				chptr->topic == NULL ? "" : chptr->topic);
 	}
 	else if(MyClient(source_p))
 	{
