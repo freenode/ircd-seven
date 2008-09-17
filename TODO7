@@ -2,7 +2,7 @@
 [x] reorganise oper privileges
 [x] Add umode +O / helper status
 [x] umode +h
-[ ] propagate OPER
+[x] propagate OPER
 [x] operhide
 [x] umodes +p, +m
 [x] GRANT
@@ -20,4 +20,4 @@
 [x] identify-msg
 [ ] make +p noisy (use OMODE code)
 [ ] restrict snotes
-[ ] icky kline hack
+[x] icky kline hack
