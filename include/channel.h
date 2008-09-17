@@ -88,6 +88,7 @@ struct membership
 	unsigned int flags;
 
 	unsigned long bants;
+	unsigned long override_ts;
 };
 
 #define BANLEN 195

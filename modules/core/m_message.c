@@ -347,12 +347,26 @@ build_target_list(int p_or_n, const char *command, struct Client *client_p,
 
 				msptr = find_channel_membership(chptr, source_p);
 
-				if(!IsServer(source_p) && !IsService(source_p) && !is_chanop_voiced(msptr)
-					&& !IsOverride(source_p))
+				if(!IsServer(source_p) && !IsService(source_p) && !is_chanop_voiced(msptr))
 				{
-					sendto_one(source_p, form_str(ERR_CHANOPRIVSNEEDED),
-						   me.name, source_p->name, with_prefix);
-					return (-1);
+					if(msptr && IsOverride(source_p))
+					{
+						/* Only send a notice for this if we haven't in the last
+						 * three minutes. */
+						if(MyClient(source_p) && rb_current_time() > msptr->override_ts + 300)
+						{
+							msptr->override_ts = rb_current_time();
+							sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
+									"%s is overriding send to [%s]",
+									get_oper_name(source_p), with_prefix);
+						}
+					}
+					else
+					{
+						sendto_one(source_p, form_str(ERR_CHANOPRIVSNEEDED),
+							   me.name, source_p->name, with_prefix);
+						return (-1);
+					}
 				}
 
 				if(!duplicate_ptr(chptr))
@@ -443,6 +457,7 @@ msg_channel(int p_or_n, const char *command,
 {
 	int result;
 	char text2[BUFSIZE];
+	struct membership *msptr;
 
 	if(MyClient(source_p))
 	{
@@ -466,8 +481,10 @@ msg_channel(int p_or_n, const char *command,
 		}
 	}
 
+	msptr = find_channel_membership(chptr, source_p);
+
 	/* chanops and voiced can flood their own channel with impunity */
-	if((result = can_send(chptr, source_p, NULL)))
+	if((result = can_send(chptr, source_p, msptr)))
 	{
 		if(result == CAN_SEND_OPV ||
 		   !flood_attack_channel(p_or_n, source_p, chptr, chptr->chname))
@@ -475,6 +492,17 @@ msg_channel(int p_or_n, const char *command,
 			sendto_channel_message(client_p, ALL_MEMBERS, source_p, chptr,
 					     command, chptr->chname, "%s", text);
 		}
+	}
+	else if (msptr && IsOverride(source_p))
+	{
+		if(MyClient(source_p) && rb_current_time() > msptr->override_ts + 300)
+		{
+			msptr->override_ts = rb_current_time();
+			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "%s is overriding send to %s",
+					get_oper_name(source_p), chptr->chname);
+		}
+		sendto_channel_message(client_p, ALL_MEMBERS, source_p, chptr,
+				command, chptr->chname, "%s", text);
 	}
 	else if(chptr->mode.mode & MODE_OPMODERATE &&
 			chptr->mode.mode & MODE_MODERATED &&

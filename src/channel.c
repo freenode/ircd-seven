@@ -851,9 +851,6 @@ can_send(struct Channel *chptr, struct Client *source_p, struct membership *mspt
 	if(is_chanop_voiced(msptr))
 		return CAN_SEND_OPV;
 
-	if(IsOverride(source_p))
-		return CAN_SEND_NONOP;
-
 	if(chptr->mode.mode & MODE_MODERATED)
 		return CAN_SEND_NO;
 
