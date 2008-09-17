@@ -725,9 +725,6 @@ can_join(struct Client *source_p, struct Channel *chptr, char *key, const char *
 
 	s_assert(source_p->localClient != NULL);
 
-	if(IsOverride(source_p))
-		return 0;
-
 	rb_sprintf(src_host, "%s!%s@%s", source_p->name, source_p->username, source_p->host);
 	rb_sprintf(src_iphost, "%s!%s@%s", source_p->name, source_p->username, source_p->sockhost);
 	if(source_p->localClient->mangledhost != NULL)

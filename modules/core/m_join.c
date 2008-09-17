@@ -99,6 +99,13 @@ check_forward(struct Client *source_p, struct Channel *chptr,
 	 */
 	if ((*err = can_join(source_p, chptr, key, &next)) == 0)
 		return chptr;
+	else if (IsOverride(source_p))
+	{
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
+				"%s is overriding JOIN to [%s]",
+				get_oper_name(source_p), chptr->chname);
+		return chptr;
+	}
 
 	/* User is +Q */
 	if (IsNoForward(source_p))
