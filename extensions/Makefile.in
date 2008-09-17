@@ -27,6 +27,7 @@ INCLUDES	= -I. -I../include -I../libratbox/include $(SSL_INCLUDES)
 CPPFLAGS	= ${INCLUDES} @CPPFLAGS@
 
 SRCS =                          \
+  burst_klines.c		\
   chm_adminonly.c		\
   chm_no_oper_kick.c		\
   chm_operonly.c		\
