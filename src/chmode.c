@@ -168,7 +168,7 @@ find_cflag_slot(void)
 static int
 get_channel_access(struct Client *source_p, struct membership *msptr)
 {
-	if(!MyClient(source_p) || is_chanop(msptr) || IsOverride(source_p))
+	if(!MyClient(source_p) || is_chanop(msptr))
 		return CHFL_CHANOP;
 
 	return CHFL_PEON;
@@ -946,7 +946,7 @@ chm_op(struct Client *source_p, struct Channel *chptr,
 
 	if(dir == MODE_ADD)
 	{
-		if(targ_p == source_p && !IsOverride(source_p))
+		if(targ_p == source_p)
 			return;
 
 		mode_changes[mode_count].letter = c;
