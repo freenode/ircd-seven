@@ -578,7 +578,7 @@ sendto_channel_message(struct Client *one, int type, struct Client *source_p,
 			       ":%s!%s@%s %s %s :%c%s",
 			       source_p->name, source_p->username, 
 			       source_p->host, command, target,
-			       EmptyString(source_p->user->suser) ? '-' : '+', buf);
+			       (EmptyString(source_p->user->suser) && !IsService(source_p)) ? '-' : '+', buf);
 	}
 
 	rb_linebuf_putmsg(&rb_linebuf_id, NULL, NULL, ":%s %s %s :%s", use_id(source_p), command, target, buf);
@@ -1059,7 +1059,7 @@ sendto_anywhere_message(struct Client *target_p, struct Client *source_p,
 					       source_p->name, source_p->username,
 					       source_p->host, command,
 					       target_p->name,
-					       EmptyString(source_p->user->suser)? '-' : '+');
+					       (EmptyString(source_p->user->suser) && !IsService(source_p)) ? '-' : '+');
 			else
 				rb_linebuf_putmsg(&linebuf, pattern, &args, 
 					       ":%s!%s@%s %s %s :", 
