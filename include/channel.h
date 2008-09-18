@@ -116,6 +116,7 @@ struct ChModeChange
 	int caps;
 	int nocaps;
 	int mems;
+	int override;
 	struct Client *client;
 };
 

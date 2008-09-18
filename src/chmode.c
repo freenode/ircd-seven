@@ -506,13 +506,20 @@ chm_simple(struct Client *source_p, struct Channel *chptr,
 	   int alevel, int parc, int *parn,
 	   const char **parv, int *errors, int dir, char c, long mode_type)
 {
+	int override = 0;
+
 	if(alevel != CHFL_CHANOP)
 	{
-		if(!(*errors & SM_ERR_NOOPS))
-			sendto_one(source_p, form_str(ERR_CHANOPRIVSNEEDED),
-				   me.name, source_p->name, chptr->chname);
-		*errors |= SM_ERR_NOOPS;
-		return;
+		if (IsOverride(source_p))
+			override = 1;
+		else
+		{
+			if(!(*errors & SM_ERR_NOOPS))
+				sendto_one(source_p, form_str(ERR_CHANOPRIVSNEEDED),
+					   me.name, source_p->name, chptr->chname);
+			*errors |= SM_ERR_NOOPS;
+			return;
+		}
 	}
 
 	/* flags (possibly upto 32) + 4 with param */
@@ -530,6 +537,7 @@ chm_simple(struct Client *source_p, struct Channel *chptr,
 		mode_changes[mode_count].nocaps = 0;
 		mode_changes[mode_count].id = NULL;
 		mode_changes[mode_count].mems = ALL_MEMBERS;
+		mode_changes[mode_count].override = override;
 		mode_changes[mode_count++].arg = NULL;
 	}
 	else if((dir == MODE_DEL) && (chptr->mode.mode & mode_type))
@@ -542,6 +550,7 @@ chm_simple(struct Client *source_p, struct Channel *chptr,
 		mode_changes[mode_count].nocaps = 0;
 		mode_changes[mode_count].mems = ALL_MEMBERS;
 		mode_changes[mode_count].id = NULL;
+		mode_changes[mode_count].override = override;
 		mode_changes[mode_count++].arg = NULL;
 	}
 }
@@ -1693,12 +1702,13 @@ void
 set_channel_mode(struct Client *client_p, struct Client *source_p,
 		 struct Channel *chptr, struct membership *msptr, int parc, const char *parv[])
 {
+	static char cmdbuf[BUFSIZE];
 	static char modebuf[BUFSIZE];
 	static char parabuf[BUFSIZE];
 	char *mbuf;
 	char *pbuf;
 	int cur_len, mlen, paralen, paracount, arglen, len;
-	int i, j, flags;
+	int i, j, flags, override;
 	int dir = MODE_ADD;
 	int parn = 1;
 	int errors = 0;
@@ -1748,86 +1758,117 @@ set_channel_mode(struct Client *client_p, struct Client *source_p,
 		return;
 
 	if(IsServer(source_p))
-		mlen = rb_sprintf(modebuf, ":%s MODE %s ", fakesource_p->name, chptr->chname);
+		rb_sprintf(cmdbuf, ":%s MODE %s ", fakesource_p->name, chptr->chname);
 	else
-		mlen = rb_sprintf(modebuf, ":%s!%s@%s MODE %s ",
+		rb_sprintf(cmdbuf, ":%s!%s@%s MODE %s ",
 				  source_p->name, source_p->username,
 				  source_p->host, chptr->chname);
 
-	for(j = 0, flags = ALL_MEMBERS; j < 2; j++, flags = ONLY_CHANOPS)
+	mlen = 0;
+
+	for (override = 0; override < (IsOverride(source_p) ? 2 : 1); ++override)
 	{
-		cur_len = mlen;
-		mbuf = modebuf + mlen;
-		pbuf = parabuf;
-		parabuf[0] = '\0';
-		paracount = paralen = 0;
-		dir = MODE_QUERY;
-
-		for(i = 0; i < mode_count; i++)
+		int was_on_chan = 0;
+		if(override)
 		{
-			if(mode_changes[i].letter == 0 || mode_changes[i].mems != flags)
-				continue;
-
-			if(mode_changes[i].arg != NULL)
-			{
-				arglen = strlen(mode_changes[i].arg);
-
-				if(arglen > MODEBUFLEN - 5)
-					continue;
-			}
+			if(msptr)
+				was_on_chan = 1;
 			else
-				arglen = 0;
+				add_user_to_channel(chptr, source_p, 0);
+		}
 
-			/* if we're creeping over MAXMODEPARAMSSERV, or over
-			 * bufsize (4 == +/-,modechar,two spaces) send now.
-			 */
-			if(mode_changes[i].arg != NULL &&
-			   ((paracount == MAXMODEPARAMSSERV) ||
-			    ((cur_len + paralen + arglen + 4) > (BUFSIZE - 3))))
+		for(j = 0, flags = ALL_MEMBERS; j < 2; j++, flags = ONLY_CHANOPS)
+		{
+			cur_len = mlen;
+			mbuf = modebuf + mlen;
+			pbuf = parabuf;
+			parabuf[0] = '\0';
+			paracount = paralen = 0;
+			dir = MODE_QUERY;
+
+			for(i = 0; i < mode_count; i++)
 			{
-				*mbuf = '\0';
-
-				if(cur_len > mlen)
-					sendto_channel_local(flags, chptr, "%s %s", modebuf,
-							     parabuf);
-				else
+				if(mode_changes[i].letter == 0 || mode_changes[i].mems != flags)
 					continue;
 
-				paracount = paralen = 0;
-				cur_len = mlen;
-				mbuf = modebuf + mlen;
-				pbuf = parabuf;
-				parabuf[0] = '\0';
-				dir = MODE_QUERY;
-			}
+				if(mode_changes[i].override != override)
+					continue;
 
-			if(dir != mode_changes[i].dir)
-			{
-				*mbuf++ = (mode_changes[i].dir == MODE_ADD) ? '+' : '-';
+				if(mode_changes[i].arg != NULL)
+				{
+					arglen = strlen(mode_changes[i].arg);
+
+					if(arglen > MODEBUFLEN - 5)
+						continue;
+				}
+				else
+					arglen = 0;
+
+				/* if we're creeping over MAXMODEPARAMSSERV, or over
+				 * bufsize (4 == +/-,modechar,two spaces) send now.
+				 */
+				if(mode_changes[i].arg != NULL &&
+				   ((paracount == MAXMODEPARAMSSERV) ||
+				    ((cur_len + paralen + arglen + 4) > (BUFSIZE - 3))))
+				{
+					*mbuf = '\0';
+
+					if(cur_len > mlen)
+					{
+						sendto_channel_local(flags, chptr, "%s%s %s",
+								     cmdbuf, modebuf, parabuf);
+						if(override)
+							sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
+									"%s is overriding modes on %s: %s %s",
+									get_oper_name(source_p), chptr->chname,
+									modebuf, parabuf);
+					}
+					else
+						continue;
+
+					paracount = paralen = 0;
+					cur_len = mlen;
+					mbuf = modebuf + mlen;
+					pbuf = parabuf;
+					parabuf[0] = '\0';
+					dir = MODE_QUERY;
+				}
+
+				if(dir != mode_changes[i].dir)
+				{
+					*mbuf++ = (mode_changes[i].dir == MODE_ADD) ? '+' : '-';
+					cur_len++;
+					dir = mode_changes[i].dir;
+				}
+
+				*mbuf++ = mode_changes[i].letter;
 				cur_len++;
-				dir = mode_changes[i].dir;
+
+				if(mode_changes[i].arg != NULL)
+				{
+					paracount++;
+					len = rb_sprintf(pbuf, "%s ", mode_changes[i].arg);
+					pbuf += len;
+					paralen += len;
+				}
 			}
 
-			*mbuf++ = mode_changes[i].letter;
-			cur_len++;
+			if(paralen && parabuf[paralen - 1] == ' ')
+				parabuf[paralen - 1] = '\0';
 
-			if(mode_changes[i].arg != NULL)
+			*mbuf = '\0';
+			if(cur_len > mlen)
 			{
-				paracount++;
-				len = rb_sprintf(pbuf, "%s ", mode_changes[i].arg);
-				pbuf += len;
-				paralen += len;
+				sendto_channel_local(flags, chptr, "%s%s %s", cmdbuf, modebuf, parabuf);
+				if(override)
+					sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
+							"%s is overriding modes on %s: %s %s",
+							get_oper_name(source_p), chptr->chname,
+							modebuf, parabuf);
 			}
 		}
-
-		if(paralen && parabuf[paralen - 1] == ' ')
-			parabuf[paralen - 1] = '\0';
-
-		*mbuf = '\0';
-		if(cur_len > mlen)
-		{
-			sendto_channel_local(flags, chptr, "%s %s", modebuf, parabuf);
-		}
+		if(override && !was_on_chan)
+			remove_user_from_channel(find_channel_membership(chptr, source_p));
 	}
 
 	/* only propagate modes originating locally, or if we're hubbing */
