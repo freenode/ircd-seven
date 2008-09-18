@@ -873,6 +873,7 @@ expire_umode_p(void *data)
 {
 	struct Client *source_p = data;
 	char *parv[4] = {source_p->name, source_p->name, "-p", NULL};
+	source_p->localClient->override_timeout_event = NULL;
 	user_mode(source_p, source_p, 3, parv);
 }
 
@@ -1164,8 +1165,15 @@ user_mode(struct Client *client_p, struct Client *source_p, int parc, const char
 
 	/* If we're setting +p, expire it */
 	if(ConfigFileEntry.expire_override_time && MyClient(source_p) && (source_p->umodes & ~setflags) & UMODE_OVERRIDE)
-		rb_event_addonce("expire_override", expire_umode_p, source_p, ConfigFileEntry.expire_override_time);
-
+	{
+		source_p->localClient->override_timeout_event =
+			rb_event_addonce("expire_override", expire_umode_p, source_p, ConfigFileEntry.expire_override_time);
+	}
+	else if(MyClient(source_p) && source_p->localClient->override_timeout_event && (setflags & ~source_p->umodes) & UMODE_OVERRIDE)
+	{
+		rb_event_delete(source_p->localClient->override_timeout_event);
+		source_p->localClient->override_timeout_event = NULL;
+	}
 
 	return (0);
 }

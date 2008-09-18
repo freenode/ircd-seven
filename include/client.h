@@ -286,6 +286,8 @@ struct LocalUser
 	struct ev_entry *event;			/* used for associated events */
 
 	struct PrivilegeSet *privset;		/* privset... */
+
+	struct rb_event_t *override_timeout_event;
 };
 
 struct PreClient
