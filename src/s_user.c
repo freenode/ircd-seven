@@ -1163,7 +1163,7 @@ user_mode(struct Client *client_p, struct Client *source_p, int parc, const char
 			construct_snobuf(source_p->snomask));
 
 	/* If we're setting +p, expire it */
-	if(ConfigFileEntry.expire_override_time && (source_p->umodes & ~setflags) & UMODE_OVERRIDE)
+	if(ConfigFileEntry.expire_override_time && MyClient(source_p) && (source_p->umodes & ~setflags) & UMODE_OVERRIDE)
 		rb_event_addonce("expire_override", expire_umode_p, source_p, ConfigFileEntry.expire_override_time);
 
 
