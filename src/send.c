@@ -661,48 +661,6 @@ sendto_channel_local(int type, struct Channel *chptr, const char *pattern, ...)
 	rb_linebuf_donebuf(&linebuf);
 }
 
-
-/* sendto_channel_local_plus_opers()
- *
- * inputs	- flags to send to, channel to send to, va_args
- * outputs	- message to local channel members. If type is non-zero,
- *		  send to +p opers as well -- hence use this only for mode changes
- *		  and other informational messages, not message/notice text.
- * side effects -
- */
-void
-sendto_channel_local_plus_opers(int type, struct Channel *chptr, const char *pattern, ...)
-{
-	va_list args;
-	buf_head_t linebuf;
-	struct membership *msptr;
-	struct Client *target_p;
-	rb_dlink_node *ptr;
-	rb_dlink_node *next_ptr;
-	
-	rb_linebuf_newbuf(&linebuf); 
-	
-	va_start(args, pattern);
-	rb_linebuf_putmsg(&linebuf, pattern, &args, NULL);
-	va_end(args);
-
-	RB_DLINK_FOREACH_SAFE(ptr, next_ptr, chptr->locmembers.head)
-	{
-		msptr = ptr->data;
-		target_p = msptr->client_p;
-
-		if(IsIOError(target_p))
-			continue;
-
-		if(type && ((msptr->flags & type) == 0) && !IsOverride(target_p))
-			continue;
-
-		_send_linebuf(target_p, &linebuf);
-	}
-
-	rb_linebuf_donebuf(&linebuf);
-}
-
 /* sendto_channel_local_butone()
  *
  * inputs	- flags to send to, channel to send to, va_args
