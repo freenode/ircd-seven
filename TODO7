@@ -21,4 +21,4 @@
 [x] make +p noisy (use OMODE code)
 [ ] restrict snotes
 [x] icky kline hack
-[ ] Make +p time out
+[x] Make +p time out
