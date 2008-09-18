@@ -823,6 +823,7 @@ set_default_conf(void)
 	ConfigFileEntry.throttle_count = 4;
 	ConfigFileEntry.throttle_duration = 60;
 	ConfigFileEntry.operhide = 0;
+	ConfigFileEntry.expire_override_time = 300;
 
 	ServerInfo.default_max_clients = MAXCONNECTIONS;
 }

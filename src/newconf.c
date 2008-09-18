@@ -2149,6 +2149,7 @@ static struct ConfEntry conf_general_table[] =
 	{ "use_whois_actually", CF_YESNO, NULL, 0, &ConfigFileEntry.use_whois_actually	},
 	{ "warn_no_nline",	CF_YESNO, NULL, 0, &ConfigFileEntry.warn_no_nline	},
 	{ "hide_opers",		CF_YESNO, NULL, 0, &ConfigFileEntry.operhide		},
+	{ "expire_override_time",CF_TIME, NULL, 0, &ConfigFileEntry.expire_override_time},
 	{ "\0", 		0, 	  NULL, 0, NULL }
 };
 

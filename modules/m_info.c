@@ -182,6 +182,12 @@ static struct InfoStruct info_table[] = {
 		"Number of permissable dots in an ident"
 	},
 	{
+		"expire_override_time",
+		OUTPUT_DECIMAL,
+		&ConfigFileEntry.expire_override_time,
+		"Period of time after which to unset user mode +p"
+	},
+	{
 		"failed_oper_notice",
 		OUTPUT_BOOLEAN,
 		&ConfigFileEntry.failed_oper_notice,
