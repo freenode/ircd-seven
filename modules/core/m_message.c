@@ -495,14 +495,17 @@ msg_channel(int p_or_n, const char *command,
 	}
 	else if (msptr && IsOverride(source_p))
 	{
-		if(MyClient(source_p) && rb_current_time() > msptr->override_ts + 300)
+		if (!flood_attack_channel(p_or_n, source_p, chptr, chptr->chname))
 		{
-			msptr->override_ts = rb_current_time();
-			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "%s is overriding send to %s",
-					get_oper_name(source_p), chptr->chname);
+			if(MyClient(source_p) && rb_current_time() > msptr->override_ts + 300)
+			{
+				msptr->override_ts = rb_current_time();
+				sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "%s is overriding send to %s",
+						get_oper_name(source_p), chptr->chname);
+			}
+			sendto_channel_message(client_p, ALL_MEMBERS, source_p, chptr,
+					command, chptr->chname, "%s", text);
 		}
-		sendto_channel_message(client_p, ALL_MEMBERS, source_p, chptr,
-				command, chptr->chname, "%s", text);
 	}
 	else if(chptr->mode.mode & MODE_OPMODERATE &&
 			chptr->mode.mode & MODE_MODERATED &&
