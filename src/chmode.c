@@ -649,7 +649,7 @@ chm_ban(struct Client *source_p, struct Channel *chptr,
 	const char **parv, int *errors, int dir, char c, long mode_type)
 {
 	char *mask;
-	char *raw_mask;
+	const char *raw_mask, *send_mask;
 	char *forward;
 	rb_dlink_list *list;
 	rb_dlink_node *ptr;
@@ -794,10 +794,14 @@ chm_ban(struct Client *source_p, struct Channel *chptr,
 		if(strchr(raw_mask, ' '))
 			return;
 
-		mask = raw_mask;
+		mask = LOCAL_COPY(raw_mask);
+		send_mask = raw_mask;
 	}
 	else
+	{
 		mask = pretty_mask(raw_mask);
+		send_mask = mask;
+	}
 
 	/* Look for a $ after the first character.
 	 * As the first character, it marks an extban; afterwards
@@ -887,7 +891,7 @@ chm_ban(struct Client *source_p, struct Channel *chptr,
 		mode_changes[mode_count].mems = mems;
 		mode_changes[mode_count].id = NULL;
 		mode_changes[mode_count].override = override;
-		mode_changes[mode_count++].arg = mask;
+		mode_changes[mode_count++].arg = send_mask;
 	}
 	else if(dir == MODE_DEL)
 	{
@@ -895,17 +899,17 @@ chm_ban(struct Client *source_p, struct Channel *chptr,
 		static char buf[BANLEN * MAXMODEPARAMS];
 		int old_removed_mask_pos = removed_mask_pos;
 
-		if((removed = del_id(chptr, mask, list, mode_type)) == NULL)
+		if((removed = del_id(chptr, send_mask, list, mode_type)) == NULL)
 		{
 			/* mask isn't a valid ban, check raw_mask */
 			if((removed = del_id(chptr, raw_mask, list, mode_type)) != NULL)
-				mask = raw_mask;
+				send_mask = raw_mask;
 		}
 
 		if(removed && removed->forward)
-			removed_mask_pos += rb_snprintf(buf, sizeof(buf), "%s$%s", removed->banstr, removed->forward);
+			removed_mask_pos += rb_snprintf(buf + removed_mask_pos, sizeof(buf), "%s$%s", removed->banstr, removed->forward) + 1;
 		else
-			removed_mask_pos += rb_strlcpy(buf, mask, sizeof(buf));
+			removed_mask_pos += rb_strlcpy(buf + removed_mask_pos, send_mask, sizeof(buf)) + 1;
 
 		if(removed)
 		{
