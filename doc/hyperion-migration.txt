@@ -16,6 +16,9 @@ Things that are gone
 --------------------
 
 - SILENCE. The replacement is user mode +g and /accept.
+- Channel mode +m no longer prevents nick changes.
+- Channel mode +R no longer exists as a simple mode -- use +q $~a to
+  achieve the same effect.
 
 Things that are different
 -------------------------
