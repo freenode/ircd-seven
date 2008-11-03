@@ -106,11 +106,11 @@ construct_noparam_modes(void)
 			if (chmode_flags[i] == 0)
 			{
                                 chmode_table[i].set_func = chm_orphaned;
-				sendto_realops_snomask(SNO_DEBUG, L_ALL, "Cmode +%c is now orphaned", i);
+				sendto_realops_snomask(SNO_DEBUG, L_NETWIDE, "Cmode +%c is now orphaned", i);
 			}
 			else
 			{
-				sendto_realops_snomask(SNO_DEBUG, L_ALL, "Orphaned cmode +%c is picked up by module", i);
+				sendto_realops_snomask(SNO_DEBUG, L_NETWIDE, "Orphaned cmode +%c is picked up by module", i);
 			}
 			chmode_flags[i] = prev_chmode_flags[i];
 		}
