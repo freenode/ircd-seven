@@ -52,7 +52,7 @@ can_kick(hook_data_channel_approval *data)
 		data->approved = 0;
 	}
 
-	if (target_p->umodes & UMODE_OVERRIDE && HasPrivilege(target_p, "oper:immune") && data->approved)
+	if (target_p->umodes & UMODE_OVERRIDE && data->approved)
 	{
 		sendto_one_numeric(source_p, ERR_ISCHANSERVICE,
 				"%s %s :User is immune from kick.",
