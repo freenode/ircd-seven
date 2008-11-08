@@ -48,6 +48,7 @@ SRCS =                          \
   force_user_invis.c		\
   ip_cloaking.c			\
   ip_cloaking_old.c		\
+  sno_channelcreate.c           \
   sno_farconnect.c		\
   sno_globalkline.c		\
   sno_globaloper.c		\
