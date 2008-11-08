@@ -51,7 +51,7 @@ h_scc_channel_join(void *vdata)
 	/* If they just joined a channel, and it only has one member, then they just created it. */
 	if(rb_dlink_list_length(&chptr->members) == 1)
 	{
-		sendto_realops_snomask(snomask_modes['l'], L_ALL, "%s is creating new channel %s",
+		sendto_realops_snomask(snomask_modes['l'], L_NETWIDE, "%s is creating new channel %s",
 					source_p->name, chptr->chname);
 	}
 }
