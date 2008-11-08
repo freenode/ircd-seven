@@ -402,14 +402,11 @@ m_join(struct Client *client_p, struct Client *source_p, int parc, const char *p
 
 /*
  * ms_join
- *
- * inputs	-
- * output	- none
- * side effects	- handles remote JOIN's sent by servers. In TSora
- *		  remote clients are joined using SJOIN, hence a 
- *		  JOIN sent by a server on behalf of a client is an error.
- *		  here, the initial code is in to take an extra parameter
- *		  and use it for the TimeStamp on a new channel.
+ *      parv[0] = sender prefix
+ *      parv[1] = channel TS
+ *      parv[2] = channel
+ *      parv[3] = "+", formerly channel modes but now unused
+ * alternatively, a single "0" parameter parts all channels
  */
 static int
 ms_join(struct Client *client_p, struct Client *source_p, int parc, const char *parv[])
@@ -1198,7 +1195,7 @@ remove_our_modes(struct Channel *chptr, struct Client *source_p)
 					*mbuf = '\0';
 					sendto_channel_local(ALL_MEMBERS, chptr,
 							     ":%s MODE %s %s %s %s %s %s",
-							     me.name, chptr->chname,
+							     source_p->name, chptr->chname,
 							     lmodebuf, lpara[0], lpara[1],
 							     lpara[2], lpara[3]);
 
@@ -1230,7 +1227,7 @@ remove_our_modes(struct Channel *chptr, struct Client *source_p)
 			*mbuf = '\0';
 			sendto_channel_local(ALL_MEMBERS, chptr,
 					     ":%s MODE %s %s %s %s %s %s",
-					     me.name, chptr->chname, lmodebuf,
+					     source_p->name, chptr->chname, lmodebuf,
 					     lpara[0], lpara[1], lpara[2], lpara[3]);
 			mbuf = lmodebuf;
 			*mbuf++ = '-';
@@ -1246,7 +1243,7 @@ remove_our_modes(struct Channel *chptr, struct Client *source_p)
 		*mbuf = '\0';
 		sendto_channel_local(ALL_MEMBERS, chptr,
 				     ":%s MODE %s %s %s %s %s %s",
-				     me.name, chptr->chname, lmodebuf,
+				     source_p->name, chptr->chname, lmodebuf,
 				     EmptyString(lpara[0]) ? "" : lpara[0],
 				     EmptyString(lpara[1]) ? "" : lpara[1],
 				     EmptyString(lpara[2]) ? "" : lpara[2],

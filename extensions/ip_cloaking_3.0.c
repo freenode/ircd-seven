@@ -6,7 +6,6 @@
 #include "client.h"
 #include "ircd.h"
 #include "send.h"
-#include "hash.h"
 #include "s_conf.h"
 #include "s_user.h"
 #include "s_serv.h"
@@ -66,54 +65,67 @@ distribute_hostchange(struct Client *client)
 		ClearDynSpoof(client);
 }
 
+#define Nval 0x8c3a48ac
+#define HOSTLEN 63
+#define INITDATA "98fwqefnoiqefv03f423t34gbv3vb89tg432t3b8" /* change this */
+
+static inline unsigned int
+get_string_entropy(const char *inbuf)
+{
+	unsigned int accum = 1;
+
+	while(*inbuf != '\0')
+		accum += *inbuf++;
+
+	return accum;
+}
+
+/* calls get_string_entropy() and toasts it against INITDATA */
+static inline unsigned int
+get_string_weighted_entropy(const char *inbuf)
+{
+	static int base_entropy = 0;
+        unsigned int accum = get_string_entropy(inbuf);
+
+	/* initialize the algorithm if it is not yet ready */
+	if (base_entropy == 0)
+		base_entropy = get_string_entropy(INITDATA);
+
+        return (Nval * accum) ^ base_entropy;
+}
+
 static void
 do_host_cloak_ip(const char *inbuf, char *outbuf)
 {
-	/* None of the characters in this table can be valid in an IP */
-	char chartable[] = "ghijklmnopqrstuvwxyz";
 	char *tptr;
-	uint32_t accum = fnv_hash((const unsigned char*) inbuf, 32);
-	int sepcount = 0;
-	int totalcount = 0;
+	unsigned int accum = get_string_weighted_entropy(inbuf);
+	char buf[HOSTLEN];
 	int ipv6 = 0;
 
-	rb_strlcpy(outbuf, inbuf, HOSTLEN + 1);
+	strncpy(buf, inbuf, HOSTLEN);
+	tptr = strrchr(buf, '.');
 
-	if (strchr(outbuf, ':'))
+	if (tptr == NULL)
 	{
+		tptr = strrchr(buf, ':');
 		ipv6 = 1;
-
-		/* Damn you IPv6... 
-		 * We count the number of colons so we can calculate how much
-		 * of the host to cloak. This is because some hostmasks may not
-		 * have as many octets as we'd like.
-		 *
-		 * We have to do this ahead of time because doing this during
-		 * the actual cloaking would get ugly
-		 */
-		for (tptr = outbuf; *tptr != '\0'; tptr++)
-			if (*tptr == ':')
-				totalcount++;
 	}
-	else if (!strchr(outbuf, '.'))
-		return;
 
-	for (tptr = outbuf; *tptr != '\0'; tptr++) 
+	if (tptr == NULL)
 	{
-		if (*tptr == ':' || *tptr == '.')
-		{
-			sepcount++;
-			continue;
-		}
+		strncpy(outbuf, inbuf, HOSTLEN);
+		return;
+	}
 
-		if (ipv6 && sepcount < totalcount / 2)
-			continue;
+	*tptr++ = '\0';
 
-		if (!ipv6 && sepcount < 2)
-			continue;
-
-		*tptr = chartable[(*tptr + accum) % 20];
-		accum = (accum << 1) | (accum >> 31);
+	if(ipv6)
+	{
+	    rb_snprintf(outbuf, HOSTLEN, "%s:%x", buf, accum);
+	}
+	else
+	{
+	    rb_snprintf(outbuf, HOSTLEN, "%s.%x", buf, accum);
 	}
 }
 
@@ -122,12 +134,12 @@ do_host_cloak_host(const char *inbuf, char *outbuf)
 {
 	char b26_alphabet[] = "abcdefghijklmnopqrstuvwxyz";
 	char *tptr;
-	uint32_t accum = fnv_hash((const unsigned char*) inbuf, 32);
+	unsigned int accum = get_string_weighted_entropy(inbuf);
 
-	rb_strlcpy(outbuf, inbuf, HOSTLEN + 1);
+	strncpy(outbuf, inbuf, HOSTLEN);
 
 	/* pass 1: scramble first section of hostname using base26 
-	 * alphabet toasted against the FNV hash of the string.
+	 * alphabet toasted against the weighted entropy of the string.
 	 *
 	 * numbers are not changed at this time, only letters.
 	 */
@@ -139,19 +151,16 @@ do_host_cloak_host(const char *inbuf, char *outbuf)
 		if (isdigit(*tptr) || *tptr == '-')
 			continue;
 
-		*tptr = b26_alphabet[(*tptr + accum) % 26];
-
-		/* Rotate one bit to avoid all digits being turned odd or even */
-		accum = (accum << 1) | (accum >> 31);
+		*tptr = b26_alphabet[(*tptr * accum) % 26];
 	}
 
 	/* pass 2: scramble each number in the address */
 	for (tptr = outbuf; *tptr != '\0'; tptr++)
 	{
 		if (isdigit(*tptr))
-			*tptr = '0' + (*tptr + accum) % 10;
-
-		accum = (accum << 1) | (accum >> 31);
+		{
+			*tptr = 48 + ((*tptr * accum) % 10);
+		}
 	}	
 }
 
@@ -177,7 +186,7 @@ check_umode_change(void *vdata)
 		}
 		if (strcmp(source_p->host, source_p->localClient->mangledhost))
 		{
-			rb_strlcpy(source_p->host, source_p->localClient->mangledhost, HOSTLEN + 1);
+			rb_strlcpy(source_p->host, source_p->localClient->mangledhost, HOSTLEN);
 			distribute_hostchange(source_p);
 		}
 		else /* not really nice, but we need to send this numeric here */
@@ -189,7 +198,7 @@ check_umode_change(void *vdata)
 		if (source_p->localClient->mangledhost != NULL &&
 				!strcmp(source_p->host, source_p->localClient->mangledhost))
 		{
-			rb_strlcpy(source_p->host, source_p->orighost, HOSTLEN + 1);
+			rb_strlcpy(source_p->host, source_p->orighost, HOSTLEN);
 			distribute_hostchange(source_p);
 		}
 	}
@@ -205,7 +214,7 @@ check_new_user(void *vdata)
 		source_p->umodes &= ~user_modes['h'];
 		return;
 	}
-	source_p->localClient->mangledhost = rb_malloc(HOSTLEN + 1);
+	source_p->localClient->mangledhost = rb_malloc(HOSTLEN);
 	if (!irccmp(source_p->orighost, source_p->sockhost))
 		do_host_cloak_ip(source_p->orighost, source_p->localClient->mangledhost);
 	else
