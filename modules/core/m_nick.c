@@ -1249,14 +1249,14 @@ register_client(struct Client *client_p, struct Client *server,
 			Count.invisi++;
 
 		/* increment opered count if theyre opered */
-		if(!(source_p->umodes & UMODE_OPER) && (flag & UMODE_OPER))
+		if(!(source_p->umodes & (UMODE_OPER|UMODE_HELPER)) && (flag & (UMODE_OPER|UMODE_HELPER)))
 			Count.oper++;
 
 		source_p->umodes |= flag;
 		m++;
 	}
 
-	if(IsOper(source_p) && !IsService(source_p))
+	if(IsAnyOper(source_p) && !IsService(source_p))
 		rb_dlinkAddAlloc(source_p, &oper_list);
 
 	SetRemoteClient(source_p);

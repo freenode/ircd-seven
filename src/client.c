@@ -1206,7 +1206,7 @@ exit_generic_client(struct Client *client_p, struct Client *source_p, struct Cli
 {
 	rb_dlink_node *ptr, *next_ptr;
 
-	if(IsOper(source_p))
+	if(IsAnyOper(source_p))
 		rb_dlinkFindDestroy(source_p, &oper_list);
 
 	sendto_common_channels_local(source_p, ":%s!%s@%s QUIT :%s",
