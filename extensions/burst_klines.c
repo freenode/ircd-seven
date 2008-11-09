@@ -6,6 +6,8 @@
 #include "send.h"
 #include "s_conf.h"
 #include "hostmask.h"
+#include "s_newconf.h"
+#include "hash.h"
 
 static int _modinit(void);
 static void _moddeinit(void);
@@ -19,6 +21,10 @@ mapi_hfn_list_av1 bk_hfnlist[] = {
 DECLARE_MODULE_AV1(checkremotekline, _modinit, _moddeinit, NULL, NULL, bk_hfnlist, "$Revision: 1869 $");
 
 static char *fake_oper_uid = NULL;
+
+static void send_klines(struct Client *);
+static void send_xlines(struct Client *);
+static void send_resvs (struct Client *);
 
 static int
 _modinit(void)
@@ -38,14 +44,26 @@ static void
 h_bk_burst_finished(hook_data_client *data)
 {
 	struct Client *server = data->client;
-	struct AddressRec *arec;
-	struct ConfItem *aconf = NULL;
-	rb_dlink_node *ptr;
-	int i;
 
 	sendto_one(server, ":%s UID %s %d %ld %s %s %s %s %s :%s",
 		me.id, fake_oper_uid, 1, (long)rb_current_time(), "+o",
 		"internal", me.name, "0", fake_oper_uid, "internal");
+
+	send_klines(server);
+	send_xlines(server);
+	send_resvs(server);
+
+	sendto_one(server, ":%s QUIT :", fake_oper_uid);
+}
+
+
+static void
+send_klines(struct Client *server)
+{
+	struct AddressRec *arec;
+	struct ConfItem *aconf = NULL;
+	rb_dlink_node *ptr;
+	int i;
 
 	for (i = 0; i < ATABLE_SIZE; i++)
 	{
@@ -82,7 +100,91 @@ h_bk_burst_finished(hook_data_client *data)
 					aconf->spasswd ? aconf->spasswd : "");
 		}
 	}
-
-	sendto_one(server, ":%s QUIT :", fake_oper_uid);
 }
 
+static void
+send_resvs(struct Client *server)
+{
+	struct ConfItem *aconf;
+	rb_dlink_node *ptr;
+	int i;
+
+	RB_DLINK_FOREACH(ptr, resv_conf_list.head)
+	{
+		aconf = ptr->data;
+		if (aconf->hold)
+			sendto_one(server, ":%s ENCAP * RESV %ld %s 0 :%s",
+					fake_oper_uid, aconf->hold - rb_current_time(),
+					aconf->name, aconf->passwd);
+		else
+			sendto_one(server, ":%s ENCAP * RESV 0 %s 0 :%s",
+					fake_oper_uid, aconf->name, aconf->passwd);
+	}
+
+	HASH_WALK(i, R_MAX, ptr, resvTable)
+	{
+		aconf = ptr->data;
+		if (aconf->hold)
+			sendto_one(server, ":%s ENCAP * RESV %ld %s 0 :%s",
+					fake_oper_uid, aconf->hold - rb_current_time(),
+					aconf->name, aconf->passwd);
+		else
+			sendto_one(server, ":%s ENCAP * RESV 0 %s 0 :%s",
+					fake_oper_uid, aconf->name, aconf->passwd);
+	}
+	HASH_WALK_END
+
+}
+
+static const char *expand_xline(const char *mask)
+{
+	static char buf[512];
+	const char *p;
+	char *q;
+
+	if (!strchr(mask, ' '))
+		return mask;
+	if (strlen(mask) > 250)
+		return NULL;
+	p = mask;
+	q = buf;
+	while (*p != '\0')
+	{
+		if (*p == ' ')
+			*q++ = '\\', *q++ = 's';
+		else
+			*q++ = *p;
+		p++;
+	}
+	*q = '\0';
+	return buf;
+}
+
+static void
+send_xlines(struct Client *server)
+{
+	struct ConfItem *aconf;
+	rb_dlink_node *ptr;
+	const char *mask2;
+
+	RB_DLINK_FOREACH(ptr, xline_conf_list.head)
+	{
+		aconf = ptr->data;
+		mask2 = expand_xline(aconf->name);
+		if (mask2 == NULL)
+		{
+			sendto_realops_snomask(SNO_DEBUG, L_NETWIDE,
+					"Not bursting xline [%s]",
+					aconf->name);
+			continue;
+		}
+		if (aconf->hold)
+			sendto_one(server, ":%s ENCAP * XLINE %ld %s 2 :%s",
+					fake_oper_uid, aconf->hold - rb_current_time(),
+					mask2, aconf->passwd);
+		else
+			sendto_one(server, ":%s ENCAP * XLINE 0 %s 2 :%s",
+					fake_oper_uid, mask2, aconf->passwd);
+	}
+
+}
