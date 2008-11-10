@@ -113,9 +113,14 @@ send_resvs(struct Client *server)
 	{
 		aconf = ptr->data;
 		if (aconf->hold)
+		{
+			if(aconf->hold < rb_current_time() + 60)
+				continue;
+			
 			sendto_one(server, ":%s ENCAP * RESV %ld %s 0 :%s",
 					fake_oper_uid, aconf->hold - rb_current_time(),
 					aconf->name, aconf->passwd);
+		}
 		else
 			sendto_one(server, ":%s ENCAP * RESV 0 %s 0 :%s",
 					fake_oper_uid, aconf->name, aconf->passwd);
@@ -125,9 +130,14 @@ send_resvs(struct Client *server)
 	{
 		aconf = ptr->data;
 		if (aconf->hold)
+		{
+			if(aconf->hold < rb_current_time() + 60)
+				continue;
+			
 			sendto_one(server, ":%s ENCAP * RESV %ld %s 0 :%s",
 					fake_oper_uid, aconf->hold - rb_current_time(),
 					aconf->name, aconf->passwd);
+		}
 		else
 			sendto_one(server, ":%s ENCAP * RESV 0 %s 0 :%s",
 					fake_oper_uid, aconf->name, aconf->passwd);
@@ -179,9 +189,14 @@ send_xlines(struct Client *server)
 			continue;
 		}
 		if (aconf->hold)
+		{
+			if(aconf->hold < rb_current_time() + 60)
+				continue;
+			
 			sendto_one(server, ":%s ENCAP * XLINE %ld %s 2 :%s",
 					fake_oper_uid, aconf->hold - rb_current_time(),
 					mask2, aconf->passwd);
+		}
 		else
 			sendto_one(server, ":%s ENCAP * XLINE 0 %s 2 :%s",
 					fake_oper_uid, mask2, aconf->passwd);
