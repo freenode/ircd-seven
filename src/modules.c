@@ -67,7 +67,6 @@ static const char *core_module_table[] = {
 	"m_nick",
 	"m_part",
 	"m_quit",
-        "m_remove",
 	"m_server",
 	"m_squit",
 	NULL

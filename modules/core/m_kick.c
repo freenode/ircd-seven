@@ -39,17 +39,41 @@
 #include "s_serv.h"
 #include "s_conf.h"
 
+#define KICK 0
+#define REMOVE 1
+
+static int do_kick(int, struct Client *, struct Client *, int, const char **);
+
 static int m_kick(struct Client *, struct Client *, int, const char **);
 #define mg_kick { m_kick, 3 }
+static int m_remove(struct Client *, struct Client *, int, const char **);
+#define mg_remove { m_remove, 3 }
 
 struct Message kick_msgtab = {
 	"KICK", 0, 0, 0, MFLG_SLOW,
 	{mg_unreg, mg_kick, mg_kick, mg_kick, mg_ignore, mg_kick}
 };
 
-mapi_clist_av1 kick_clist[] = { &kick_msgtab, NULL };
+struct Message remove_msgtab = {
+	"REMOVE", 0, 0, 0, MFLG_SLOW,
+	{mg_unreg, mg_remove, mg_remove, mg_remove, mg_ignore, mg_remove}
+};
+
+mapi_clist_av1 kick_clist[] = { &kick_msgtab, &remove_msgtab, NULL };
 
 DECLARE_MODULE_AV1(kick, NULL, NULL, kick_clist, NULL, NULL, "$Revision: 3317 $");
+
+static int
+m_kick(struct Client *client_p, struct Client *source_p, int parc, const char *parv[])
+{
+	return do_kick(KICK, client_p, source_p, parc, parv);
+}
+
+static int
+m_remove(struct Client *client_p, struct Client *source_p, int parc, const char *parv[])
+{
+	return do_kick(REMOVE, client_p, source_p, parc, parv);
+}
 
 /*
 ** m_kick
@@ -59,7 +83,7 @@ DECLARE_MODULE_AV1(kick, NULL, NULL, kick_clist, NULL, NULL, "$Revision: 3317 $"
 **      parv[3] = kick comment
 */
 static int
-m_kick(struct Client *client_p, struct Client *source_p, int parc, const char *parv[])
+do_kick(int kick_or_remove, struct Client *client_p, struct Client *source_p, int parc, const char *parv[])
 {
 	struct membership *msptr;
 	struct Client *who;
@@ -71,6 +95,7 @@ m_kick(struct Client *client_p, struct Client *source_p, int parc, const char *p
 	const char *user;
 	static char buf[BUFSIZE];
 	int is_override = 0;
+	const char *command = kick_or_remove ? "KICK" : "REMOVE";
 
 	if(MyClient(source_p) && !IsFloodDone(source_p))
 		flood_endgrace(source_p);
@@ -167,8 +192,8 @@ m_kick(struct Client *client_p, struct Client *source_p, int parc, const char *p
 		if (MyClient(source_p) && chptr->mode.mode & MODE_NOOPERKICK && IsOper(who))
 		{
 			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
-				"Overriding KICK from %s on %s in %s (channel is +M)",
-				source_p->name, who->name, chptr->chname);
+				"Overriding %s from %s on %s in %s (channel is +M)",
+				command, source_p->name, who->name, chptr->chname);
 			sendto_one_numeric(source_p, ERR_ISCHANSERVICE,
 				"%s %s :Cannot kick IRC operators from that channel.",
 				who->name, chptr->chname);
@@ -193,8 +218,8 @@ m_kick(struct Client *client_p, struct Client *source_p, int parc, const char *p
 
 		if(is_override)
 			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
-					"%s is overriding KICK [%s] on [%s] [%s]",
-					get_oper_name(source_p), who->name, chptr->chname, comment);
+					"%s is overriding %s [%s] on [%s] [%s]",
+					command, get_oper_name(source_p), who->name, chptr->chname, comment);
 
 		/* jdc
 		 * - In the case of a server kicking a user (i.e. CLEARCHAN),
@@ -203,18 +228,34 @@ m_kick(struct Client *client_p, struct Client *source_p, int parc, const char *p
 		 * - Personally, flame and I believe that server kicks shouldn't
 		 *   be sent anyways.  Just waiting for some oper to abuse it...
 		 */
-		if(IsServer(source_p))
-			sendto_channel_local(ALL_MEMBERS, chptr, ":%s KICK %s %s :%s",
-					     source_p->name, name, who->name, comment);
-		else
-			sendto_channel_local(ALL_MEMBERS, chptr,
-					     ":%s!%s@%s KICK %s %s :%s",
-					     source_p->name, source_p->username,
-					     source_p->host, name, who->name, comment);
+		if(kick_or_remove == KICK)
+		{
+			if(IsServer(source_p))
+				sendto_channel_local(ALL_MEMBERS, chptr, ":%s KICK %s %s :%s",
+						     source_p->name, name, who->name, comment);
+			else
+				sendto_channel_local(ALL_MEMBERS, chptr,
+						     ":%s!%s@%s KICK %s %s :%s",
+						     source_p->name, source_p->username,
+						     source_p->host, name, who->name, comment);
 
-		sendto_server(client_p, chptr, CAP_TS6, NOCAPS,
-			      ":%s KICK %s %s :%s",
-			      use_id(source_p), chptr->chname, use_id(who), comment);
+			sendto_server(client_p, chptr, CAP_TS6, NOCAPS,
+				      ":%s KICK %s %s :%s",
+				      use_id(source_p), chptr->chname, use_id(who), comment);
+		}
+		else
+		{
+			sendto_channel_local(ALL_MEMBERS, chptr, ":%s!%s@%s PART %s :requested by %s (%s)",
+				who->name, who->username, who->host, name, source_p->name, comment);
+
+			sendto_server(client_p, chptr, CAP_REMOVE, NOCAPS,
+				      ":%s REMOVE %s %s :%s",
+				      use_id(source_p), chptr->chname, use_id(who), comment);
+			sendto_server(client_p, chptr, NOCAPS, CAP_REMOVE,
+				      ":%s KICK %s %s :%s",
+				      use_id(source_p), chptr->chname, use_id(who), comment);
+		}
+
 		remove_user_from_channel(msptr);
 	}
 	else if (MyClient(source_p))

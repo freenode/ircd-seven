@@ -46,7 +46,6 @@ CORE_SRCS = \
   core/m_nick.c \
   core/m_part.c \
   core/m_quit.c \
-  core/m_remove.c \
   core/m_server.c \
   core/m_squit.c
 
