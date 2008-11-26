@@ -591,6 +591,59 @@ chm_orphaned(struct Client *source_p, struct Channel *chptr,
 }
 
 void
+chm_hidden(struct Client *source_p, struct Channel *chptr,
+	  int alevel, int parc, int *parn,
+	  const char **parv, int *errors, int dir, char c, long mode_type)
+{
+	if(!IsOper(source_p) && !IsServer(source_p))
+	{
+		if(!(*errors & SM_ERR_NOPRIVS))
+			sendto_one_numeric(source_p, ERR_NOPRIVILEGES, form_str(ERR_NOPRIVILEGES));
+		*errors |= SM_ERR_NOPRIVS;
+		return;
+	}
+	if(MyClient(source_p) && !IsOperAdmin(source_p))
+	{
+		if(!(*errors & SM_ERR_NOPRIVS))
+			sendto_one(source_p, form_str(ERR_NOPRIVS), me.name,
+					source_p->name, "cmodes");
+		*errors |= SM_ERR_NOPRIVS;
+		return;
+	}
+
+	if(MyClient(source_p) && (++mode_limit_simple > MAXMODES_SIMPLE))
+		return;
+
+	/* setting + */
+	if((dir == MODE_ADD) && !(chptr->mode.mode & mode_type))
+	{
+		chptr->mode.mode |= mode_type;
+
+		mode_changes[mode_count].letter = c;
+		mode_changes[mode_count].dir = MODE_ADD;
+		mode_changes[mode_count].caps = 0;
+		mode_changes[mode_count].nocaps = 0;
+		mode_changes[mode_count].id = NULL;
+		mode_changes[mode_count].mems = ONLY_OPERS;
+		mode_changes[mode_count].override = 0;
+		mode_changes[mode_count++].arg = NULL;
+	}
+	else if((dir == MODE_DEL) && (chptr->mode.mode & mode_type))
+	{
+		chptr->mode.mode &= ~mode_type;
+
+		mode_changes[mode_count].letter = c;
+		mode_changes[mode_count].dir = MODE_DEL;
+		mode_changes[mode_count].caps = 0;
+		mode_changes[mode_count].nocaps = 0;
+		mode_changes[mode_count].mems = ONLY_OPERS;
+		mode_changes[mode_count].id = NULL;
+		mode_changes[mode_count].override = 0;
+		mode_changes[mode_count++].arg = NULL;
+	}
+}
+
+void
 chm_staff(struct Client *source_p, struct Channel *chptr,
 	  int alevel, int parc, int *parn,
 	  const char **parv, int *errors, int dir, char c, long mode_type)
@@ -1589,7 +1642,7 @@ struct ChannelMode chmode_table[256] =
   {chm_nosuch,	0 },			/* J */
   {chm_nosuch,	0 },			/* K */
   {chm_staff,	MODE_EXLIMIT },		/* L */
-  {chm_nosuch,	0 },			/* M */
+  {chm_hidden,	MODE_NOOPERKICK },	/* M */
   {chm_nosuch,	0 },			/* N */
   {chm_nosuch,	0 },			/* O */
   {chm_staff,	MODE_PERMANENT },	/* P */
@@ -1807,6 +1860,7 @@ set_channel_mode(struct Client *client_p, struct Client *source_p,
 	const char *ml = parv[0];
 	char c;
 	struct Client *fakesource_p;
+	int flags_list[3] = { ALL_MEMBERS, ONLY_CHANOPS, ONLY_OPERS };
 
 	mask_pos = 0;
 	removed_mask_pos = 0;
@@ -1874,7 +1928,7 @@ set_channel_mode(struct Client *client_p, struct Client *source_p,
 				add_user_to_channel(chptr, source_p, CHFL_CHANOP);
 		}
 
-		for(j = 0, flags = ALL_MEMBERS; j < 2; j++, flags = ONLY_CHANOPS)
+		for(j = 0, flags = flags_list[0]; j < 3; j++, flags = flags_list[j])
 		{
 			cur_len = mlen;
 			mbuf = modebuf + mlen;

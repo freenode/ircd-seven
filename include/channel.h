@@ -150,6 +150,7 @@ typedef int (*ExtbanFunc)(const char *data, struct Client *client_p,
 #define CHFL_BANNED		0x0008  /* cached as banned */
 #define CHFL_QUIETED		0x0010  /* cached as being +q victim */
 #define ONLY_SERVERS		0x0020
+#define ONLY_OPERS		0x0040
 #define ALL_MEMBERS		CHFL_PEON
 #define ONLY_CHANOPS		CHFL_CHANOP
 #define ONLY_CHANOPSVOICED	(CHFL_CHANOP|CHFL_VOICE)
@@ -174,6 +175,7 @@ typedef int (*ExtbanFunc)(const char *data, struct Client *client_p,
 #define MODE_FREEINVITE 0x0800  /* allow free use of /invite */
 #define MODE_FREETARGET 0x1000  /* can be forwarded to without authorization */
 #define MODE_DISFORWARD 0x2000  /* disable channel forwarding */
+#define MODE_NOOPERKICK 0x4000  /* disallow kicking opers */
 
 #define CHFL_BAN        0x10000000	/* ban channel flag */
 #define CHFL_EXCEPTION  0x20000000	/* exception to ban channel flag */
