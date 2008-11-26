@@ -164,6 +164,17 @@ m_kick(struct Client *client_p, struct Client *source_p, int parc, const char *p
 			return 0;
 		}
 
+		if (MyClient(source_p) && chptr->mode.mode & MODE_NOOPERKICK && IsOper(who))
+		{
+			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
+				"Overriding KICK from %s on %s in %s (channel is +M)",
+				source_p->name, who->name, chptr->chname);
+			sendto_one_numeric(source_p, ERR_ISCHANSERVICE,
+				"%s %s :Cannot kick IRC operators from that channel.",
+				who->name, chptr->chname);
+			return 0;
+		}
+
 		if(MyClient(source_p))
 		{
 			hook_data_channel_approval hookdata;
