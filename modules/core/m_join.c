@@ -79,9 +79,10 @@ static void remove_ban_list(struct Channel *chptr, struct Client *source_p,
 			    rb_dlink_list * list, char c, int mems);
 
 static char modebuf[MODEBUFLEN];
+static char omodebuf[MODEBUFLEN];
 static char parabuf[MODEBUFLEN];
 static const char *para[MAXMODEPARAMS];
-static char *mbuf;
+static char *mbuf, *ombuf;
 static int pargs;
 
 /* Check what we will forward to, without sending any notices to the user
@@ -438,6 +439,7 @@ ms_join(struct Client *client_p, struct Client *source_p, int parc, const char *
 		return 0;
 
 	mbuf = modebuf;
+	ombuf = omodebuf;
 	mode.key[0] = mode.forward[0] = '\0';
 	mode.mode = mode.limit = mode.join_num = mode.join_time = 0;
 
@@ -506,7 +508,12 @@ ms_join(struct Client *client_p, struct Client *source_p, int parc, const char *
 					     ":%s MODE %s %s %s",
 					     source_p->servptr->name,
 					     chptr->chname, modebuf, parabuf);
-		*modebuf = *parabuf = '\0';
+		if(*omodebuf != '\0')
+			sendto_channel_local(ONLY_OPERS, chptr,
+					     ":%s MODE %s %s %s",
+					     source_p->servptr->name,
+					     chptr->chname, modebuf, parabuf);
+		*omodebuf = *modebuf = *parabuf = '\0';
 	}
 
 	if(!IsMember(source_p, chptr))
@@ -565,7 +572,7 @@ ms_sjoin(struct Client *client_p, struct Client *source_p, int parc, const char 
 	if(*parv[2] == '&')
 		return 0;
 
-	modebuf[0] = parabuf[0] = mode.key[0] = mode.forward[0] = '\0';
+	omodebuf[0] = modebuf[0] = parabuf[0] = mode.key[0] = mode.forward[0] = '\0';
 	pargs = mode.mode = mode.limit = mode.join_num = mode.join_time = 0;
 
 	/* Hide connecting server on netburst -- jilles */
@@ -575,6 +582,7 @@ ms_sjoin(struct Client *client_p, struct Client *source_p, int parc, const char 
 		fakesource_p = source_p;
 
 	mbuf = modebuf;
+	ombuf = omodebuf;
 	newts = atol(parv[1]);
 
 	s = parv[3];
@@ -773,7 +781,11 @@ ms_sjoin(struct Client *client_p, struct Client *source_p, int parc, const char 
 		sendto_channel_local(ALL_MEMBERS, chptr, ":%s MODE %s %s %s",
 				     fakesource_p->name, chptr->chname, modebuf, parabuf);
 
-	*modebuf = *parabuf = '\0';
+	if(*omodebuf != '\0')
+		sendto_channel_local(ONLY_OPERS, chptr, ":%s MODE %s %s %s",
+				     fakesource_p->name, chptr->chname, omodebuf, parabuf);
+
+	*omodebuf = *modebuf = *parabuf = '\0';
 
 	if(parv[3][0] != '0' && keep_new_modes)
 		modes = channel_modes(chptr, source_p);
@@ -788,6 +800,7 @@ ms_sjoin(struct Client *client_p, struct Client *source_p, int parc, const char 
 	ptr_uid = buf_uid + mlen_uid;
 
 	mbuf = modebuf;
+	ombuf = omodebuf;
 	para[0] = para[1] = para[2] = para[3] = empty;
 	pargs = 0;
 	len_nick = len_uid = 0;
@@ -1036,7 +1049,7 @@ check_channel_name_loc(struct Client *source_p, const char *name)
 static void
 set_final_mode(struct Mode *mode, struct Mode *oldmode)
 {
-	int dir = MODE_QUERY;
+	int dir = MODE_QUERY, odir = MODE_QUERY;
 	char *pbuf = parabuf;
 	int len;
 	int i;
@@ -1046,12 +1059,24 @@ set_final_mode(struct Mode *mode, struct Mode *oldmode)
 	{
 		if((mode->mode & chmode_flags[i]) && !(oldmode->mode & chmode_flags[i]))
 		{
-			if(dir != MODE_ADD)
+			if (chmode_table[i].set_func == chm_hidden)
 			{
-				*mbuf++ = '+';
-				dir = MODE_ADD;
+				if(odir != MODE_ADD)
+				{
+					*ombuf++ = '+';
+					odir = MODE_ADD;
+				}
+				*ombuf++ = i;
 			}
-			*mbuf++ = i;
+			else
+			{
+				if(dir != MODE_ADD)
+				{
+					*mbuf++ = '+';
+					dir = MODE_ADD;
+				}
+				*mbuf++ = i;
+			}
 		}
 	}
 
@@ -1060,12 +1085,24 @@ set_final_mode(struct Mode *mode, struct Mode *oldmode)
 	{
 		if((oldmode->mode & chmode_flags[i]) && !(mode->mode & chmode_flags[i]))
 		{
-			if(dir != MODE_DEL)
+			if (chmode_table[i].set_func == chm_hidden)
 			{
-				*mbuf++ = '-';
-				dir = MODE_DEL;
+				if(odir != MODE_DEL)
+				{
+					*ombuf++ = '-';
+					odir = MODE_DEL;
+				}
+				*ombuf++ = i;
 			}
-			*mbuf++ = i;
+			else
+			{
+				if(dir != MODE_DEL)
+				{
+					*mbuf++ = '-';
+					dir = MODE_DEL;
+				}
+				*mbuf++ = i;
+			}
 		}
 	}
 
