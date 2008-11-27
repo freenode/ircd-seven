@@ -95,7 +95,7 @@ do_kick(int kick_or_remove, struct Client *client_p, struct Client *source_p, in
 	const char *user;
 	static char buf[BUFSIZE];
 	int is_override = 0;
-	const char *command = kick_or_remove ? "KICK" : "REMOVE";
+	const char *command = kick_or_remove == KICK ? "KICK" : "REMOVE";
 
 	if(MyClient(source_p) && !IsFloodDone(source_p))
 		flood_endgrace(source_p);
@@ -219,7 +219,7 @@ do_kick(int kick_or_remove, struct Client *client_p, struct Client *source_p, in
 		if(is_override)
 			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 					"%s is overriding %s [%s] on [%s] [%s]",
-					command, get_oper_name(source_p), who->name, chptr->chname, comment);
+					get_oper_name(source_p), command, who->name, chptr->chname, comment);
 
 		/* jdc
 		 * - In the case of a server kicking a user (i.e. CLEARCHAN),
