@@ -606,7 +606,7 @@ chm_hidden(struct Client *source_p, struct Channel *chptr,
 	{
 		if(!(*errors & SM_ERR_NOPRIVS))
 			sendto_one(source_p, form_str(ERR_NOPRIVS), me.name,
-					source_p->name, "cmodes");
+					source_p->name, "admin");
 		*errors |= SM_ERR_NOPRIVS;
 		return;
 	}
