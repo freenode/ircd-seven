@@ -449,7 +449,8 @@ do_who(struct Client *source_p, struct Client *target_p, struct membership *mspt
 			   source_p->name, msptr ? msptr->chptr->chname : "*",
 			   target_p->username, target_p->host,
 			   target_p->servptr->name, target_p->name, status,
-			   ConfigServerHide.flatten_links ? 0 : target_p->hopcount, 
+			   (ConfigServerHide.flatten_links && !IsExemptShide(source_p) && !IsOper(source_p))
+			       ? 0 : target_p->hopcount,
 			   target_p->info);
 	else
 	{
