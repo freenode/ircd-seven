@@ -49,8 +49,8 @@ struct ServerStatistics
 	unsigned long long int is_cbr;	/* bytes received to clients */
 	unsigned long long int is_sbs;	/* bytes sent to servers */
 	unsigned long long int is_sbr;	/* bytes received to servers */
-	time_t is_cti;		/* time spent connected by clients */
-	time_t is_sti;		/* time spent connected by servers */
+	unsigned long long int is_cti;	/* time spent connected by clients */
+	unsigned long long int is_sti;	/* time spent connected by servers */
 	unsigned int is_ac;	/* connections accepted */
 	unsigned int is_ref;	/* accepts refused */
 	unsigned int is_unco;	/* unknown commands */
@@ -63,6 +63,7 @@ struct ServerStatistics
 	unsigned int is_asuc;	/* successful auth requests */
 	unsigned int is_abad;	/* bad auth requests */
 	unsigned int is_rej;	/* rejected from cache */
+	unsigned int is_thr;	/* number of throttled connections */
 	unsigned int is_ssuc;	/* successful sasl authentications */
 	unsigned int is_sbad;	/* failed sasl authentications */
 	unsigned int is_tgch;	/* messages blocked due to target change */

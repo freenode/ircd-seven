@@ -122,6 +122,25 @@ init_reject(void)
 	rb_event_add("throttle_expires", throttle_expires, NULL, 10);
 }
 
+unsigned long
+throttle_size(void)
+{
+	unsigned long count;
+	rb_dlink_node *ptr;
+	rb_patricia_node_t *pnode;
+	throttle_t *t;
+
+	count = 0;
+	RB_DLINK_FOREACH(ptr, throttle_list.head)
+	{
+		pnode = ptr->data;
+		t = pnode->data;
+		if (t->count > ConfigFileEntry.throttle_count)
+			count++;
+	}
+
+	return count;
+}
 
 void
 add_reject(struct Client *client_p, const char *mask1, const char *mask2)
@@ -189,6 +208,31 @@ check_reject(rb_fde_t *F, struct sockaddr *addr)
 		}
 	}	
 	/* Caller does what it wants */	
+	return 0;
+}
+
+int
+is_reject_ip(struct sockaddr *addr)
+{
+	rb_patricia_node_t *pnode;
+	reject_t *rdata;
+	int duration;
+
+	/* Reject is disabled */
+	if(ConfigFileEntry.reject_after_count == 0 || ConfigFileEntry.reject_duration == 0)
+		return 0;
+		
+	pnode = rb_match_ip(reject_tree, addr);
+	if(pnode != NULL)
+	{
+		rdata = pnode->data;
+
+		if(rdata->count > (unsigned long)ConfigFileEntry.reject_after_count)
+		{
+			duration = rdata->time + ConfigFileEntry.reject_duration - rb_current_time();
+			return duration > 0 ? duration : 1;
+		}
+	}	
 	return 0;
 }
 
@@ -269,8 +313,10 @@ throttle_add(struct sockaddr *addr)
 		t = pnode->data;
 
 		if(t->count > ConfigFileEntry.throttle_count)
-			return 1;			
-
+		{
+			ServerStats.is_thr++;
+			return 1;
+		}
 		/* Stop penalizing them after they've been throttled */
 		t->last = rb_current_time();
 		t->count++;
@@ -288,6 +334,25 @@ throttle_add(struct sockaddr *addr)
 		pnode->data = t;
 		rb_dlinkAdd(pnode, &t->node, &throttle_list); 
 	}	
+	return 0;
+}
+
+int
+is_throttle_ip(struct sockaddr *addr)
+{
+	throttle_t *t;
+	rb_patricia_node_t *pnode;
+	int duration;
+
+	if((pnode = rb_match_ip(throttle_tree, addr)) != NULL)
+	{
+		t = pnode->data;
+		if(t->count > ConfigFileEntry.throttle_count)
+		{
+			duration = t->last + ConfigFileEntry.throttle_duration - rb_current_time();
+			return duration > 0 ? duration : 1;
+		}
+	}
 	return 0;
 }
 

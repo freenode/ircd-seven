@@ -201,27 +201,6 @@ mod_clear_paths(void)
 	mod_paths.length = 0;
 }
 
-/* irc_basename
- *
- * input	-
- * output	-
- * side effects -
- */
-char *
-irc_basename(const char *path)
-{
-	char *mod_basename = rb_malloc(strlen(path) + 1);
-	const char *s;
-
-	if(!(s = strrchr(path, '/')))
-		s = path;
-	else
-		s++;
-
-	(void) strcpy(mod_basename, s);
-	return mod_basename;
-}
-
 /* findmodule_byname
  *
  * input        -
@@ -394,7 +373,7 @@ me_modload(struct Client *client_p, struct Client *source_p, int parc, const cha
 static int
 do_modload(struct Client *source_p, const char *module)
 {
-	char *m_bn = irc_basename(module);
+	char *m_bn = rb_basename(module);
 
 	if(findmodule_byname(m_bn) != -1)
 	{
@@ -450,7 +429,7 @@ static int
 do_modunload(struct Client *source_p, const char *module)
 {
 	int modindex;
-	char *m_bn = irc_basename(module);
+	char *m_bn = rb_basename(module);
 
 	if((modindex = findmodule_byname(m_bn)) == -1)
 	{
@@ -515,7 +494,7 @@ do_modreload(struct Client *source_p, const char *module)
 {
 	int modindex;
 	int check_core;
-	char *m_bn = irc_basename(module);
+	char *m_bn = rb_basename(module);
 
 	if((modindex = findmodule_byname(m_bn)) == -1)
 	{
@@ -672,6 +651,10 @@ do_modrestart(struct Client *source_p)
 
 #ifndef RTLD_NOW
 #define RTLD_NOW RTLD_LAZY	/* openbsd deficiency */
+#endif
+
+#ifndef RTLD_LOCAL
+#define RTLD_LOCAL 0
 #endif
 
 #ifdef CHARYBDIS_PROFILE
@@ -930,12 +913,12 @@ load_a_module(const char *path, int warn, int core)
 
 	int *mapi_version;
 
-	mod_basename = irc_basename(path);
+	mod_basename = rb_basename(path);
 
 #ifdef CHARYBDIS_PROFILE
-	tmpptr = dlopen(path, RTLD_NOW | RTLD_PROFILE);
+	tmpptr = dlopen(path, RTLD_NOW | RTLD_LOCAL | RTLD_PROFILE);
 #else
-	tmpptr = dlopen(path, RTLD_NOW);
+	tmpptr = dlopen(path, RTLD_NOW | RTLD_LOCAL);
 #endif
 
 	if(tmpptr == NULL)
