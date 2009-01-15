@@ -787,7 +787,12 @@ chm_ban(struct Client *source_p, struct Channel *chptr,
 				mode_type != CHFL_QUIET)
 		{
 			if(IsOverride(source_p))
-				override = 1;
+			{
+				sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
+						"%s is overriding modes on %s: (%s list)",
+						get_oper_name(source_p), chptr->chname,
+						mode_type == CHFL_INVEX ? "invex" : "exempt");
+			}
 			else
 			{
 				if(!(*errors & SM_ERR_NOOPS))
