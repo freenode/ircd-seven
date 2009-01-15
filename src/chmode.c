@@ -1913,7 +1913,7 @@ set_channel_mode(struct Client *client_p, struct Client *source_p,
 
 	mlen = 0;
 
-	for (override = 0; override < (IsOverride(source_p) ? 2 : 1); ++override)
+	for (override = 0; override < (IsOverride(source_p) && alevel != CHFL_CHANOP ? 2 : 1); ++override)
 	{
 		int was_on_chan = 0;
 
