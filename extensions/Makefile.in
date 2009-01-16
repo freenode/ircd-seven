@@ -45,6 +45,7 @@ SRCS =                          \
   extb_realname.c		\
   extb_extgecos.c		\
   force_user_invis.c		\
+  identify_msg.c		\
   ip_cloaking.c			\
   ip_cloaking_old.c		\
   make_override_immune.c	\

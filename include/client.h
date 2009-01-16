@@ -415,6 +415,7 @@ struct exit_client_hook
 #define FLAGS_TGCHANGE     0x400000	/* we're allowed to clear something */
 #define FLAGS_DYNSPOOF     0x800000	/* dynamic spoof, only opers see ip */
 #define FLAGS_EXUNKNOWN	   0x1000000	/* too many unknowns exit.. */
+#define FLAGS_IDMSG        0x2000000	/* Marked as 'identified' for identify-msg purposes */
 
 /* flags for local clients, this needs stuff moved from above to here at some point */
 #define LFLAGS_SSL		0x00000001
@@ -513,6 +514,9 @@ struct exit_client_hook
 #define ClearDynSpoof(x)	((x)->flags &= ~FLAGS_DYNSPOOF)
 #define IsExUnknown(x)		((x)->flags & FLAGS_EXUNKNOWN)
 #define SetExUnknown(x)		((x)->flags |= FLAGS_EXUNKNOWN)
+#define IsIdentifiedMsg(x)	((x)->flags & FLAGS_IDMSG || IsService(x))
+#define SetIdentifiedMsg(x)	((x)->flags |= FLAGS_IDMSG)
+#define ClearIdentifiedMsg(x)	((x)->flags &= ~FLAGS_IDMSG)
 
 /* local flags */
 
