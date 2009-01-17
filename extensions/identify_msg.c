@@ -38,7 +38,7 @@ static void h_im_nick_change(void *vdata);
 
 struct Message identified_msgtab = {
 	"IDENTIFIED", 0, 0, 0, MFLG_SLOW,
-	{ mg_unreg, mg_ignore, mg_ignore, mg_ignore, {me_identified, 1}, mg_ignore}
+	{ mg_unreg, mg_ignore, mg_ignore, mg_ignore, {me_identified, 2}, mg_ignore}
 };
 
 mapi_hfn_list_av1 im_hfnlist[] = {
@@ -55,16 +55,25 @@ static int
 me_identified(struct Client *client_p, struct Client *source_p, int parc, const char *parv[])
 {
 	struct Client *target_p;
-
-	sendto_realops_snomask(SNO_DEBUG, L_ALL, "IDENTIFIED %s %s", parv[1], parv[2]?parv[2]:"");
+	time_t ts;
 
 	target_p = find_person(parv[1]);
+	ts = atol(parv[2]);
+
 	if(target_p == NULL)
 	{
 		return 0;
 	}
 
-	if (parc > 2 && !irccmp(parv[2], "OFF"))
+	if (ts != target_p->tsinfo)
+	{
+		sendto_realops_snomask(SNO_DEBUG, L_ALL,
+			"Dropping IDENTIFIED for %s due to TS mismatch (%ld != %ld)",
+			target_p->name, ts, target_p->tsinfo);
+		return 0;
+	}
+
+	if (parc > 3 && !irccmp(parv[3], "OFF"))
 		ClearIdentifiedMsg(target_p);
 	else
 		SetIdentifiedMsg(target_p);
