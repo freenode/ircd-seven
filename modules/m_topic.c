@@ -71,7 +71,7 @@ m_topic(struct Client *client_p, struct Client *source_p, int parc, const char *
 
 	name = parv[1];
 
-	if(IsOperSpy(source_p) && parv[1][0] == '!')
+	if(IsOperAuspex(source_p) && parv[1][0] == '!')
 	{
 		name++;
 		operspy = 1;
