@@ -42,7 +42,8 @@
 static void
 conf_add_fields(struct ConfItem *aconf,	const char *host_field,
 		const char *pass_field,	const char *user_field,
-		const char *operreason_field, const char *date_field)
+		const char *operreason_field, const char *date_field,
+		const char *setter_field)
 {
 	if(host_field != NULL)
 		aconf->host = rb_strdup(host_field);
@@ -60,6 +61,8 @@ conf_add_fields(struct ConfItem *aconf,	const char *host_field,
 		aconf->user = rb_strdup(user_field);
 	if(operreason_field != NULL)
 		aconf->spasswd = rb_strdup(operreason_field);
+	if(setter_field != NULL)
+		aconf->name = rb_strdup(setter_field);
 }
 
 /*
@@ -78,6 +81,7 @@ parse_k_file(FILE * file)
 	char *operreason_field = NULL;
 	char *host_field = NULL;
 	char *date_field = NULL;
+	char *setter_field = NULL;
 	char line[BUFSIZE];
 	char *p;
 
@@ -103,11 +107,12 @@ parse_k_file(FILE * file)
 
 		operreason_field = getfield(NULL);
 		date_field = getfield(NULL);
+		setter_field = getfield(NULL);
 
 		aconf = make_conf();
 		aconf->status = CONF_KILL;
 		conf_add_fields(aconf, host_field, reason_field,
-				user_field, operreason_field, date_field);
+				user_field, operreason_field, date_field, setter_field);
 
 		if(aconf->host != NULL)
 			add_conf_by_address(aconf->host, CONF_KILL, aconf->user, NULL, aconf);
@@ -129,6 +134,7 @@ parse_d_file(FILE * file)
 	char *host_field = NULL;
 	char *operreason_field = NULL;
 	char *date_field = NULL;
+	char *setter_field = NULL;
 	char line[BUFSIZE];
 	char *p;
 
@@ -150,10 +156,11 @@ parse_d_file(FILE * file)
 
 		operreason_field = getfield(NULL);
 		date_field = getfield(NULL);
+		setter_field = getfield(NULL);
 
 		aconf = make_conf();
 		aconf->status = CONF_DLINE;
-		conf_add_fields(aconf, host_field, reason_field, "", operreason_field, date_field);
+		conf_add_fields(aconf, host_field, reason_field, "", operreason_field, date_field, setter_field);
 		conf_add_d_conf(aconf);
 	}
 }

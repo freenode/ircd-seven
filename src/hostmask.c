@@ -740,7 +740,7 @@ report_auth(struct Client *client_p)
 void
 report_Klines(struct Client *source_p)
 {
-	char *host, *pass, *user, *oper_reason;
+	char *host, *pass, *user, *oper_reason, *setter;
 	struct AddressRec *arec;
 	struct ConfItem *aconf = NULL;
 	int i;
@@ -757,10 +757,10 @@ report_Klines(struct Client *source_p)
 				if(aconf->flags & CONF_FLAGS_TEMPORARY)
 					continue;
 
-				get_printable_kline(source_p, aconf, &host, &pass, &user, &oper_reason);
+				get_printable_kline(source_p, aconf, &host, &pass, &user, &oper_reason, &setter);
 				sendto_one_numeric(source_p, RPL_STATSKLINE,
 						   form_str(RPL_STATSKLINE),
-						   'K', host, user, pass,
+						   'K', host, setter, user, pass,
 						   oper_reason ? "|" : "",
 						   oper_reason ? oper_reason : "");
 			}

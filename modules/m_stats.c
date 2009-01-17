@@ -333,7 +333,7 @@ stats_connect(struct Client *source_p)
 static void
 stats_tdeny (struct Client *source_p)
 {
-	char *host, *pass, *user, *oper_reason;
+	char *host, *pass, *user, *oper_reason, *setter;
 	struct AddressRec *arec;
 	struct ConfItem *aconf;
 	int i;
@@ -349,7 +349,7 @@ stats_tdeny (struct Client *source_p)
 				if(!(aconf->flags & CONF_FLAGS_TEMPORARY))
 					continue;
 
-				get_printable_kline(source_p, aconf, &host, &pass, &user, &oper_reason);
+				get_printable_kline(source_p, aconf, &host, &pass, &user, &oper_reason, &setter);
 
 				sendto_one_numeric(source_p, RPL_STATSDLINE, 
 						   form_str (RPL_STATSDLINE),
@@ -370,7 +370,7 @@ stats_tdeny (struct Client *source_p)
 static void
 stats_deny (struct Client *source_p)
 {
-	char *host, *pass, *user, *oper_reason;
+	char *host, *pass, *user, *oper_reason, *setter;
 	struct AddressRec *arec;
 	struct ConfItem *aconf;
 	int i;
@@ -386,7 +386,7 @@ stats_deny (struct Client *source_p)
 				if(aconf->flags & CONF_FLAGS_TEMPORARY)
 					continue;
 
-				get_printable_kline(source_p, aconf, &host, &pass, &user, &oper_reason);
+				get_printable_kline(source_p, aconf, &host, &pass, &user, &oper_reason, &setter);
 
 				sendto_one_numeric(source_p, RPL_STATSDLINE, 
 						   form_str (RPL_STATSDLINE),
@@ -536,7 +536,7 @@ stats_tklines(struct Client *source_p)
 	else if((ConfigFileEntry.stats_k_oper_only == 1) && !IsOper (source_p))
 	{
 		struct ConfItem *aconf;
-		char *host, *pass, *user, *oper_reason;
+		char *host, *pass, *user, *oper_reason, *setter;
 
 		if(MyConnect (source_p))
 			aconf = find_conf_by_address (source_p->host, source_p->sockhost, NULL,
@@ -555,11 +555,11 @@ stats_tklines(struct Client *source_p)
 		if((aconf->flags & CONF_FLAGS_TEMPORARY) == 0)
 			return;
 
-		get_printable_kline(source_p, aconf, &host, &pass, &user, &oper_reason);
+		get_printable_kline(source_p, aconf, &host, &pass, &user, &oper_reason, &setter);
 
 		sendto_one_numeric(source_p, RPL_STATSKLINE, 
 				   form_str(RPL_STATSKLINE), aconf->flags & CONF_FLAGS_TEMPORARY ? 'k' : 'K',
-				   host, user, pass, oper_reason ? "|" : "",
+				   host, setter, user, pass, oper_reason ? "|" : "",
 				   oper_reason ? oper_reason : "");
 	}
 	/* Theyre opered, or allowed to see all klines */
@@ -568,7 +568,7 @@ stats_tklines(struct Client *source_p)
 		struct ConfItem *aconf;
 		rb_dlink_node *ptr;
 		int i;
-		char *user, *host, *pass, *oper_reason;
+		char *user, *host, *pass, *oper_reason, *setter;
 
 		for(i = 0; i < LAST_TEMP_TYPE; i++)
 		{
@@ -577,11 +577,11 @@ stats_tklines(struct Client *source_p)
 				aconf = ptr->data;
 
 				get_printable_kline(source_p, aconf, &host, &pass, 
-							&user, &oper_reason);
+							&user, &oper_reason, &setter);
 
 				sendto_one_numeric(source_p, RPL_STATSKLINE,
 						   form_str(RPL_STATSKLINE),
-						   'k', host, user, pass,
+						   'k', host, setter, user, pass,
 						   oper_reason ? "|" : "",
 						   oper_reason ? oper_reason : "");
 			}
@@ -601,7 +601,7 @@ stats_klines(struct Client *source_p)
 	else if((ConfigFileEntry.stats_k_oper_only == 1) && !IsOper (source_p))
 	{
 		struct ConfItem *aconf;
-		char *host, *pass, *user, *oper_reason;
+		char *host, *pass, *user, *oper_reason, *setter;
 
 		/* search for a kline */
 		if(MyConnect (source_p))
@@ -617,11 +617,11 @@ stats_klines(struct Client *source_p)
 		if(aconf == NULL)
 			return;
 
-		get_printable_kline(source_p, aconf, &host, &pass, &user, &oper_reason);
+		get_printable_kline(source_p, aconf, &host, &pass, &user, &oper_reason, &setter);
 
 		sendto_one_numeric(source_p, RPL_STATSKLINE, form_str(RPL_STATSKLINE),
 				   aconf->flags & CONF_FLAGS_TEMPORARY ? 'k' : 'K',
-				   host, user, pass, oper_reason ? "|" : "",
+				   host, setter, user, pass, oper_reason ? "|" : "",
 				   oper_reason ? oper_reason : "");
 	}
 	/* Theyre opered, or allowed to see all klines */

@@ -188,6 +188,7 @@ mo_kline(struct Client *client_p, struct Client *source_p,
 	aconf->status = CONF_KILL;
 	aconf->host = rb_strdup(host);
 	aconf->user = rb_strdup(user);
+	aconf->name = rb_strdup(get_oper_name(source_p));
 	aconf->port = 0;
 
 	/* Look for an oper reason */
@@ -303,6 +304,7 @@ handle_remote_kline(struct Client *source_p, int tkline_time,
 	aconf->status = CONF_KILL;
 	aconf->user = rb_strdup(user);
 	aconf->host = rb_strdup(host);
+	aconf->name = rb_strdup(get_oper_name(source_p));
 
 	/* Look for an oper reason */
 	if((oper_reason = strchr(reason, '|')) != NULL)

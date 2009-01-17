@@ -333,7 +333,7 @@ extern char *show_iline_prefix(struct Client *, struct ConfItem *, char *);
 extern void get_printable_conf(struct ConfItem *,
 			       char **, char **, char **, char **, int *, char **);
 extern void get_printable_kline(struct Client *, struct ConfItem *,
-				char **, char **, char **, char **);
+				char **, char **, char **, char **, char **);
 
 extern void yyerror(const char *);
 extern int conf_yy_fatal_error(const char *);
