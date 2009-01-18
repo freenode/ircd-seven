@@ -35,6 +35,7 @@
 static int me_identified(struct Client *, struct Client *, int, const char **);
 
 static void h_im_nick_change(void *vdata);
+static void h_im_burst_client(void *vdata);
 
 struct Message identified_msgtab = {
 	"IDENTIFIED", 0, 0, 0, MFLG_SLOW,
@@ -44,6 +45,7 @@ struct Message identified_msgtab = {
 mapi_hfn_list_av1 im_hfnlist[] = {
 	{ "local_nick_change", (hookfn) h_im_nick_change },
 	{ "remote_nick_change", (hookfn) h_im_nick_change },
+	{ "burst_client", (hookfn) h_im_burst_client },
 	{ NULL, NULL }
 };
 
@@ -84,5 +86,16 @@ h_im_nick_change(void *vdata)
 	hook_data *data = vdata;
 	if(data->client)
 		ClearIdentifiedMsg(data->client);
+}
+
+static void
+h_im_burst_client(void *vdata)
+{
+	hook_data_client *data = vdata;
+	struct Client *server = data->client;
+	struct Client *target_p = data->target;
+
+	if(IsIdentifiedMsg(target_p))
+	    sendto_one(server, ":%s ENCAP * IDENTIFIED %s %s", me.id, use_id(target_p), target_p->name);
 }
 
