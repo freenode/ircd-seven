@@ -9,7 +9,6 @@
 #include "s_newconf.h"
 #include "hash.h"
 
-static int _modinit(void);
 static void _moddeinit(void);
 static void h_bk_burst_finished(hook_data_client *);
 
@@ -18,20 +17,13 @@ mapi_hfn_list_av1 bk_hfnlist[] = {
 	{ NULL, NULL }
 };
 
-DECLARE_MODULE_AV1(checkremotekline, _modinit, _moddeinit, NULL, NULL, bk_hfnlist, "$Revision: 1869 $");
+DECLARE_MODULE_AV1(checkremotekline, NULL, _moddeinit, NULL, NULL, bk_hfnlist, "$Revision: 1869 $");
 
 static char *fake_oper_uid = NULL;
 
 static void send_klines(struct Client *);
 static void send_xlines(struct Client *);
 static void send_resvs (struct Client *);
-
-static int
-_modinit(void)
-{
-	fake_oper_uid = rb_strdup(generate_uid());
-	return 0;
-}
 
 static void
 _moddeinit(void)
@@ -44,6 +36,12 @@ static void
 h_bk_burst_finished(hook_data_client *data)
 {
 	struct Client *server = data->client;
+
+	/* This has to be done here and not in _modinit because the latter
+	 * might get called before our SID is known.
+	 */
+	if (fake_oper_uid == NULL)
+		fake_oper_uid = rb_strdup(generate_uid());
 
 	sendto_one(server, ":%s UID %s %d %ld %s %s %s %s %s :%s",
 		me.id, fake_oper_uid, 1, (long)rb_current_time(), "+o",
