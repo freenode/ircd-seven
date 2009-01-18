@@ -39,7 +39,7 @@ static void h_im_burst_client(void *vdata);
 
 struct Message identified_msgtab = {
 	"IDENTIFIED", 0, 0, 0, MFLG_SLOW,
-	{ mg_unreg, mg_ignore, mg_ignore, mg_ignore, {me_identified, 2}, mg_ignore}
+	{ mg_unreg, mg_ignore, mg_ignore, mg_ignore, {me_identified, 3}, mg_ignore}
 };
 
 mapi_hfn_list_av1 im_hfnlist[] = {
