@@ -143,11 +143,6 @@ ms_squit(struct Client *client_p, struct Client *source_p, int parc, const char 
 		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "Remote SQUIT %s from %s (%s)",
 				     target_p->name, source_p->name, comment);
 
-		ilog(L_SERVER, "SQUIT From %s : %s (%s)", parv[0], target_p->name, comment);
-		sendto_server(NULL, NULL, CAP_TS6, NOCAPS,
-			      ":%s WALLOPS :Remote SQUIT %s from %s (%s)",
-			      me.id, target_p->name, source_p->name, comment);
-
 		ilog(L_SERVER, "SQUIT From %s : %s (%s)", source_p->name, target_p->name, comment);
 	}
 	exit_client(client_p, target_p, source_p, comment);
