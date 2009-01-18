@@ -397,13 +397,8 @@ ms_uid(struct Client *client_p, struct Client *source_p, int parc, const char *p
 	if(strlen(parv[9]) > REALLEN)
 	{
 		char *s = LOCAL_COPY(parv[9]);
-<<<<<<< HEAD:modules/core/m_nick.c
 		sendto_realops_snomask(SNO_DEBUG, L_NETWIDE, "Long realname from server %s for %s",
-				     parv[0], parv[1]);
-=======
-		sendto_realops_snomask(SNO_GENERAL, L_ALL, "Long realname from server %s for %s",
 				     source_p->name, parv[1]);
->>>>>>> 106c88737f649876982c918d814b240c008d1687:modules/core/m_nick.c
 		s[REALLEN] = '\0';
 		parv[9] = s;
 	}
@@ -503,13 +498,8 @@ ms_euid(struct Client *client_p, struct Client *source_p, int parc, const char *
 	if(strlen(parv[11]) > REALLEN)
 	{
 		char *s = LOCAL_COPY(parv[11]);
-<<<<<<< HEAD:modules/core/m_nick.c
 		sendto_realops_snomask(SNO_DEBUG, L_NETWIDE, "Long realname from server %s for %s",
-				     parv[0], parv[1]);
-=======
-		sendto_realops_snomask(SNO_GENERAL, L_ALL, "Long realname from server %s for %s",
 				     source_p->name, parv[1]);
->>>>>>> 106c88737f649876982c918d814b240c008d1687:modules/core/m_nick.c
 		s[REALLEN] = '\0';
 		parv[11] = s;
 	}
@@ -1121,22 +1111,6 @@ register_client(struct Client *client_p, struct Client *server,
 	const char *m;
 	int flag;
 
-<<<<<<< HEAD:modules/core/m_nick.c
-	if(server == NULL)
-	{
-		if((server = find_server(NULL, parv[7])) == NULL)
-		{
-			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
-					     "Ghost killed: %s on invalid server %s",
-					     nick, parv[7]);
-			sendto_one(client_p, ":%s KILL %s :%s (Server doesn't exist)",
-					get_id(&me, client_p), nick, me.name);
-			return 0;
-		}
-	}
-
-=======
->>>>>>> 106c88737f649876982c918d814b240c008d1687:modules/core/m_nick.c
 	source_p = make_client(client_p);
 	user = make_user(source_p);
 	rb_dlinkAddTail(source_p, &source_p->node, &global_client_list);
@@ -1234,26 +1208,6 @@ register_client(struct Client *client_p, struct Client *server,
 
 	rb_dlinkAdd(source_p, &source_p->lnode, &source_p->servptr->serv->users);
 
-<<<<<<< HEAD:modules/core/m_nick.c
-	/* fake direction */
-	if(source_p->servptr->from != source_p->from)
-	{
-		struct Client *target_p = source_p->servptr->from;
-
-		sendto_realops_snomask(SNO_DEBUG, L_NETWIDE,
-				     "Bad User [%s] :%s USER %s@%s %s, != %s[%s]",
-				     client_p->name, source_p->name,
-				     source_p->username, source_p->host,
-				     server->name, target_p->name, target_p->from->name);
-		kill_client(client_p, source_p,
-			    "%s (NICK from wrong direction (%s != %s))",
-			    me.name, server->name, target_p->from->name);
-		source_p->flags |= FLAGS_KILLED;
-		return exit_client(source_p, source_p, &me, "USER server wrong direction");
-	}
-
-=======
->>>>>>> 106c88737f649876982c918d814b240c008d1687:modules/core/m_nick.c
 	call_hook(h_new_remote_user, source_p);
 
 	return (introduce_client(client_p, source_p, user, nick, parc == 12));
@@ -1323,14 +1277,8 @@ static void bad_nickname(struct Client *client_p, const char *nick)
 
 	sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, 	"Squitting %s because of bad nickname %s (NICKLEN mismatch?)",
 			client_p->name, nick);
-<<<<<<< HEAD:modules/core/m_nick.c
-=======
-	sendto_server(NULL, NULL, CAP_TS6, NOCAPS,
-			":%s WALLOPS :Squitting %s because of bad nickname %s (NICKLEN mismatch?)",
-			me.id, client_p->name, nick);
 	ilog(L_SERVER, "Link %s cancelled, bad nickname %s sent (NICKLEN mismatch?)",
 			client_p->name, nick);
->>>>>>> 106c88737f649876982c918d814b240c008d1687:modules/core/m_nick.c
 
 	rb_snprintf(squitreason, sizeof squitreason,
 			"Bad nickname introduced [%s]", nick);
