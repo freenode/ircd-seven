@@ -377,6 +377,14 @@ ssl_process_dead_fd(ssl_ctl_t * ctl, ssl_ctl_buf_t * ctl_buf)
 	client_p = find_cli_fd_hash(fd);
 	if(client_p == NULL)
 		return;
+	if(IsAnyServer(client_p) || IsRegistered(client_p))
+	{
+		/* read any last moment ERROR, QUIT or the like -- jilles */
+		if (!strcmp(reason, "Remote host closed the connection"))
+			read_packet(client_p->localClient->F, client_p);
+		if (IsAnyDead(client_p))
+			return;
+	}
 	if(IsAnyServer(client_p))
 	{
 		sendto_realops_snomask(SNO_GENERAL, !IsServer(client_p) ? L_NETWIDE : L_ALL, "ssld error for %s: %s", client_p->name, reason);
@@ -384,29 +392,6 @@ ssl_process_dead_fd(ssl_ctl_t * ctl, ssl_ctl_buf_t * ctl_buf)
 	}
 	exit_client(client_p, client_p, &me, reason);
 }
-
-
-static void
-ssl_process_zip_ready(ssl_ctl_t * ctl, ssl_ctl_buf_t * ctl_buf)
-{
-	struct Client *client_p;
-	int32_t fd;
-
-	if(ctl_buf->buflen < 5)
-		return;		/* bogus message..drop it.. XXX should warn here */
-
-	fd = buf_to_int32(&ctl_buf->buf[1]);
-	client_p = find_cli_fd_hash(fd);
-	if(client_p == NULL)
-		return;
-
-	/* Now start sending the data that should be compressed. */
-	// ClearCork(client_p);
-	send_pop_queue(client_p);
-	/* Start reading uncompressed data. */
-	read_packet(client_p->localClient->F, client_p);
-}
-
 
 static void
 ssl_process_cmd_recv(ssl_ctl_t * ctl)
@@ -441,9 +426,6 @@ ssl_process_cmd_recv(ssl_ctl_t * ctl)
 			ilog(L_MAIN, no_ssl_or_zlib);
 			sendto_realops_snomask(SNO_GENERAL, L_ALL, no_ssl_or_zlib);
 			ssl_killall();
-			break;
-		case 'R':
-			ssl_process_zip_ready(ctl, ctl_buf);
 			break;
 		case 'z':
 			zlib_ok = 0;
@@ -766,9 +748,10 @@ start_zlib_session(void *data)
 	/* need to redo as what we did before isn't valid now */
 	int32_to_buf(&buf[1], rb_get_fd(server->localClient->F));
 	add_to_cli_fd_hash(server);
-	server->localClient->ssl_ctl = which_ssld();
-	server->localClient->ssl_ctl->cli_count++;
-	ssl_cmd_write_queue(server->localClient->ssl_ctl, F, 2, buf, len);
+
+	server->localClient->z_ctl = which_ssld();
+	server->localClient->z_ctl->cli_count++;
+	ssl_cmd_write_queue(server->localClient->z_ctl, F, 2, buf, len);
 	rb_free(buf);
 }
 
@@ -796,7 +779,7 @@ collect_zipstats(void *unused)
 			int32_to_buf(&buf[1], rb_get_fd(target_p->localClient->F));
 			rb_strlcpy(odata, target_p->name, (sizeof(buf) - len));
 			len += strlen(odata) + 1;	/* Get the \0 as well */
-			ssl_cmd_write_queue(target_p->localClient->ssl_ctl, NULL, 0, buf, len);
+			ssl_cmd_write_queue(target_p->localClient->z_ctl, NULL, 0, buf, len);
 		}
 	}
 }

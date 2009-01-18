@@ -71,7 +71,7 @@ static int h_remote_nick_change;
 
 struct Message nick_msgtab = {
 	"NICK", 0, 0, 0, MFLG_SLOW,
-	{{mr_nick, 0}, {m_nick, 0}, {mc_nick, 3}, {ms_nick, 8}, mg_ignore, {m_nick, 0}}
+	{{mr_nick, 0}, {m_nick, 0}, {mc_nick, 3}, {ms_nick, 0}, mg_ignore, {m_nick, 0}}
 };
 struct Message uid_msgtab = {
 	"UID", 0, 0, 0, MFLG_SLOW,
@@ -154,7 +154,7 @@ mr_nick(struct Client *client_p, struct Client *source_p, int parc, const char *
 	if(!clean_nick(nick, 1))
 	{
 		sendto_one(source_p, form_str(ERR_ERRONEUSNICKNAME),
-			   me.name, EmptyString(parv[0]) ? "*" : parv[0], parv[1]);
+			   me.name, EmptyString(source_p->name) ? "*" : source_p->name, parv[1]);
 		return 0;
 	}
 
@@ -217,7 +217,7 @@ m_nick(struct Client *client_p, struct Client *source_p, int parc, const char *p
 	/* check the nickname is ok */
 	if(!clean_nick(nick, 1))
 	{
-		sendto_one(source_p, form_str(ERR_ERRONEUSNICKNAME), me.name, parv[0], nick);
+		sendto_one(source_p, form_str(ERR_ERRONEUSNICKNAME), me.name, source_p->name, nick);
 		return 0;
 	}
 
@@ -254,7 +254,7 @@ m_nick(struct Client *client_p, struct Client *source_p, int parc, const char *p
 			change_local_nick(client_p, source_p, nick, 1);
 		}
 		else
-			sendto_one(source_p, form_str(ERR_NICKNAMEINUSE), me.name, parv[0], nick);
+			sendto_one(source_p, form_str(ERR_NICKNAMEINUSE), me.name, source_p->name, nick);
 
 		return 0;
 	}
@@ -264,23 +264,12 @@ m_nick(struct Client *client_p, struct Client *source_p, int parc, const char *p
 	return 0;
 }
 
-/* ms_nick()
+/* mc_nick()
  *      
  * server -> server nick change
  *    parv[0] = sender prefix
  *    parv[1] = nickname
  *    parv[2] = TS when nick change
- *
- * server introducing new nick
- *    parv[0] = sender prefix
- *    parv[1] = nickname
- *    parv[2] = hop count
- *    parv[3] = TS
- *    parv[4] = umode
- *    parv[5] = username
- *    parv[6] = hostname
- *    parv[7] = server
- *    parv[8] = ircname
  */
 static int
 mc_nick(struct Client *client_p, struct Client *source_p, int parc, const char *parv[])
@@ -325,78 +314,21 @@ mc_nick(struct Client *client_p, struct Client *source_p, int parc, const char *
 static int
 ms_nick(struct Client *client_p, struct Client *source_p, int parc, const char *parv[])
 {
-	struct Client *target_p;
-	time_t newts = 0;
-	char squitreason[100];
+	const char *nick, *server;
 
-	if(parc != 9)
-	{
-		sendto_realops_snomask(SNO_GENERAL, L_ALL,
-				     "Dropping server %s due to (invalid) command 'NICK' "
-				     "with %d arguments (expecting 9)", client_p->name, parc);
-		ilog(L_SERVER, "Excess parameters (%d) for command 'NICK' from %s.",
-		     parc, client_p->name);
-		rb_snprintf(squitreason, sizeof squitreason,
-				"Excess parameters (%d) to %s command, expecting %d",
-				parc, "NICK", 9);
-		exit_client(client_p, client_p, client_p, squitreason);
-		return 0;
-	}
+	nick = parc > 1 ? parv[1] : "?";
+	server = parc > 7 ? parv[7] : "?";
 
-	/* if nicks empty, erroneous, or too long, kill */
-	if(!clean_nick(parv[1], 0))
-	{
-		bad_nickname(client_p, parv[1]);
-		return 0;
-	}
+	sendto_wallops_flags(UMODE_WALLOP, &me,
+			"Link %s cancelled, TS5 nickname %s on %s introduced (old server?)",
+			client_p->name, nick, server);
+	sendto_server(NULL, NULL, CAP_TS6, NOCAPS,
+			":%s WALLOPS :Link %s cancelled, TS5 nickname %s on %s introduced (old server?)",
+			me.id, client_p->name, nick, server);
+	ilog(L_SERVER, "Link %s cancelled, TS5 nickname %s on %s introduced (old server?)",
+			client_p->name, nick, server);
 
-	/* invalid username or host? */
-	if(!clean_username(parv[5]) || !clean_host(parv[6]))
-	{
-		ServerStats.is_kill++;
-		sendto_realops_snomask(SNO_DEBUG, L_NETWIDE,
-				     "Bad user@host: %s@%s From: %s(via %s)",
-				     parv[5], parv[6], parv[7], client_p->name);
-		sendto_one(client_p, ":%s KILL %s :%s (Bad user@host)", me.name, parv[1], me.name);
-		return 0;
-	}
-
-	/* check the length of the clients gecos */
-	if(strlen(parv[8]) > REALLEN)
-	{
-		char *s = LOCAL_COPY(parv[8]);
-		/* why exactly do we care? --fl */
-		sendto_realops_snomask(SNO_DEBUG, L_NETWIDE,
-				     "Long realname from server %s for %s", parv[7], parv[1]);
-
-		s[REALLEN] = '\0';
-		parv[8] = s;
-	}
-
-	newts = atol(parv[3]);
-
-	target_p = find_named_client(parv[1]);
-
-	/* if the nick doesnt exist, allow it and process like normal */
-	if(target_p == NULL)
-	{
-		register_client(client_p, NULL, parv[1], newts, parc, parv);
-	}
-	else if(IsUnknown(target_p))
-	{
-		exit_client(NULL, target_p, &me, "Overridden");
-		register_client(client_p, NULL, parv[1], newts, parc, parv);
-	}
-	else if(target_p == source_p)
-	{
-		/* client changing case of nick */
-		if(strcmp(target_p->name, parv[1]))
-			register_client(client_p, NULL, parv[1], newts, parc, parv);
-	}
-	/* we've got a collision! */
-	else
-		perform_nick_collides(source_p, client_p, target_p, parc, parv,
-				      newts, parv[1], NULL);
+	exit_client(client_p, client_p, &me, "TS5 nickname introduced");
 
 	return 0;
 }
@@ -465,8 +397,13 @@ ms_uid(struct Client *client_p, struct Client *source_p, int parc, const char *p
 	if(strlen(parv[9]) > REALLEN)
 	{
 		char *s = LOCAL_COPY(parv[9]);
+<<<<<<< HEAD:modules/core/m_nick.c
 		sendto_realops_snomask(SNO_DEBUG, L_NETWIDE, "Long realname from server %s for %s",
 				     parv[0], parv[1]);
+=======
+		sendto_realops_snomask(SNO_GENERAL, L_ALL, "Long realname from server %s for %s",
+				     source_p->name, parv[1]);
+>>>>>>> 106c88737f649876982c918d814b240c008d1687:modules/core/m_nick.c
 		s[REALLEN] = '\0';
 		parv[9] = s;
 	}
@@ -566,8 +503,13 @@ ms_euid(struct Client *client_p, struct Client *source_p, int parc, const char *
 	if(strlen(parv[11]) > REALLEN)
 	{
 		char *s = LOCAL_COPY(parv[11]);
+<<<<<<< HEAD:modules/core/m_nick.c
 		sendto_realops_snomask(SNO_DEBUG, L_NETWIDE, "Long realname from server %s for %s",
 				     parv[0], parv[1]);
+=======
+		sendto_realops_snomask(SNO_GENERAL, L_ALL, "Long realname from server %s for %s",
+				     source_p->name, parv[1]);
+>>>>>>> 106c88737f649876982c918d814b240c008d1687:modules/core/m_nick.c
 		s[REALLEN] = '\0';
 		parv[11] = s;
 	}
@@ -1020,7 +962,7 @@ perform_nick_collides(struct Client *source_p, struct Client *client_p,
 				(void) exit_client(client_p, target_p, &me, "Nick collision");
 			}
 
-			register_client(client_p, parc >= 10 ? source_p : NULL,
+			register_client(client_p, source_p,
 					nick, newts, parc, parv);
 
 			return 0;
@@ -1179,6 +1121,7 @@ register_client(struct Client *client_p, struct Client *server,
 	const char *m;
 	int flag;
 
+<<<<<<< HEAD:modules/core/m_nick.c
 	if(server == NULL)
 	{
 		if((server = find_server(NULL, parv[7])) == NULL)
@@ -1192,6 +1135,8 @@ register_client(struct Client *client_p, struct Client *server,
 		}
 	}
 
+=======
+>>>>>>> 106c88737f649876982c918d814b240c008d1687:modules/core/m_nick.c
 	source_p = make_client(client_p);
 	user = make_user(source_p);
 	rb_dlinkAddTail(source_p, &source_p->node, &global_client_list);
@@ -1228,7 +1173,7 @@ register_client(struct Client *client_p, struct Client *server,
 	}
 	else
 	{
-		rb_strlcpy(source_p->info, parv[8], sizeof(source_p->info));
+		s_assert(0);
 	}
 
 	/* remove any nd entries for this nick */
@@ -1289,6 +1234,7 @@ register_client(struct Client *client_p, struct Client *server,
 
 	rb_dlinkAdd(source_p, &source_p->lnode, &source_p->servptr->serv->users);
 
+<<<<<<< HEAD:modules/core/m_nick.c
 	/* fake direction */
 	if(source_p->servptr->from != source_p->from)
 	{
@@ -1306,6 +1252,8 @@ register_client(struct Client *client_p, struct Client *server,
 		return exit_client(source_p, source_p, &me, "USER server wrong direction");
 	}
 
+=======
+>>>>>>> 106c88737f649876982c918d814b240c008d1687:modules/core/m_nick.c
 	call_hook(h_new_remote_user, source_p);
 
 	return (introduce_client(client_p, source_p, user, nick, parc == 12));
@@ -1375,6 +1323,14 @@ static void bad_nickname(struct Client *client_p, const char *nick)
 
 	sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, 	"Squitting %s because of bad nickname %s (NICKLEN mismatch?)",
 			client_p->name, nick);
+<<<<<<< HEAD:modules/core/m_nick.c
+=======
+	sendto_server(NULL, NULL, CAP_TS6, NOCAPS,
+			":%s WALLOPS :Squitting %s because of bad nickname %s (NICKLEN mismatch?)",
+			me.id, client_p->name, nick);
+	ilog(L_SERVER, "Link %s cancelled, bad nickname %s sent (NICKLEN mismatch?)",
+			client_p->name, nick);
+>>>>>>> 106c88737f649876982c918d814b240c008d1687:modules/core/m_nick.c
 
 	rb_snprintf(squitreason, sizeof squitreason,
 			"Bad nickname introduced [%s]", nick);
