@@ -1025,22 +1025,6 @@ handle_special(int p_or_n, const char *command, struct Client *client_p,
 			return;
 		}
 
-		if((s = strrchr(nick, '.')) == NULL)
-		{
-			sendto_one_numeric(source_p, ERR_NOTOPLEVEL,
-					   form_str(ERR_NOTOPLEVEL), nick);
-			return;
-		}
-		while(*++s)
-			if(*s == '.' || *s == '*' || *s == '?')
-				break;
-		if(*s == '*' || *s == '?')
-		{
-			sendto_one_numeric(source_p, ERR_WILDTOPLEVEL,
-					   form_str(ERR_WILDTOPLEVEL), nick);
-			return;
-		}
-
 		sendto_match_butone(IsServer(client_p) ? client_p : NULL, source_p,
 				    nick + 1,
 				    (*nick == '#') ? MATCH_HOST : MATCH_SERVER,
