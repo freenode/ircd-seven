@@ -1110,15 +1110,21 @@ get_printable_kline(struct Client *source_p, struct ConfItem *aconf,
 		    char **user, char **oper_reason)
 {
 	static char null[] = "<NULL>";
+	static char operreason_buf[BUFSIZE];
 
 	*host = EmptyString(aconf->host) ? null : aconf->host;
 	*reason = EmptyString(aconf->passwd) ? null : aconf->passwd;
 	*user = EmptyString(aconf->user) ? null : aconf->user;
 
-	if(EmptyString(aconf->spasswd) || !IsOper(source_p))
+	if((EmptyString(aconf->spasswd) && EmptyString(aconf->name)) || !IsOper(source_p))
 		*oper_reason = NULL;
 	else
-		*oper_reason = aconf->spasswd;
+	{
+		rb_snprintf(operreason_buf, sizeof(operreason_buf), "%s (%s)",
+			aconf->spasswd ? aconf->spasswd : "",
+			aconf->name ? aconf->name : null);
+		*oper_reason = operreason_buf;
+	}
 }
 
 /*
