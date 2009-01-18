@@ -54,22 +54,19 @@ DECLARE_MODULE_AV1(identify_msg, NULL, NULL, identified_clist, NULL, im_hfnlist,
 static int
 me_identified(struct Client *client_p, struct Client *source_p, int parc, const char *parv[])
 {
-	struct Client *target_p;
-	time_t ts;
-
-	target_p = find_person(parv[1]);
-	ts = atol(parv[2]);
+	struct Client *target_p = find_person(parv[1]);
+	const char *nick = parv[2];
 
 	if(target_p == NULL)
 	{
 		return 0;
 	}
 
-	if (ts != target_p->tsinfo)
+	if (irccmp(target_p->name, nick))
 	{
 		sendto_realops_snomask(SNO_DEBUG, L_ALL,
-			"Dropping IDENTIFIED for %s due to TS mismatch (%ld != %ld)",
-			target_p->name, ts, target_p->tsinfo);
+			"Dropping IDENTIFIED for %s due to nickname mismatch (%s)",
+			target_p->name, nick);
 		return 0;
 	}
 
