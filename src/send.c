@@ -1064,7 +1064,7 @@ sendto_anywhere_message(struct Client *target_p, struct Client *source_p,
 					       source_p->name, source_p->username,
 					       source_p->host, command,
 					       target_p->name,
-					       (EmptyString(source_p->user->suser) && !IsService(source_p)) ? '-' : '+');
+					       (IsIdentifiedMsg(source_p) || IsService(source_p)) ? '+' : '-');
 			else
 				rb_linebuf_putmsg(&linebuf, pattern, &args, 
 					       ":%s!%s@%s %s %s :", 
