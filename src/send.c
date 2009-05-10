@@ -543,6 +543,7 @@ sendto_channel_opmod(struct Client *one, struct Client *source_p,
 		     const char *text)
 {
 	buf_head_t rb_linebuf_local;
+	buf_head_t rb_linebuf_local_id;
 	buf_head_t rb_linebuf_old;
 	buf_head_t rb_linebuf_new;
 	struct Client *target_p;
@@ -551,20 +552,33 @@ sendto_channel_opmod(struct Client *one, struct Client *source_p,
 	rb_dlink_node *next_ptr;
 
 	rb_linebuf_newbuf(&rb_linebuf_local);
+	rb_linebuf_newbuf(&rb_linebuf_local_id);
 	rb_linebuf_newbuf(&rb_linebuf_old);
 	rb_linebuf_newbuf(&rb_linebuf_new);
 
 	current_serial++;
 
 	if(IsServer(source_p))
+	{
 		rb_linebuf_putmsg(&rb_linebuf_local, NULL, NULL,
 			       ":%s %s %s :%s",
 			       source_p->name, command, chptr->chname, text);
+		rb_linebuf_putmsg(&rb_linebuf_local_id, NULL, NULL,
+			       ":%s %s %s :%s",
+			       source_p->name, command, chptr->chname, text);
+	}
 	else
+	{
 		rb_linebuf_putmsg(&rb_linebuf_local, NULL, NULL,
 			       ":%s!%s@%s %s %s :%s",
 			       source_p->name, source_p->username, 
 			       source_p->host, command, chptr->chname, text);
+		rb_linebuf_putmsg(&rb_linebuf_local_id, NULL, NULL,
+			       ":%s!%s@%s %s %s :%c%s",
+			       source_p->name, source_p->username, 
+			       source_p->host, command, chptr->chname,
+			       IsIdentifiedMsg(source_p) ? '+' : '-', text);
+	}
 
 	if (chptr->mode.mode & MODE_MODERATED)
 		rb_linebuf_putmsg(&rb_linebuf_old, NULL, NULL,
@@ -611,7 +625,8 @@ sendto_channel_opmod(struct Client *one, struct Client *source_p,
 			}
 		}
 		else
-			_send_linebuf(target_p, &rb_linebuf_local);
+			_send_linebuf(target_p,
+				IsCapable(target_p, CLICAP_IDENTIFY_MSG) ? &rb_linebuf_local_id : &rb_linebuf_local);
 	}
 
 	rb_linebuf_donebuf(&rb_linebuf_local);
