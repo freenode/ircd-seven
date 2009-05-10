@@ -28,6 +28,7 @@
 #include "ircd_defs.h"
 #include "s_conf.h"
 #include "s_newconf.h"
+#include "newconf.h"
 #include "s_serv.h"
 #include "s_stats.h"
 #include "channel.h"
@@ -806,6 +807,7 @@ set_default_conf(void)
 	ConfigChannel.max_chans_per_user_large = 15;
 	ConfigChannel.max_bans = 25;
 	ConfigChannel.max_bans_large = 500;
+	ConfigChannel.only_ascii_channels = NO;
 	ConfigChannel.burst_topicwho = NO;
 	ConfigChannel.kick_on_split_riding = NO;
 
@@ -1449,8 +1451,8 @@ conf_add_class_to_conf(struct ConfItem *aconf)
 	{
 		if(aconf->status == CONF_CLIENT)
 		{
-			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
-					     "Warning -- Using default class for missing class \"%s\" in auth{} for %s@%s",
+			conf_report_error(
+					     "Using default class for missing class \"%s\" in auth{} for %s@%s",
 					     aconf->className, aconf->user, aconf->host);
 		}
 

@@ -5,7 +5,9 @@ See LICENSE for licensing details (GPL v2).
 
 - Remove TS5 support. No TS5 servers are permitted in a network with
   charybdis 3.1.0 or newer, except jupes.
-- Replace oper flags by privilege sets (privsets).
+- Replace oper flags by privilege sets (privsets). This adds an extra
+  level of indirection between oper flags and operator blocks. /stats O
+  (capital O) shows the configured privsets.
 - Update libratbox and ssld from upstream and use it better.
 - Add auth_user to auth{}. This allows specifying a username:password instead
   of just a password in PASS, so that a fixed user@host is not necessary
@@ -18,6 +20,11 @@ See LICENSE for licensing details (GPL v2).
 - Move nick collision notices from +s to +k.
 - Add additional information to various server notices about server
   connections.
+- Show throttle information in /stats t.
+- Show rejectcache and throttle information in /testline.
+- Show oper reason in /testline.
+- Allow opers to see other users' umodes with /mode <nick>.
+- SCAN UMODES GLOBAL NO-LIST MASK <mask> is no longer an operspy command.
 - Also apply floodcount to messages to remote clients (except services).
 - Remove user@server messages to local users. Sending such messages to
   remote servers is still possible, for securely messaging pseudoservers
@@ -25,17 +32,33 @@ See LICENSE for licensing details (GPL v2).
   remains as well.
 - Allow /list on a named +p channel. A full /list already included +p channels.
 - Add operspy /topic.
+- For remote rehashes, send error messages to the requesting oper as well.
+- Disable autoconnect for a server with excessive TS delta.
+- Disallow invites to juped channels.
+- Warn about certain duplicate and redundant auth blocks.
 - Make PRIVMSG/NOTICE behave as CPRIVMSG/CNOTICE automatically if possible.
 - Allow +z messages from outside if a channel is -n.
 - Allow coloured part reasons in -c channels.
 - Add ircu-like WHOX support. This allows requesting specific information
   in /who and allows obtaining services login name for all users in a
   channel. XChat/Conspire use WHOX to update away status more efficiently.
+- Allow opers and shide_exempt users to see hopcounts even if flatten_links
+  is on.
 - Rework ip_cloaking.
 - Add the IP address to userlog, as in ircd-ratbox 3.0.
 - Split cidr_bitlen into cidr_ipv4_bitlen and cidr_ipv6_bitlen.
+- Allow using ziplinks with SSL connections. This is not as efficient as
+  using OpenSSL's built in compression, but also works with older versions
+  of OpenSSL.
+- Fix an off by one error with zipstats processing, which could overwrite
+  a variable with NULL causing a crash on some systems.
 - Document some extensions in charybdis-oper-guide.
-- Various new extensions.
+- Add more server protocol documentation.
+- Add m_sendbans extension, SENDBANS command to propagate xlines and resvs
+  manually.
+- Add chm_sslonly extension, cmode +S for SSL/TLS only channels.
+- Add chm_operonly extension, cmode +O for IRCop only channels.
+- Add chm_adminonly extension, cmode +A for server admin only channels.
 - Various code cleanups.
 
 -- charybdis-3.0.4

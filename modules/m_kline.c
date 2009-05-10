@@ -96,11 +96,10 @@ static int
 mo_kline(struct Client *client_p, struct Client *source_p,
 	 int parc, const char **parv)
 {
-	char def[] = "No Reason";
 	char user[USERLEN + 2];
 	char host[HOSTLEN + 2];
 	char buffer[IRCD_BUFSIZE];
-	char *reason = def;
+	char *reason;
 	char *oper_reason;
 	const char *current_date;
 	const char *target_server = NULL;
@@ -447,8 +446,8 @@ mo_unkline(struct Client *client_p, struct Client *source_p, int parc, const cha
 static int
 ms_unkline(struct Client *client_p, struct Client *source_p, int parc, const char *parv[])
 {
-	/* parv[0]  parv[1]        parv[2]  parv[3]
-	 * oper     target server  user     host    */
+	/* source_p  parv[1]        parv[2]  parv[3]
+	 * oper      target server  user     host    */
 	propagate_generic(source_p, "UNKLINE", parv[1], CAP_UNKLN,
 			"%s %s", parv[2], parv[3]);
 
@@ -603,8 +602,9 @@ find_user_host(struct Client *source_p, const char *userhost, char *luser, char 
 static int
 valid_user_host(struct Client *source_p, const char *luser, const char *lhost)
 {
-	/* # is invalid, as are '!' (n!u@h kline) and '@' (u@@h kline) */
-	if(strchr(lhost, '#') || strchr(luser, '#') || strchr(luser, '!') ||
+	/* # and " are invalid, as are '!' (n!u@h kline) and '@' (u@@h kline) */
+	if(strchr(lhost, '#') || strchr(luser, '#') || strchr(lhost, '"') ||
+			strchr(luser, '"') || strchr(luser, '!') ||
 			strchr(lhost, '@'))
 	{
 		sendto_one_notice(source_p, ":Invalid K-Line");

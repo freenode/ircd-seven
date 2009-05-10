@@ -92,6 +92,7 @@ struct Capability captab[] = {
 	{ "SAVE",	CAP_SAVE },
 	{ "EUID",	CAP_EUID },
 	{ "REMOVE",	CAP_REMOVE },
+	{ "EOPMOD",	CAP_EOPMOD },
 	{0, 0}
 };
 
@@ -157,41 +158,23 @@ hunt_server(struct Client *client_p, struct Client *source_p,
 	 * Again, if there are no wild cards involved in the server
 	 * name, use the hash lookup
 	 */
-	if(!target_p)
+	if(!target_p && wilds)
 	{
-		if(!wilds)
+		RB_DLINK_FOREACH(ptr, global_client_list.head)
 		{
-			if(MyClient(source_p) || !IsDigit(parv[server][0]))
-				sendto_one_numeric(source_p, ERR_NOSUCHSERVER,
-						   form_str(ERR_NOSUCHSERVER),
-						   parv[server]);
-			return (HUNTED_NOSUCH);
-		}
-		else
-		{
-			target_p = NULL;
-
-			RB_DLINK_FOREACH(ptr, global_client_list.head)
+			if(match(new, ((struct Client *) (ptr->data))->name))
 			{
-				if(match(new, ((struct Client *) (ptr->data))->name))
-				{
-					target_p = ptr->data;
-					break;
-				}
+				target_p = ptr->data;
+				break;
 			}
 		}
 	}
 
+	if(target_p && !IsRegistered(target_p))
+		target_p = NULL;
+
 	if(target_p)
 	{
-		if(!IsRegistered(target_p))
-		{
-			sendto_one_numeric(source_p, ERR_NOSUCHSERVER,
-					   form_str(ERR_NOSUCHSERVER),
-					   parv[server]);
-			return HUNTED_NOSUCH;
-		}
-
 		if(IsMe(target_p) || MyClient(target_p))
 			return HUNTED_ISME;
 
@@ -1276,9 +1259,6 @@ serv_connect_callback(rb_fde_t *F, int status, void *data)
 	/* Next, send the initial handshake */
 	SetHandshake(client_p);
 
-	/* kludge, if we're not using TS6, dont ever send
-	 * ourselves as being TS6 capable.
-	 */
 	if(!EmptyString(server_p->spasswd))
 	{
 		sendto_one(client_p, "PASS %s TS %d :%s", 

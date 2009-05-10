@@ -70,7 +70,6 @@ static int remove_resv_from_file(struct Client *source_p, const char *name);
 
 /*
  * mo_resv()
- *      parv[0] = sender prefix
  *      parv[1] = channel/nick to forbid
  *      parv[2] = reason
  */
@@ -147,7 +146,6 @@ mo_resv(struct Client *client_p, struct Client *source_p, int parc, const char *
 }
 
 /* ms_resv()
- *     parv[0] = sender prefix
  *     parv[1] = target server
  *     parv[2] = channel/nick to forbid
  *     parv[3] = reason
@@ -156,8 +154,8 @@ static int
 ms_resv(struct Client *client_p, struct Client *source_p,
 	int parc, const char *parv[])
 {
-	/* parv[0]  parv[1]        parv[2]  parv[3]
-	 * oper     target server  resv     reason
+	/* source_p  parv[1]        parv[2]  parv[3]
+	 * oper      target server  resv     reason
 	 */
 	propagate_resv(source_p, parv[1], 0, parv[2], parv[3]);
 
@@ -217,6 +215,13 @@ parse_resv(struct Client *source_p, const char *name,
 		{
 			sendto_one_notice(source_p, ":Invalid RESV length: %s",
 					  name);
+			return;
+		}
+
+		if(strchr(name, ','))
+		{
+			sendto_one_notice(source_p,
+					":Invalid character ',' in channel RESV");
 			return;
 		}
 
@@ -377,7 +382,6 @@ cluster_resv(struct Client *source_p, int temp_time, const char *name,
 
 /*
  * mo_unresv()
- *     parv[0] = sender prefix
  *     parv[1] = channel/nick to unforbid
  */
 static int
@@ -414,15 +418,14 @@ mo_unresv(struct Client *client_p, struct Client *source_p, int parc, const char
 }
 
 /* ms_unresv()
- *     parv[0] = sender prefix
  *     parv[1] = target server
  *     parv[2] = resv to remove
  */
 static int
 ms_unresv(struct Client *client_p, struct Client *source_p, int parc, const char *parv[])
 {
-	/* parv[0]  parv[1]        parv[2]
-	 * oper     target server  resv to remove
+	/* source_p  parv[1]        parv[2]
+	 * oper      target server  resv to remove
 	 */
 	propagate_generic(source_p, "UNRESV", parv[1], CAP_CLUSTER,
 			"%s", parv[2]);

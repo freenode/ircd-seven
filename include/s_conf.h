@@ -243,6 +243,7 @@ struct config_channel_entry
 	int burst_topicwho;
 	int kick_on_split_riding;
 	int disable_local_channels;
+	int only_ascii_channels;
 };
 
 struct config_server_hide
@@ -373,6 +374,7 @@ extern void parse_d_file(FILE * fb);
 extern void parse_x_file(FILE * fb);
 extern void parse_resv_file(FILE *);
 extern char *getfield(char *newline);
+extern char *xline_encode_spaces(const char *);
 
 extern char *get_oper_name(struct Client *client_p);
 

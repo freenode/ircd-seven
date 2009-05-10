@@ -38,6 +38,7 @@
 #include "packet.h"
 #include "s_serv.h"
 #include "s_conf.h"
+#include "hook.h"
 
 #define KICK 0
 #define REMOVE 1
@@ -77,7 +78,6 @@ m_remove(struct Client *client_p, struct Client *source_p, int parc, const char 
 
 /*
 ** m_kick
-**      parv[0] = sender prefix
 **      parv[1] = channel
 **      parv[2] = client to kick
 **      parv[3] = kick comment
@@ -203,12 +203,15 @@ do_kick(int kick_or_remove, struct Client *client_p, struct Client *source_p, in
 		if(MyClient(source_p))
 		{
 			hook_data_channel_approval hookdata;
+
 			hookdata.client = source_p;
 			hookdata.chptr = chptr;
 			hookdata.target = who;
 			hookdata.approved = 1;
+
 			call_hook(h_can_kick, &hookdata);
-			if(!hookdata.approved)
+
+			if (!hookdata.approved)
 				return 0;
 		}
 

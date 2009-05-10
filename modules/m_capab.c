@@ -1,6 +1,6 @@
 /*
  *  ircd-ratbox: A slightly useful ircd.
- *  m_away.c: Negotiates capabilities with a remote server.
+ *  m_capab.c: Negotiates capabilities with a remote server.
  *
  *  Copyright (C) 1990 Jarkko Oikarinen and University of Oulu, Co Center
  *  Copyright (C) 1996-2002 Hybrid Development Team
@@ -50,7 +50,6 @@ DECLARE_MODULE_AV1(capab, NULL, NULL, capab_clist, NULL, NULL, "$Revision: 1295 
 
 /*
  * mr_capab - CAPAB message handler
- *      parv[0] = sender prefix
  *      parv[1] = space-separated list of capabilities
  *
  */

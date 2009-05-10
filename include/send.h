@@ -38,6 +38,8 @@ struct monitor;
 /* The nasty global also used in s_serv.c for server bursts */
 extern unsigned long current_serial;
 
+extern struct Client *remote_rehash_oper_p;
+
 extern void send_pop_queue(struct Client *);
 
 extern void send_queued(struct Client *to);
@@ -58,6 +60,9 @@ extern void sendto_channel_flags(struct Client *one, int type, struct Client *so
 extern void sendto_channel_message(struct Client *one, int type, struct Client *source_p,
 				 struct Channel *chptr, const char *command, const char *target,
 				 const char *, ...) AFP(7, 8);
+extern void sendto_channel_opmod(struct Client *one, struct Client *source_p,
+				 struct Channel *chptr, const char *command,
+				 const char *text);
 
 extern void sendto_channel_local(int type, struct Channel *, const char *, ...) AFP(3, 4);
 extern void sendto_channel_local_butone(struct Client *, int type, struct Channel *, const char *, ...) AFP(4, 5);

@@ -64,7 +64,6 @@ static int set_server_gecos(struct Client *, const char *);
 
 /*
  * mr_server - SERVER message handler
- *      parv[0] = sender prefix
  *      parv[1] = servername
  *      parv[2] = serverinfo/hopcount
  *      parv[3] = serverinfo
@@ -76,6 +75,7 @@ mr_server(struct Client *client_p, struct Client *source_p, int parc, const char
 	const char *name;
 	struct Client *target_p;
 	int hop;
+	struct Capability *cap;
 
 	name = parv[1];
 	hop = atoi(parv[2]);
@@ -107,6 +107,23 @@ mr_server(struct Client *client_p, struct Client *source_p, int parc, const char
 	{
 		exit_client(client_p, client_p, client_p, "Bogus server name");
 		return 0;
+	}
+
+	/* check to ensure any "required" caps are set. --nenolod */
+	for (cap = captab; cap->name; cap++)
+	{
+		if (!cap->required)
+			continue;
+
+		if (!(client_p->localClient->caps & cap->cap))
+		{
+			char exitbuf[BUFSIZE];
+
+			rb_snprintf(exitbuf, BUFSIZE, "Missing required CAPAB [%s]", cap->name);
+			exit_client(client_p, client_p, client_p, exitbuf);
+
+			return 0;
+		}
 	}
 
 	/* Now we just have to call check_server and everything should be
@@ -261,7 +278,6 @@ mr_server(struct Client *client_p, struct Client *source_p, int parc, const char
 
 /*
  * ms_server - SERVER message handler
- *      parv[0] = sender prefix
  *      parv[1] = servername
  *      parv[2] = serverinfo/hopcount
  *      parv[3] = serverinfo
@@ -641,7 +657,6 @@ set_server_gecos(struct Client *client_p, const char *info)
 	{
 		char *p;
 		char *s;
-		char *t;
 
 		s = LOCAL_COPY(info);
 
@@ -650,7 +665,7 @@ set_server_gecos(struct Client *client_p, const char *info)
 			*p = '\0';
 
 		/* check for a ] which would symbolise an [IP] */
-		if((t = strchr(s, ']')))
+		if(strchr(s, ']'))
 		{
 			/* set s to after the first space */
 			if(p)

@@ -384,7 +384,7 @@ pretty_mask(const char *idmask)
 		if(*t != '\0')
 			user = t;
 	}
-	else if(strchr(mask, '.') != NULL || strchr(mask, ':') != NULL)
+	else if(strchr(mask, '.') != NULL || strchr(mask, ':') != NULL || strchr(mask, '/') != NULL)
 	{
 		if(*mask != '\0')
 			host = mask;
@@ -523,7 +523,6 @@ chm_simple(struct Client *source_p, struct Channel *chptr,
 		}
 	}
 
-	/* flags (possibly upto 32) + 4 with param */
 	if(MyClient(source_p) && (++mode_limit_simple > MAXMODES_SIMPLE))
 		return;
 

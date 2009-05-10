@@ -53,7 +53,6 @@ DECLARE_MODULE_AV1(topic, NULL, NULL, topic_clist, NULL, NULL, "$Revision: 254 $
 
 /*
  * m_topic
- *      parv[0] = sender prefix
  *      parv[1] = channel name
  *	parv[2] = new topic, if setting topic
  */
@@ -126,7 +125,8 @@ m_topic(struct Client *client_p, struct Client *source_p, int parc, const char *
 			else
 			{
 				sendto_one(source_p, form_str(ERR_CHANOPRIVSNEEDED),
-						me.name, source_p->name, name);
+						get_id(&me, source_p),
+						get_id(source_p, source_p), name);
 				return 0;
 			}
 		}
@@ -175,7 +175,6 @@ m_topic(struct Client *client_p, struct Client *source_p, int parc, const char *
 
 /*
  * ms_topic
- *      parv[0] = sender prefix
  *      parv[1] = channel name
  *	parv[2] = topic_info
  *	parv[3] = topic_info time

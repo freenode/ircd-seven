@@ -51,6 +51,7 @@ struct Capability
 {
 	const char *name;	/* name of capability */
 	unsigned int cap;	/* mask value */
+	unsigned int required;  /* 1 if required, 0 if not */
 };
 
 #define CAP_CAP         0x000001 /* received a CAP to begin with */
@@ -71,13 +72,14 @@ struct Capability
 #define CAP_SAVE	0x040000 /* supports SAVE (nick collision FNC) */
 #define CAP_EUID	0x080000 /* supports EUID (ext UID + nonencap CHGHOST) */
 #define CAP_REMOVE	0x100000 /* supports REMOVE */
+#define CAP_EOPMOD	0x200000 /* supports EOPMOD (ext +z + ext topic) */
 
 #define CAP_MASK        (CAP_QS  | CAP_EX   | CAP_CHW  | \
                          CAP_IE  | CAP_KLN  | CAP_SERVICE |\
                          CAP_CLUSTER | CAP_ENCAP | \
                          CAP_ZIP  | CAP_KNOCK  | CAP_UNKLN | \
 			 CAP_RSFNC | CAP_SAVE | CAP_EUID | \
-			 CAP_REMOVE)
+			 CAP_REMOVE | CAP_EOPMOD)
 
 #ifdef HAVE_LIBZ
 #define CAP_ZIP_SUPPORTED       CAP_ZIP

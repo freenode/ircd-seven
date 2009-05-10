@@ -83,7 +83,6 @@ clean_host(const char *host)
 
 /*
  * me_realhost
- * parv[0] = origin
  * parv[1] = real host
  *
  * Yes this contains a little race condition if someone does a whois
@@ -146,7 +145,6 @@ do_chghost(struct Client *source_p, struct Client *target_p,
 
 /*
  * ms_chghost
- * parv[0] = origin
  * parv[1] = target
  * parv[2] = host
  */
@@ -174,7 +172,6 @@ ms_chghost(struct Client *client_p, struct Client *source_p,
 
 /*
  * me_chghost
- * parv[0] = origin
  * parv[1] = target
  * parv[2] = host
  */
@@ -194,7 +191,6 @@ me_chghost(struct Client *client_p, struct Client *source_p,
 
 /*
  * mo_chghost
- * parv[0] = origin
  * parv[1] = target
  * parv[2] = host
  */

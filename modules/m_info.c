@@ -567,6 +567,12 @@ static struct InfoStruct info_table[] = {
 		"Disallow joining channels when split",
 	},
 	{
+		"only_ascii_channels",
+		OUTPUT_BOOLEAN_YN,
+		&ConfigChannel.only_ascii_channels,
+		"Controls whether non-ASCII is disabled for JOIN"
+	},
+	{
 		"use_except",
 		OUTPUT_BOOLEAN_YN,
 		&ConfigChannel.use_except,
@@ -615,7 +621,6 @@ static struct InfoStruct info_table[] = {
 
 /*
 ** m_info
-**  parv[0] = sender prefix
 **  parv[1] = servername
 */
 static int
@@ -648,7 +653,6 @@ m_info(struct Client *client_p, struct Client *source_p, int parc, const char *p
 
 /*
 ** mo_info
-**  parv[0] = sender prefix
 **  parv[1] = servername
 */
 static int

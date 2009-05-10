@@ -49,6 +49,8 @@ static void send_queued_write(rb_fde_t *F, void *data);
 
 unsigned long current_serial = 0L;
 
+struct Client *remote_rehash_oper_p;
+
 /* send_linebuf()
  *
  * inputs	- client to send to, linebuf to attach
@@ -529,6 +531,93 @@ sendto_channel_flags(struct Client *one, int type, struct Client *source_p,
 	rb_linebuf_donebuf(&rb_linebuf_id);
 }
 
+/* sendto_channel_flags()
+ *
+ * inputs	- server not to send to, flags needed, source, channel, va_args
+ * outputs	- message is sent to channel members
+ * side effects -
+ */
+void
+sendto_channel_opmod(struct Client *one, struct Client *source_p,
+		     struct Channel *chptr, const char *command,
+		     const char *text)
+{
+	buf_head_t rb_linebuf_local;
+	buf_head_t rb_linebuf_old;
+	buf_head_t rb_linebuf_new;
+	struct Client *target_p;
+	struct membership *msptr;
+	rb_dlink_node *ptr;
+	rb_dlink_node *next_ptr;
+
+	rb_linebuf_newbuf(&rb_linebuf_local);
+	rb_linebuf_newbuf(&rb_linebuf_old);
+	rb_linebuf_newbuf(&rb_linebuf_new);
+
+	current_serial++;
+
+	if(IsServer(source_p))
+		rb_linebuf_putmsg(&rb_linebuf_local, NULL, NULL,
+			       ":%s %s %s :%s",
+			       source_p->name, command, chptr->chname, text);
+	else
+		rb_linebuf_putmsg(&rb_linebuf_local, NULL, NULL,
+			       ":%s!%s@%s %s %s :%s",
+			       source_p->name, source_p->username, 
+			       source_p->host, command, chptr->chname, text);
+
+	if (chptr->mode.mode & MODE_MODERATED)
+		rb_linebuf_putmsg(&rb_linebuf_old, NULL, NULL,
+			       ":%s %s %s :%s",
+			       use_id(source_p), command, chptr->chname, text);
+	else
+		rb_linebuf_putmsg(&rb_linebuf_old, NULL, NULL,
+			       ":%s NOTICE @%s :<%s:%s> %s",
+			       use_id(source_p->servptr), chptr->chname,
+			       source_p->name, chptr->chname, text);
+	rb_linebuf_putmsg(&rb_linebuf_new, NULL, NULL,
+		       ":%s %s =%s :%s",
+		       use_id(source_p), command, chptr->chname, text);
+
+	RB_DLINK_FOREACH_SAFE(ptr, next_ptr, chptr->members.head)
+	{
+		msptr = ptr->data;
+		target_p = msptr->client_p;
+
+		if(IsIOError(target_p->from) || target_p->from == one)
+			continue;
+
+		if((msptr->flags & CHFL_CHANOP) == 0)
+			continue;
+
+		if(IsDeaf(target_p))
+			continue;
+
+		if(!MyClient(target_p))
+		{
+			/* if we've got a specific type, target must support
+			 * CHW.. --fl
+			 */
+			if(NotCapable(target_p->from, CAP_CHW))
+				continue;
+
+			if(target_p->from->serial != current_serial)
+			{
+				if (IsCapable(target_p->from, CAP_EOPMOD))
+					send_linebuf_remote(target_p, source_p, &rb_linebuf_new);
+				else
+					send_linebuf_remote(target_p, source_p, &rb_linebuf_old);
+				target_p->from->serial = current_serial;
+			}
+		}
+		else
+			_send_linebuf(target_p, &rb_linebuf_local);
+	}
+
+	rb_linebuf_donebuf(&rb_linebuf_local);
+	rb_linebuf_donebuf(&rb_linebuf_old);
+	rb_linebuf_donebuf(&rb_linebuf_new);
+}
 
 /* sendto_channel_message()
  *
@@ -1122,6 +1211,16 @@ sendto_realops_snomask(int flags, int level, const char *pattern, ...)
 			sendto_server(NULL, NULL, CAP_ENCAP|CAP_TS6, NOCAPS,
 					":%s ENCAP * SNOTE %c :%s",
 					me.id, snobuf[1], buf);
+	}
+	else if (remote_rehash_oper_p != NULL)
+	{
+		/* rather a lot of copying around, oh well -- jilles */
+		va_start(args, pattern);
+		rb_vsnprintf(buf, sizeof(buf), pattern, args);
+		va_end(args);
+		rb_linebuf_putmsg(&linebuf, pattern, NULL, 
+				":%s NOTICE * :*** Notice -- %s", me.name, buf);
+		sendto_one_notice(remote_rehash_oper_p, ":*** Notice -- %s", buf);
 	}
 	else
 	{

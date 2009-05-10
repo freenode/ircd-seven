@@ -909,7 +909,13 @@ conf_end_auth(struct TopConf *tc)
 	collapse(yy_aconf->user);
 	collapse(yy_aconf->host);
 	conf_add_class_to_conf(yy_aconf);
-	add_conf_by_address(yy_aconf->host, CONF_CLIENT, yy_aconf->user, yy_aconf->spasswd, yy_aconf);
+	if (find_exact_conf_by_address("*", CONF_CLIENT, "*"))
+		conf_report_error("Ignoring redundant auth block (after *@*)");
+	else if (find_exact_conf_by_address(yy_aconf->host, CONF_CLIENT, yy_aconf->user))
+		conf_report_error("Ignoring duplicate auth block for %s@%s",
+				yy_aconf->user, yy_aconf->host);
+	else
+		add_conf_by_address(yy_aconf->host, CONF_CLIENT, yy_aconf->user, yy_aconf->spasswd, yy_aconf);
 
 	RB_DLINK_FOREACH_SAFE(ptr, next_ptr, yy_aconf_list.head)
 	{
@@ -935,7 +941,13 @@ conf_end_auth(struct TopConf *tc)
 
 		conf_add_class_to_conf(yy_tmp);
 
-		add_conf_by_address(yy_tmp->host, CONF_CLIENT, yy_tmp->user, yy_tmp->spasswd, yy_tmp);
+		if (find_exact_conf_by_address("*", CONF_CLIENT, "*"))
+			conf_report_error("Ignoring redundant auth block (after *@*)");
+		else if (find_exact_conf_by_address(yy_tmp->host, CONF_CLIENT, yy_tmp->user))
+			conf_report_error("Ignoring duplicate auth block for %s@%s",
+					yy_tmp->user, yy_tmp->host);
+		else
+			add_conf_by_address(yy_tmp->host, CONF_CLIENT, yy_tmp->user, yy_tmp->spasswd, yy_tmp);
 		rb_dlinkDestroy(ptr, &yy_aconf_list);
 	}
 
@@ -2175,6 +2187,7 @@ static struct ConfEntry conf_channel_table[] =
 	{ "max_chans_per_user_large", CF_INT,   NULL, 0, &ConfigChannel.max_chans_per_user_large },
 	{ "no_create_on_split", CF_YESNO, NULL, 0, &ConfigChannel.no_create_on_split 	},
 	{ "no_join_on_split",	CF_YESNO, NULL, 0, &ConfigChannel.no_join_on_split	},
+	{ "only_ascii_channels", CF_YESNO, NULL, 0, &ConfigChannel.only_ascii_channels },
 	{ "use_except",		CF_YESNO, NULL, 0, &ConfigChannel.use_except		},
 	{ "use_invex",		CF_YESNO, NULL, 0, &ConfigChannel.use_invex		},
 	{ "use_knock",		CF_YESNO, NULL, 0, &ConfigChannel.use_knock		},

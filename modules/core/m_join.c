@@ -140,7 +140,6 @@ check_forward(struct Client *source_p, struct Channel *chptr,
 
 /*
  * m_join
- *      parv[0] = sender prefix
  *      parv[1] = channel
  *      parv[2] = channel password (key)
  */
@@ -403,7 +402,6 @@ m_join(struct Client *client_p, struct Client *source_p, int parc, const char *p
 
 /*
  * ms_join
- *      parv[0] = sender prefix
  *      parv[1] = channel TS
  *      parv[2] = channel
  *      parv[3] = "+", formerly channel modes but now unused
@@ -1019,25 +1017,34 @@ do_join_0(struct Client *client_p, struct Client *source_p)
 static int
 check_channel_name_loc(struct Client *source_p, const char *name)
 {
+	const char *p;
+
 	s_assert(name != NULL);
 	if(EmptyString(name))
 		return 0;
 
 	if(ConfigFileEntry.disable_fake_channels && !IsOper(source_p))
 	{
-		for(; *name; ++name)
+		for(p = name; *p; ++p)
 		{
-			if(!IsChanChar(*name) || IsFakeChanChar(*name))
+			if(!IsChanChar(*p) || IsFakeChanChar(*p))
 				return 0;
 		}
 	}
 	else
 	{
-		for(; *name; ++name)
+		for(p = name; *p; ++p)
 		{
-			if(!IsChanChar(*name))
+			if(!IsChanChar(*p))
 				return 0;
 		}
+	}
+
+	if(ConfigChannel.only_ascii_channels)
+	{
+		for(p = name; *p; ++p)
+			if(*p < 33 || *p > 126)
+				return 0;
 	}
 
 	return 1;

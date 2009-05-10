@@ -52,7 +52,6 @@ DECLARE_MODULE_AV1(invite, NULL, NULL, invite_clist, NULL, NULL, "$Revision: 343
 static void add_invite(struct Channel *, struct Client *);
 
 /* m_invite()
- *      parv[0] - sender prefix
  *      parv[1] - user to invite
  *      parv[2] - channel name
  */
@@ -107,6 +106,16 @@ m_invite(struct Client *client_p, struct Client *source_p, int parc, const char 
 	{
 		sendto_one(source_p, form_str(ERR_USERNOTONSERV),
 			   me.name, source_p->name, target_p->name);
+		return 0;
+	}
+
+	if(((MyConnect(source_p) && !IsExemptResv(source_p)) ||
+			(MyConnect(target_p) && !IsExemptResv(target_p))) &&
+		hash_find_resv(parv[2]))
+	{
+		sendto_one_numeric(source_p, ERR_BADCHANNAME,
+				   form_str(ERR_BADCHANNAME),
+				   parv[2]);
 		return 0;
 	}
 

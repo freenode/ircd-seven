@@ -70,7 +70,8 @@ struct Message unxline_msgtab = {
 mapi_clist_av1 xline_clist[] =  { &xline_msgtab, &unxline_msgtab, NULL };
 DECLARE_MODULE_AV1(xline, NULL, NULL, xline_clist, NULL, NULL, "$Revision: 3161 $");
 
-static int valid_xline(struct Client *, const char *, const char *);
+static char *escape_perm_xline(const char *);
+static int valid_xline(struct Client *, const char *, const char *, int);
 static void apply_xline(struct Client *client_p, const char *name, 
 			const char *reason, int temp_time);
 static void write_xline(struct Client *source_p, struct ConfItem *aconf);
@@ -99,6 +100,7 @@ mo_xline(struct Client *client_p, struct Client *source_p, int parc, const char 
 {
 	struct ConfItem *aconf;
 	const char *name;
+	char *escapedname;
 	const char *reason;
 	const char *target_server = NULL;
 	int temp_time;
@@ -143,6 +145,16 @@ mo_xline(struct Client *client_p, struct Client *source_p, int parc, const char 
 
 	reason = parv[loc];
 
+	if (temp_time == 0)
+	{
+		escapedname = escape_perm_xline(name);
+		if (strcmp(escapedname, name))
+			sendto_one_notice(source_p, ":Changed xline from [%s] to [%s]",
+					name, escapedname);
+	}
+	else
+		escapedname = rb_strdup(name);
+
 	if(target_server != NULL)
 	{
 		if (temp_time)
@@ -152,25 +164,33 @@ mo_xline(struct Client *client_p, struct Client *source_p, int parc, const char 
 			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "%s is adding a permanent X-Line for [%s] on %s [%s]",
 					get_oper_name(source_p), name, target_server, reason);
 		propagate_xline(source_p, target_server, temp_time,
-				name, "2", reason);
+				escapedname, "2", reason);
 
 		if(!match(target_server, me.name))
+		{
+			rb_free(escapedname);
 			return 0;
+		}
 	}
 	else if(rb_dlink_list_length(&cluster_conf_list) > 0)
-		cluster_xline(source_p, temp_time, name, reason);
+		cluster_xline(source_p, temp_time, escapedname, reason);
 
-	if((aconf = find_xline_mask(name)) != NULL)
+	if((aconf = find_xline_mask(escapedname)) != NULL)
 	{
 		sendto_one(source_p, ":%s NOTICE %s :[%s] already X-Lined by [%s] - %s",
-			   me.name, source_p->name, name, aconf->name, aconf->passwd);
+			   me.name, source_p->name, escapedname, aconf->name, aconf->passwd);
+		rb_free(escapedname);
 		return 0;
 	}
 
-	if(!valid_xline(source_p, name, reason))
+	if(!valid_xline(source_p, escapedname, reason, temp_time))
+	{
+		rb_free(escapedname);
 		return 0;
+	}
 
-	apply_xline(source_p, name, reason, temp_time);
+	apply_xline(source_p, escapedname, reason, temp_time);
+	rb_free(escapedname);
 
 	return 0;
 }
@@ -182,8 +202,8 @@ mo_xline(struct Client *client_p, struct Client *source_p, int parc, const char 
 static int
 ms_xline(struct Client *client_p, struct Client *source_p, int parc, const char *parv[])
 {
-	/* parv[0]  parv[1]      parv[2]  parv[3]  parv[4]
-	 * oper     target serv  xline    type     reason
+	/* source_p  parv[1]      parv[2]  parv[3]  parv[4]
+	 * oper      target serv  xline    type     reason
 	 */
 	propagate_xline(source_p, parv[1], 0, parv[2], parv[3], parv[4]);
 
@@ -220,7 +240,7 @@ handle_remote_xline(struct Client *source_p, int temp_time,
 				(temp_time > 0) ? SHARED_TXLINE : SHARED_PXLINE))
 		return;
 
-	if(!valid_xline(source_p, name, reason))
+	if(!valid_xline(source_p, name, reason, temp_time))
 		return;
 
 	/* already xlined */
@@ -233,21 +253,51 @@ handle_remote_xline(struct Client *source_p, int temp_time,
 	apply_xline(source_p, name, reason, temp_time);
 }
 
+/* escape_perm_xline()
+ *
+ * inputs	- gecos
+ * outputs	- escaped gecos (allocated with rb_malloc())
+ * side effects - none
+ */
+static char *
+escape_perm_xline(const char *gecos)
+{
+	char *result;
+	int i, j;
+
+	result = rb_malloc(2 * strlen(gecos) + 1);
+	for (i = 0, j = 0; gecos[i] != '\0'; i++)
+	{
+		result[j++] = gecos[i];
+		if (gecos[i] == '"' && gecos[i + 1] == ',')
+			result[j++] = '\\';
+	}
+	result[j] = '\0';
+	return result;
+}
+
 /* valid_xline()
  *
- * inputs	- client xlining, gecos, reason and whether to warn
+ * inputs	- client xlining, gecos, reason and temp time
  * outputs	-
  * side effects - checks the xline for validity, erroring if needed
  */
 static int
 valid_xline(struct Client *source_p, const char *gecos,
-	    const char *reason)
+	    const char *reason, int temp_time)
 {
 	if(EmptyString(reason))
 	{
 		sendto_one(source_p, form_str(ERR_NEEDMOREPARAMS),
 			   get_id(&me, source_p), 
 			   get_id(source_p, source_p), "XLINE");
+		return 0;
+	}
+
+	if(temp_time == 0 && strstr(gecos, "\",") != NULL)
+	{
+		sendto_one_notice(source_p,
+				  ":Invalid character sequence '\",' in xline, please replace with '\"\\,'");
 		return 0;
 	}
 
@@ -286,41 +336,7 @@ apply_xline(struct Client *source_p, const char *name, const char *reason,
 	aconf = make_conf();
 	aconf->status = CONF_XLINE;
 
-	if(strstr(name, "\\s"))
-	{
-		char *tmp = LOCAL_COPY(name);
-		char *orig = tmp;
-		char *new = tmp;
-
-		while(*orig)
-		{
-			if(*orig == '\\' && *(orig + 1) != '\0')
-			{
-				if(*(orig + 1) == 's')
-				{
-					*new++ = ' ';
-					orig += 2;
-				}
-				/* otherwise skip that and the escaped
-				 * character after it, so we dont mistake
-				 * \\s as \s --fl
-				 */
-				else
-				{
-					*new++ = *orig++;
-					*new++ = *orig++;
-				}
-			}
-			else
-				*new++ = *orig++;
-		}
-
-		*new = '\0';
-		aconf->name = rb_strdup(tmp);
-	}
-	else
-		aconf->name = rb_strdup(name);
-
+	aconf->name = rb_strdup(name);
 	aconf->passwd = rb_strdup(reason);
 	collapse(aconf->name);
 
@@ -366,6 +382,40 @@ write_xline(struct Client *source_p, struct ConfItem *aconf)
 	char buffer[BUFSIZE * 2];
 	FILE *out;
 	const char *filename;
+	char *mangle_gecos;
+
+	if(strstr(aconf->name, "\\s"))
+	{
+		char *tmp = LOCAL_COPY(aconf->name);
+		char *orig = tmp;
+		char *new = tmp; 
+		while(*orig)
+		{
+			if(*orig == '\\' && *(orig + 1) != '\0')
+			{
+				if(*(orig + 1) == 's')
+				{
+					*new++ = ' ';
+					orig += 2;   
+				}
+				/* otherwise skip that and the escaped
+				 * character after it, so we dont mistake
+				 * \\s as \s --fl
+				 */
+				else
+				{   
+					*new++ = *orig++;
+					*new++ = *orig++;
+				}
+			}
+			else
+				*new++ = *orig++;
+		}
+
+		*new = '\0';
+		mangle_gecos = tmp;
+	} else
+		mangle_gecos = aconf->name;
 
 	filename = ConfigFileEntry.xlinefile;
 
@@ -377,7 +427,7 @@ write_xline(struct Client *source_p, struct ConfItem *aconf)
 	}
 
 	rb_sprintf(buffer, "\"%s\",\"0\",\"%s\",\"%s\",%ld\n",
-		   aconf->name, aconf->passwd,
+		   mangle_gecos, aconf->passwd,
 		   get_oper_name(source_p), (long) rb_current_time());
 
 	if(fputs(buffer, out) == -1)
@@ -497,8 +547,8 @@ mo_unxline(struct Client *client_p, struct Client *source_p, int parc, const cha
 static int
 ms_unxline(struct Client *client_p, struct Client *source_p, int parc, const char *parv[])
 {
-	/* parv[0]  parv[1]        parv[2]
-	 * oper     target server  gecos
+	/* source_p  parv[1]        parv[2]
+	 * oper      target server  gecos
 	 */
 	propagate_generic(source_p, "UNXLINE", parv[1], CAP_CLUSTER,
 			"%s", parv[2]);
@@ -541,38 +591,43 @@ remove_xline(struct Client *source_p, const char *name)
 {
 	struct ConfItem *aconf;
 	rb_dlink_node *ptr;
+	char *encoded;
+
+	encoded = xline_encode_spaces(name);
 
 	RB_DLINK_FOREACH(ptr, xline_conf_list.head)
 	{
 		aconf = ptr->data;
 
-		if(!irccmp(aconf->name, name))
+		if(!irccmp(aconf->name, encoded))
 		{
 			if (!aconf->hold)
 			{
-				if (!remove_xline_from_file(source_p, name))
+				if (!remove_xline_from_file(source_p, encoded))
 					return;
 			}
 			else
 			{
 				sendto_one_notice(source_p, 
 						":X-Line for [%s] is removed",
-						name);
+						encoded);
 				sendto_realops_snomask(SNO_GENERAL, L_ALL,
 						"%s has removed the temporary X-Line for: [%s]",
-						get_oper_name(source_p), name);
+						get_oper_name(source_p), encoded);
 				ilog(L_KLINE, "UX %s %s", 
-						get_oper_name(source_p), name);
+						get_oper_name(source_p), encoded);
 			}
 			
 			remove_reject_mask(aconf->name, NULL);
 			free_conf(aconf);
 			rb_dlinkDestroy(ptr, &xline_conf_list);
+			rb_free(encoded);
 			return;
 		}
 	}
 
-	sendto_one_notice(source_p, ":No X-Line for %s", name);
+	sendto_one_notice(source_p, ":No X-Line for %s", encoded);
+	rb_free(encoded);
 
 	return;
 }
@@ -595,6 +650,7 @@ remove_xline_from_file(struct Client *source_p, const char *huntgecos)
 	const char *gecos;
 	mode_t oldumask;
 	char *p;
+	char *encoded;
 	int error_on_write = 0;
 	int found_xline = 0;
 
@@ -648,10 +704,12 @@ remove_xline_from_file(struct Client *source_p, const char *huntgecos)
 		}
 
 		/* matching.. */
-		if(irccmp(gecos, huntgecos) == 0)
+		encoded = xline_encode_spaces(gecos);
+		if(irccmp(encoded, huntgecos) == 0)
 			found_xline++;
 		else
 			error_on_write = (fputs(buf, out) < 0) ? YES : NO;
+		rb_free(encoded);
 	}
 
 	fclose(in);
