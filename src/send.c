@@ -630,6 +630,7 @@ sendto_channel_opmod(struct Client *one, struct Client *source_p,
 	}
 
 	rb_linebuf_donebuf(&rb_linebuf_local);
+	rb_linebuf_donebuf(&rb_linebuf_local_id);
 	rb_linebuf_donebuf(&rb_linebuf_old);
 	rb_linebuf_donebuf(&rb_linebuf_new);
 }
