@@ -862,7 +862,7 @@ msg_client(int p_or_n, const char *command,
 			}
 		}
 		else
-			sendto_anywhere_message(target_p, source_p, command, ":%s", text);
+			sendto_anywhere_message(target_p, source_p, command, "%s", text);
 	}
 	else
 		sendto_anywhere(target_p, source_p, command, ":%s", text);
