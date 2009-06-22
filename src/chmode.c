@@ -1047,8 +1047,11 @@ chm_op(struct Client *source_p, struct Channel *chptr,
 		{
 			/* Hack alert. */
 			no_override_deop = 1;
+			/* Don't reject modes from remote. It desyncs, and this is perfectly
+			 * legitimate from a remote override oper.
 			if(!override)
 				return;
+			*/
 		}
 
 		mode_changes[mode_count].letter = c;
