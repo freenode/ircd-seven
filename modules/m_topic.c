@@ -39,6 +39,7 @@
 #include "parse.h"
 #include "modules.h"
 #include "packet.h"
+#include "inline/stringops.h"
 
 static int m_topic(struct Client *, struct Client *, int, const char **);
 static int ms_topic(struct Client *, struct Client *, int, const char **);
@@ -106,6 +107,7 @@ m_topic(struct Client *client_p, struct Client *source_p, int parc, const char *
 	if(parc > 2)
 	{
 		char topic_info[USERHOST_REPLYLEN];
+		char topic[BUFSIZE];
 
 		msptr = find_channel_membership(chptr, source_p);
 
@@ -131,9 +133,12 @@ m_topic(struct Client *client_p, struct Client *source_p, int parc, const char *
 			}
 		}
 
+		rb_strlcpy(topic, parv[2], BUFSIZE);
+		strip_colour(topic);
+
 		rb_sprintf(topic_info, "%s!%s@%s",
 				source_p->name, source_p->username, source_p->host);
-		set_channel_topic(chptr, parv[2], topic_info, rb_current_time());
+		set_channel_topic(chptr, topic, topic_info, rb_current_time());
 
 		sendto_server(client_p, chptr, CAP_TS6, NOCAPS,
 				":%s TOPIC %s :%s",
