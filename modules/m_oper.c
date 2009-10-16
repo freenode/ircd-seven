@@ -150,7 +150,6 @@ me_oper(struct Client *client_p, struct Client *source_p, int parc, const char *
 {
 	if(!IsOper(source_p))
 		return 0;
-	sendto_realops_snomask(SNO_DEBUG, L_NETWIDE, "%s ENCAP OPER %s", source_p->name, parv[1]);
 	if(IsClient(source_p))
 		source_p->user->opername = rb_strdup(parv[1]);
 
