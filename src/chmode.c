@@ -956,7 +956,7 @@ chm_ban(struct Client *source_p, struct Channel *chptr,
 		static char buf[BANLEN * MAXMODEPARAMS];
 		int old_removed_mask_pos = removed_mask_pos;
 
-		if((removed = del_id(chptr, send_mask, list, mode_type)) == NULL)
+		if((removed = del_id(chptr, mask, list, mode_type)) == NULL)
 		{
 			/* mask isn't a valid ban, check raw_mask */
 			if((removed = del_id(chptr, raw_mask, list, mode_type)) != NULL)
