@@ -443,11 +443,22 @@ ms_euid(struct Client *client_p, struct Client *source_p, int parc, const char *
 
 	if(parc != 12)
 	{
+		char buf[BUFSIZE];
+		buf[0] = '\0';
+		for (char **p = &parv[0]; *p; p++)
+		{
+		    if (!p[1])
+			strcat(buf, ":");
+		    strcat(buf, *p);
+		    strcat(buf, " ");
+		}
 		sendto_realops_snomask(SNO_GENERAL, L_ALL,
 				     "Dropping server %s due to (invalid) command 'EUID' "
 				     "with %d arguments (expecting 12)", client_p->name, parc);
+		sendto_realops_snomask(SNO_GENERAL, L_ALL, "Parameters were: %s", buf);
 		ilog(L_SERVER, "Excess parameters (%d) for command 'EUID' from %s.",
 		     parc, client_p->name);
+		ilog(L_SERVER, "Parameters were: %s", buf);
 		rb_snprintf(squitreason, sizeof squitreason,
 				"Excess parameters (%d) to %s command, expecting %d",
 				parc, "EUID", 12);
