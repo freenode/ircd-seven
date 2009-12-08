@@ -1724,9 +1724,6 @@ conf_end_alias(struct TopConf *tc)
 		return -1;
 	}
 
-	if (!alias_dict)
-		alias_dict = irc_dictionary_create(strcasecmp);
-
 	irc_dictionary_add(alias_dict, yy_alias->name, yy_alias);
 
 	return 0;
@@ -2195,6 +2192,7 @@ static struct ConfEntry conf_channel_table[] =
 	{ "use_invex",		CF_YESNO, NULL, 0, &ConfigChannel.use_invex		},
 	{ "use_knock",		CF_YESNO, NULL, 0, &ConfigChannel.use_knock		},
 	{ "disable_local_channels", CF_YESNO, NULL, 0, &ConfigChannel.disable_local_channels },
+	{ "resv_forcepart",     CF_YESNO, NULL, 0, &ConfigChannel.resv_forcepart	},
 	{ "\0", 		0, 	  NULL, 0, NULL }
 };
 

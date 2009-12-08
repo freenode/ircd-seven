@@ -815,6 +815,7 @@ set_default_conf(void)
 	ConfigChannel.default_split_server_count = 10;
 	ConfigChannel.no_join_on_split = NO;
 	ConfigChannel.no_create_on_split = YES;
+	ConfigChannel.resv_forcepart = YES;
 
 	ConfigServerHide.flatten_links = 0;
 	ConfigServerHide.links_delay = 300;
@@ -836,6 +837,9 @@ set_default_conf(void)
 	ConfigFileEntry.expire_override_time = 300;
 
 	ServerInfo.default_max_clients = MAXCONNECTIONS;
+
+	if (!alias_dict)
+		alias_dict = irc_dictionary_create(strcasecmp);
 }
 
 #undef YES
@@ -1532,10 +1536,10 @@ yyerror(const char *msg)
 
 	strip_tabs(newlinebuf, linebuf, strlen(linebuf));
 
+	ierror("\"%s\", line %d: %s at '%s'", conffilebuf, lineno + 1, msg, newlinebuf);
 	sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "\"%s\", line %d: %s at '%s'",
 			     conffilebuf, lineno + 1, msg, newlinebuf);
 
-	ilog(L_MAIN, "\"%s\", line %d: %s at '%s'", conffilebuf, lineno + 1, msg, newlinebuf);
 }
 
 int
