@@ -244,6 +244,7 @@ struct config_channel_entry
 	int kick_on_split_riding;
 	int disable_local_channels;
 	int only_ascii_channels;
+	int resv_forcepart;
 };
 
 struct config_server_hide
