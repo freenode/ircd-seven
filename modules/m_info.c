@@ -128,6 +128,12 @@ static struct InfoStruct info_table[] = {
 		"Number of lines before a client Excess Flood's",
 	},
 	{
+		"connect_delay",
+		OUTPUT_DECIMAL,
+		&ConfigFileEntry.connect_delay,
+		"Time to wait before processing commands from a new client",
+	},
+	{
 		"connect_timeout",
 		OUTPUT_DECIMAL,
 		&ConfigFileEntry.connect_timeout,
