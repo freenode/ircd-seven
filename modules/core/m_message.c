@@ -531,11 +531,19 @@ msg_channel(int p_or_n, const char *command,
 		if(result == CAN_SEND_OPV ||
 		   !flood_attack_channel(p_or_n, source_p, chptr, chptr->chname))
 		{
+			if (p_or_n != NOTICE && *text == '\001')
+			{
+				if (chptr->mode.mode & MODE_NOCTCP)
+				{
+					sendto_one_numeric(source_p, ERR_CANNOTSENDTOCHAN,
+							   form_str(ERR_CANNOTSENDTOCHAN), chptr->chname);
+					return;
+				}
+				else if (rb_dlink_list_length(&chptr->locmembers) > (unsigned)(GlobalSetOptions.floodcount / 2))
+					source_p->large_ctcp_sent = rb_current_time();
+			}
 			sendto_channel_message(client_p, ALL_MEMBERS, source_p, chptr,
 					     command, chptr->chname, "%s", text);
-			if (p_or_n != NOTICE && *text == '\001' &&
-					rb_dlink_list_length(&chptr->locmembers) > (unsigned)(GlobalSetOptions.floodcount / 2))
-				source_p->large_ctcp_sent = rb_current_time();
 		}
 	}
 	else if (msptr && IsOverride(source_p))
@@ -548,11 +556,19 @@ msg_channel(int p_or_n, const char *command,
 				sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "%s is overriding send to %s",
 						get_oper_name(source_p), chptr->chname);
 			}
+			if (p_or_n != NOTICE && *text == '\001')
+			{
+				if (chptr->mode.mode & MODE_NOCTCP)
+				{
+					sendto_one_numeric(source_p, ERR_CANNOTSENDTOCHAN,
+							   form_str(ERR_CANNOTSENDTOCHAN), chptr->chname);
+					return;
+				}
+				else if (rb_dlink_list_length(&chptr->locmembers) > (unsigned)(GlobalSetOptions.floodcount / 2))
+					source_p->large_ctcp_sent = rb_current_time();
+			}
 			sendto_channel_message(client_p, ALL_MEMBERS, source_p, chptr,
 					command, chptr->chname, "%s", text);
-			if (p_or_n != NOTICE && *text == '\001' &&
-					rb_dlink_list_length(&chptr->locmembers) > (unsigned)(GlobalSetOptions.floodcount / 2))
-				source_p->large_ctcp_sent = rb_current_time();
 		}
 	}
 	else if(chptr->mode.mode & MODE_OPMODERATE &&
