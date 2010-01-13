@@ -533,7 +533,8 @@ msg_channel(int p_or_n, const char *command,
 		{
 			if (p_or_n != NOTICE && *text == '\001')
 			{
-				if (chptr->mode.mode & MODE_NOCTCP)
+				if (chptr->mode.mode & MODE_NOCTCP &&
+					0 != strncasecmp(text+1, "ACTION", 6))
 				{
 					sendto_one_numeric(source_p, ERR_CANNOTSENDTOCHAN,
 							   form_str(ERR_CANNOTSENDTOCHAN), chptr->chname);
@@ -558,7 +559,8 @@ msg_channel(int p_or_n, const char *command,
 			}
 			if (p_or_n != NOTICE && *text == '\001')
 			{
-				if (chptr->mode.mode & MODE_NOCTCP)
+				if (chptr->mode.mode & MODE_NOCTCP &&
+					0 != strncasecmp(text+1, "ACTION", 6))
 				{
 					sendto_one_numeric(source_p, ERR_CANNOTSENDTOCHAN,
 							   form_str(ERR_CANNOTSENDTOCHAN), chptr->chname);
