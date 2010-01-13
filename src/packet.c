@@ -132,10 +132,10 @@ parse_client_queued(struct Client *client_p)
 			else if(client_p->localClient->sent_parsed >= (4 * client_p->localClient->allow_read))
 				break;
 
-			/* connect_delay hack. Don't process any messages from a new client for $n seconds,
+			/* post_registration_delay hack. Don't process any messages from a new client for $n seconds,
 			 * to allow network bots to do their thing before channels can be joined.
 			 */
-			if (rb_current_time() < client_p->localClient->firsttime + ConfigFileEntry.connect_delay)
+			if (rb_current_time() < client_p->localClient->firsttime + ConfigFileEntry.post_registration_delay)
 				break;
 
 			dolen = rb_linebuf_get(&client_p->localClient->
