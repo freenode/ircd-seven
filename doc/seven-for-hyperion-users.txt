@@ -26,6 +26,16 @@ Setting and unsetting of bans via the hyperion syntax
 (nick!user@host!#channel) is supported -- it will be translated
 to nick!user@host$#channel.
 
+Blocking CTCPs
+--------------
+
+There is no user mode +C. Hyperion's implementation of this was broken
+in several ways, and has not been copied. Use your client's ignore
+functionality or user mode +g instead.
+
+There is a new channel mode +C, which will block any CTCP request
+directed to the channel, except for ACTION.
+
 
 Identified status
 -----------------
