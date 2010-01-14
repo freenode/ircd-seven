@@ -1,0 +1,91 @@
+SSL support
+-----------
+
+seven supports SSL, for client and server connections. Users connecting
+via SSL will get user mode +Z to denote this.
+
+Channel bans and quiets
+-----------------------
+
+Channel mode +q (quiet) is now sent as a separate mode -- hyperion's
+translation of +q foo to +b %foo is gone. Extended ban types are
+supported for all ban-like modes (+bqeI). These extended masks begin
+with $, followed by an optional ~, to negate the match, and a single
+letter denoting the type of match to do. For example:
+
+- ``+b $r:Lee*`` will ban any client whose realname (gecos) field begins
+  'Lee'. This is equivalent to hyperion's +d mode.
+- ``+I $a:spb`` will set an invite exception for any client logged in to
+  services as spb.
+- ``+q $~a`` will prevent any user not logged in to services from
+  speaking. This is roughly equivalent to hyperion's mode +R.
+
+Forward channels for bans are now delimited with ``$`` instead of
+hyperion's ``!``, and can be used with extended ban masks as well.
+Setting and unsetting of bans via the hyperion syntax
+(nick!user@host!#channel) is supported -- it will be translated
+to nick!user@host$#channel.
+
+
+Identified status
+-----------------
+
+There is no user mode +e. The IRCd keeps track of the account name of
+every user who is identified to services, and uses this to determine
+whether a user is identified or not. The 'is identified to services'
+line in WHOIS output is no longer present; there is, however, a line
+containing the account name if the user is logged in.
+
+Identifying on connect
+----------------------
+
+Using a NickServ password as a server password still works as it does in
+hyperion. However, there are two new mechanisms:
+
+- You can specify ``<username>:<password>`` in the server password
+  field, to log in to a specific account. This removes the requirement
+  to connect using a nickname that is grouped to your services account.
+- seven supports SASL authentication, to log in to services during the
+  connection process. This requires client support; a script for Irssi
+  to do so is located at
+  ``http://hg.atheme.org/atheme/raw-file/6b92bfbe3d7f/contrib/cap_sasl.pl``.
+  Conspire supports this natively. Other clients, as far as I'm aware,
+  do not.
+
+Username prefixes
+-----------------
+
+The ``n=`` and ``i=`` prefixes are not used; instead ~ is prefixed to a
+non-identd username, as in most other daemons.
+
+IDENTIFY-MSG
+------------
+
+The identify-msg capability is still present, but the way to enable it
+has changed -- it is now part of the same CAP mechanism that is used to
+control SASL and multi-prefix capabilities. See `The CAP command` below
+for more information. A script for irssi that understands both
+hyperion's and seven's identify-msg capability is available at
+``http://adipose.attenuate.org/~stephen/ircd-seven/format_identify.pl``.
+Conspire will also support this natively once w00t remembers to apply
+the patch.
+
+The CAP command
+---------------
+
+A brief summary:
+
+- The ``CAP LS`` command will list all client capabilities that are
+  available to the client.
+- The ``CAP REQ :<cap1> <cap2> <...>`` command can be used to request
+  one or more capabilities. The response to this will be either ``CAP
+  ACK :<cap> <...>``, or ``CAP NAK :<cap> <...>``, depending on whether
+  the request was successful.
+- A CAP name token can be prefixed by ``-`` to disable that capability.
+  This was not available with hyperion's ``CAPAB`` command.
+- CAP negotiation can take place either during connection and
+  registration (as is required for SASL), or afterwards, to enable
+  identify-msg.
+
+For those implementing support for it, a full specification is at
+``http://www.leeh.co.uk/draft-mitchell-irc-capabilities-02.html``.
