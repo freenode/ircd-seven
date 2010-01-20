@@ -148,8 +148,8 @@ static struct StatsStruct stats_cmd_table[] = {
 	{'m', stats_messages,		0, 0, },
 	{'M', stats_messages,		0, 0, },
 	{'n', stats_dnsbl,		0, 0, },
-	{'o', stats_oper,		0, 0, },
-	{'O', stats_privset,		1, 0, },
+	{'o', stats_oper,		1, 0, },
+	{'O', stats_privset,		1, 1, },
 	{'p', stats_operedup,		0, 0, },
 	{'P', stats_ports,		0, 0, },
 	{'q', stats_tresv,		1, 0, },
@@ -660,13 +660,6 @@ stats_oper(struct Client *source_p)
 	struct oper_conf *oper_p;
 	rb_dlink_node *ptr;
 
-	if(!IsOper(source_p) && ConfigFileEntry.stats_o_oper_only)
-	{
-		sendto_one_numeric(source_p, ERR_NOPRIVILEGES,
-				   form_str (ERR_NOPRIVILEGES));
-		return;
-	}
-
 	RB_DLINK_FOREACH(ptr, oper_conf_list.head)
 	{
 		oper_p = ptr->data;
@@ -674,7 +667,7 @@ stats_oper(struct Client *source_p)
 		sendto_one_numeric(source_p, RPL_STATSOLINE, 
 				form_str(RPL_STATSOLINE),
 				oper_p->username, oper_p->host, oper_p->name,
-				IsOper(source_p) ? oper_p->privset->name : "0", "-1");
+				IsAdmin(source_p) ? oper_p->privset->name : "0", "-1");
 	}
 }
 

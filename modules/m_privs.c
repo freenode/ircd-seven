@@ -127,6 +127,12 @@ static int mo_privs(struct Client *client_p, struct Client *source_p, int parc, 
 
 	if (parc < 2 || EmptyString(parv[1]))
 		target_p = source_p;
+	else if(!IsOperAdmin(source_p))
+	{
+		sendto_one(source_p, form_str(ERR_NOPRIVS),
+			   me.name, source_p->name, "admin");
+		return 0;
+	}
 	else
 	{
 		target_p = find_named_person(parv[1]);
