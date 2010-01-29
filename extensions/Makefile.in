@@ -71,6 +71,7 @@ SRCS =                          \
   m_sendbans.c			\
   m_webirc.c			\
   no_locops.c			\
+  sasl_usercloak.c		\
   spy_admin_notice.c		\
   spy_info_notice.c		\
   spy_links_notice.c		\
