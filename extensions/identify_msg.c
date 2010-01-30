@@ -84,7 +84,7 @@ static void
 h_im_nick_change(void *vdata)
 {
 	hook_data *data = vdata;
-	if(data->client)
+	if(data->client && 0 != irccmp(data->arg1, data->arg2))
 		ClearIdentifiedMsg(data->client);
 }
 
