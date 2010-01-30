@@ -350,11 +350,11 @@ m_join(struct Client *client_p, struct Client *source_p, int parc, const char *p
 				     source_p->name,
 				     source_p->username, source_p->host, chptr->chname);
 
-		/* its a new channel, set +nt and burst. */
+		/* its a new channel, set +ns and burst. */
 		if(flags & CHFL_CHANOP)
 		{
 			chptr->channelts = rb_current_time();
-			chptr->mode.mode |= MODE_TOPICLIMIT;
+			chptr->mode.mode |= MODE_SECRET;
 			chptr->mode.mode |= MODE_NOPRIVMSGS;
 			modes = channel_modes(chptr, &me);
 
