@@ -510,11 +510,11 @@ do_modreload(struct Client *source_p, const char *module)
 		return 0;
 	}
 
-	if((load_one_module(module, check_core) == -1) && check_core)
+	if((load_one_module(m_bn, check_core) == -1) && check_core)
 	{
 		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
-				     "Error reloading core module: %s: terminating ircd", module);
-		ilog(L_MAIN, "Error loading core module %s: terminating ircd", module);
+				     "Error reloading core module: %s: terminating ircd", m_bn);
+		ilog(L_MAIN, "Error loading core module %s: terminating ircd", m_bn);
 		exit(0);
 	}
 
