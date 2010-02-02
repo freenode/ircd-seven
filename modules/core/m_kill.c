@@ -261,7 +261,10 @@ ms_kill(struct Client *client_p, struct Client *source_p, int parc, const char *
 	/* FLAGS_KILLED prevents a quit being sent out */
 	target_p->flags |= FLAGS_KILLED;
 
-	rb_sprintf(buf, "Killed (%s %s)", source_p->name, reason);
+	if (IsService(source_p))
+		rb_sprintf(buf, "%s", "Disconnected by services");
+	else
+		rb_sprintf(buf, "Killed (%s %s)", source_p->name, reason);
 
 	exit_client(client_p, target_p, source_p, buf);
 
