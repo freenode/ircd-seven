@@ -146,21 +146,41 @@ mo_kline(struct Client *client_p, struct Client *source_p,
 	}
 
 	reason = LOCAL_COPY(parv[loc]);
+	current_date = smalldate();
+
+	/* Look for an oper reason */
+	if((oper_reason = strchr(reason, '|')) != NULL)
+	{
+		*oper_reason = '\0';
+		oper_reason++;
+	}
+	else
+		oper_reason = "";
+
+	if (tkline_time > 0)
+		rb_snprintf(buffer, sizeof(buffer),
+			   "Temporary K-line %d min. - %s (%s)",
+			   (int) (tkline_time / 60), oper_reason, current_date);
+	else
+		rb_snprintf(buffer, sizeof(buffer), "%s (%s)", oper_reason, current_date);
+
+	oper_reason = buffer;
 
 	if(target_server != NULL)
 	{
 		if (tkline_time)
 			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
-					"%s is adding a temporary %d min. K-Line for [%s@%s] on %s [%s]",
-					get_oper_name(source_p), tkline_time / 60, user, host, target_server, reason);
+					"%s is adding a temporary %d min. K-Line for [%s@%s] on %s [%s|%s]",
+					get_oper_name(source_p), tkline_time / 60, user, host, target_server,
+					reason, oper_reason);
 		else
 			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
-					"%s is adding a K-Line for [%s@%s] on %s [%s]",
-					get_oper_name(source_p), user, host, target_server, reason);
+					"%s is adding a K-Line for [%s@%s] on %s [%s|%s]",
+					get_oper_name(source_p), user, host, target_server, reason, oper_reason);
 
 		propagate_generic(source_p, "KLINE", target_server, CAP_KLN,
-				"%d %s %s :%s",
-				tkline_time, user, host, reason);
+				"%d %s %s :%s|%s",
+				tkline_time, user, host, reason, oper_reason);
 
 		/* If we are sending it somewhere that doesnt include us, stop */
 		if(!match(target_server, me.name))
@@ -170,8 +190,8 @@ mo_kline(struct Client *client_p, struct Client *source_p,
 	else if(rb_dlink_list_length(&cluster_conf_list) > 0)
 		cluster_generic(source_p, "KLINE", 
 				(tkline_time > 0) ? SHARED_TKLINE : SHARED_PKLINE, CAP_KLN,
-				"%lu %s %s :%s",
-				tkline_time, user, host, reason);
+				"%lu %s %s :%s|%s",
+				tkline_time, user, host, reason, oper_reason);
 
 	if(!valid_user_host(source_p, user, host) || 
 	   !valid_wild_card(source_p, user, host) ||
@@ -182,36 +202,21 @@ mo_kline(struct Client *client_p, struct Client *source_p,
 		return 0;
 
 	rb_set_time();
-	current_date = smalldate();
 	aconf = make_conf();
 	aconf->status = CONF_KILL;
+	aconf->passwd = rb_strdup(reason);
+	aconf->spasswd = rb_strdup(oper_reason);
 	aconf->host = rb_strdup(host);
 	aconf->user = rb_strdup(user);
 	aconf->name = rb_strdup(get_oper_name(source_p));
 	aconf->port = 0;
 
-	/* Look for an oper reason */
-	if((oper_reason = strchr(reason, '|')) != NULL)
-	{
-		*oper_reason = '\0';
-		oper_reason++;
-
-		if(!EmptyString(oper_reason))
-			aconf->spasswd = rb_strdup(oper_reason);
-	}
-
 	if(tkline_time > 0)
 	{
-		rb_snprintf(buffer, sizeof(buffer),
-			   "Temporary K-line %d min. - %s (%s)",
-			   (int) (tkline_time / 60), reason, current_date);
-		aconf->passwd = rb_strdup(buffer);
 		apply_tkline(source_p, aconf, reason, oper_reason, current_date, tkline_time);
 	}
 	else
 	{
-		rb_snprintf(buffer, sizeof(buffer), "%s (%s)", reason, current_date);
-		aconf->passwd = rb_strdup(buffer);
 		apply_kline(source_p, aconf, reason, oper_reason, current_date);
 	}
 
@@ -279,7 +284,6 @@ static void
 handle_remote_kline(struct Client *source_p, int tkline_time,
 		const char *user, const char *host, const char *kreason)
 {
-	char buffer[BUFSIZE];
 	const char *current_date;
 	char *reason = LOCAL_COPY(kreason);
 	struct ConfItem *aconf = NULL;
@@ -315,20 +319,16 @@ handle_remote_kline(struct Client *source_p, int tkline_time,
 			aconf->spasswd = rb_strdup(oper_reason);
 	}
 
+	aconf->passwd = rb_strdup(reason);
+
 	current_date = smalldate();
 
 	if(tkline_time > 0)
 	{
-		rb_snprintf(buffer, sizeof(buffer),
-			   "Temporary K-line %d min. - %s (%s)",
-			   (int) (tkline_time / 60), reason, current_date);
-		aconf->passwd = rb_strdup(buffer);
 		apply_tkline(source_p, aconf, reason, oper_reason, current_date, tkline_time);
 	}
 	else
 	{
-		rb_snprintf(buffer, sizeof(buffer), "%s (%s)", reason, current_date);
-		aconf->passwd = rb_strdup(buffer);
 		apply_kline(source_p, aconf, reason, oper_reason, current_date);
 	}
 
