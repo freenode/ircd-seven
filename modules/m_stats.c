@@ -94,6 +94,7 @@ static void stats_tdeny(struct Client *);
 static void stats_deny(struct Client *);
 static void stats_exempt(struct Client *);
 static void stats_events(struct Client *);
+static void stats_prop_klines(struct Client *);
 static void stats_hubleaf(struct Client *);
 static void stats_auth(struct Client *);
 static void stats_tklines(struct Client *);
@@ -137,6 +138,7 @@ static struct StatsStruct stats_cmd_table[] = {
 	{'E', stats_events,		1, 1, },
 	{'f', stats_comm,		1, 1, },
 	{'F', stats_comm,		1, 1, },
+	{'g', stats_prop_klines,	1, 0, },
 	{'h', stats_hubleaf,		0, 0, },
 	{'H', stats_hubleaf,		0, 0, },
 	{'i', stats_auth,		0, 0, },
@@ -451,6 +453,32 @@ stats_events (struct Client *source_p)
 }
 
 static void
+stats_prop_klines(struct Client *source_p)
+{
+	struct ConfItem *aconf;
+	rb_dlink_node *ptr;
+	char *user, *host, *pass, *oper_reason;
+
+	RB_DLINK_FOREACH(ptr, prop_bans.head)
+	{
+		aconf = ptr->data;
+
+		/* Skip non-klines and deactivated klines. */
+		if(aconf->status != CONF_KILL)
+			continue;
+
+		get_printable_kline(source_p, aconf, &host, &pass, 
+				&user, &oper_reason);
+
+		sendto_one_numeric(source_p, RPL_STATSKLINE,
+				form_str(RPL_STATSKLINE),
+				'g', host, user, pass,
+				oper_reason ? "|" : "",
+				oper_reason ? oper_reason : "");
+	}
+}
+
+static void
 stats_hubleaf(struct Client *source_p)
 {
 	struct remote_conf *hub_p;
@@ -737,7 +765,7 @@ stats_tresv(struct Client *source_p)
 		if(aconf->hold)
 			sendto_one_numeric(source_p, RPL_STATSQLINE, 
 					form_str(RPL_STATSQLINE),
-					'q', aconf->port, aconf->name, aconf->passwd);
+					'q', aconf->port, aconf->host, aconf->passwd);
 	}
 
 	HASH_WALK(i, R_MAX, ptr, resvTable)
@@ -746,7 +774,7 @@ stats_tresv(struct Client *source_p)
 		if(aconf->hold)
 			sendto_one_numeric(source_p, RPL_STATSQLINE, 
 					form_str(RPL_STATSQLINE),
-					'q', aconf->port, aconf->name, aconf->passwd);
+					'q', aconf->port, aconf->host, aconf->passwd);
 	}
 	HASH_WALK_END
 }
@@ -765,7 +793,7 @@ stats_resv(struct Client *source_p)
 		if(!aconf->hold)
 			sendto_one_numeric(source_p, RPL_STATSQLINE, 
 					form_str(RPL_STATSQLINE),
-					'Q', aconf->port, aconf->name, aconf->passwd);
+					'Q', aconf->port, aconf->host, aconf->passwd);
 	}
 
 	HASH_WALK(i, R_MAX, ptr, resvTable)
@@ -774,7 +802,7 @@ stats_resv(struct Client *source_p)
 		if(!aconf->hold)
 			sendto_one_numeric(source_p, RPL_STATSQLINE, 
 					form_str(RPL_STATSQLINE),
-					'Q', aconf->port, aconf->name, aconf->passwd);
+					'Q', aconf->port, aconf->host, aconf->passwd);
 	}
 	HASH_WALK_END
 }
@@ -1077,7 +1105,7 @@ stats_tgecos(struct Client *source_p)
 		if(aconf->hold)
 			sendto_one_numeric(source_p, RPL_STATSXLINE,
 					form_str(RPL_STATSXLINE),
-					'x', aconf->port, aconf->name,
+					'x', aconf->port, aconf->host,
 					aconf->passwd);
 	}
 }
@@ -1095,7 +1123,7 @@ stats_gecos(struct Client *source_p)
 		if(!aconf->hold)
 			sendto_one_numeric(source_p, RPL_STATSXLINE,
 					form_str(RPL_STATSXLINE),
-					'X', aconf->port, aconf->name, 
+					'X', aconf->port, aconf->host, 
 					aconf->passwd);
 	}
 }

@@ -39,6 +39,7 @@ struct Client;
 struct Mode
 {
 	unsigned int mode;
+	unsigned int off_mode;
 	int limit;
 	char key[KEYLEN];
 	unsigned int join_num;
@@ -51,6 +52,7 @@ struct Channel
 {
 	rb_dlink_node node;
 	struct Mode mode;
+	struct Mode mode_lock;
 	char *topic;
 	char *topic_info;
 	time_t topic_time;
@@ -127,11 +129,13 @@ struct ChCapCombo
 	int cap_no;
 };
 
+typedef void (*ChannelModeFunc)(struct Client *source_p, struct Channel *chptr,
+		int alevel, int parc, int *parn,
+		const char **parv, int *errors, int dir, char c, long mode_type);
+
 struct ChannelMode
 {
-	void (*set_func) (struct Client * source_p, struct Channel * chptr,
-		      int alevel, int parc, int *parn,
-		      const char **parv, int *errors, int dir, char c, long mode_type);
+	ChannelModeFunc set_func;
 	long mode_type;
 };
 
@@ -243,7 +247,9 @@ extern void channel_member_names(struct Channel *chptr, struct Client *,
 
 extern void del_invite(struct Channel *chptr, struct Client *who);
 
-const char *channel_modes(struct Channel *chptr, struct Client *who);
+const char *channel_modes_real(struct Channel *chptr, struct Mode *mode, struct Client *who);
+#define channel_modes(chptr, who)	channel_modes_real(chptr, &(chptr)->mode, who)
+#define channel_mlock(chptr, who)	channel_modes_real(chptr, &(chptr)->mode_lock, who)
 
 extern struct Channel *find_bannickchange_channel(struct Client *client_p);
 
@@ -260,8 +266,12 @@ extern void unset_chcap_usage_counts(struct Client *serv_p);
 extern void send_cap_mode_changes(struct Client *client_p, struct Client *source_p,
 				  struct Channel *chptr, struct ChModeChange foo[], int);
 
+void resv_chan_forcepart(const char *name, const char *reason, int temp_time);
+
 extern void set_channel_mode(struct Client *client_p, struct Client *source_p,
             	struct Channel *chptr, struct membership *msptr, int parc, const char *parv[]);
+extern void set_channel_mlock(struct Client *client_p, struct Client *source_p,
+            	struct Channel *chptr, int parc, const char *parv[]);
 
 extern struct ChannelMode chmode_table[256];
 

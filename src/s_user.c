@@ -339,7 +339,7 @@ register_local_user(struct Client *client_p, struct Client *source_p, const char
 		}
 
 		/* dont replace username if its supposed to be spoofed --fl */
-		if(!IsConfDoSpoofIp(aconf) || !strchr(aconf->name, '@'))
+		if(!IsConfDoSpoofIp(aconf) || !strchr(aconf->info.name, '@'))
 		{
 			p = username;
 
@@ -423,7 +423,7 @@ register_local_user(struct Client *client_p, struct Client *source_p, const char
 	   (xconf = find_xline(source_p->info, 1)) != NULL)
 	{
 		ServerStats.is_ref++;
-		add_reject(source_p, xconf->name, NULL);
+		add_reject(source_p, xconf->host, NULL);
 		exit_client(client_p, source_p, &me, "Bad user info");
 		return CLIENT_EXITED;
 	}
@@ -564,7 +564,9 @@ register_local_user(struct Client *client_p, struct Client *source_p, const char
 
 	/* they get a reduced limit */
 	if(find_tgchange(source_p->sockhost))
-		USED_TARGETS(source_p) = 6;
+		source_p->localClient->targets_free = TGCHANGE_INITIAL_LOW;
+	else
+		source_p->localClient->targets_free = TGCHANGE_INITIAL;
 
 	monitor_signon(source_p);
 	user_welcome(source_p);
@@ -636,6 +638,11 @@ introduce_client(struct Client *client_p, struct Client *source_p, struct User *
 		      IsIPSpoof(source_p) ? "0" : sockhost,
 		      source_p->id, source_p->info);
 
+	if(!EmptyString(source_p->certfp))
+		sendto_server(client_p, NULL, CAP_TS6, NOCAPS,
+				":%s ENCAP * CERTFP :%s",
+				use_id(source_p), source_p->certfp);
+
 	if (IsDynSpoof(source_p))
 	{
 		sendto_server(client_p, NULL, CAP_TS6, use_euid ? CAP_EUID : NOCAPS, ":%s ENCAP * REALHOST %s",
@@ -650,8 +657,8 @@ introduce_client(struct Client *client_p, struct Client *source_p, struct User *
 
 	if(MyConnect(source_p) && source_p->localClient->passwd)
 	{
-		if (ConfigFileEntry.identifyservice[0] != '\0' &&
-				ConfigFileEntry.identifycommand[0] != '\0')
+		if (!EmptyString(ConfigFileEntry.identifyservice) &&
+				!EmptyString(ConfigFileEntry.identifycommand))
 		{
 			/* use user@server */
 			p = strchr(ConfigFileEntry.identifyservice, '@');

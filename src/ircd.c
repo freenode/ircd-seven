@@ -67,6 +67,7 @@
 #include "sslproc.h"
 #include "chmode.h"
 #include "privilege.h"
+#include "bandbi.h"
 
 /* /quote set variables */
 struct SetOptions GlobalSetOptions;
@@ -242,16 +243,8 @@ make_daemon(void)
 static int printVersion = 0;
 
 struct lgetopt myopts[] = {
-	{"dlinefile", &ConfigFileEntry.dlinefile,
-	 STRING, "File to use for dlines.conf"},
 	{"configfile", &ConfigFileEntry.configfile,
 	 STRING, "File to use for ircd.conf"},
-	{"klinefile", &ConfigFileEntry.klinefile,
-	 STRING, "File to use for kline.conf"},
-	{"xlinefile", &ConfigFileEntry.xlinefile,
-	 STRING, "File to use for xline.conf"},
-	{"resvfile", &ConfigFileEntry.resvfile,
-	 STRING, "File to use for resv.conf"},
 	{"logfile", &logFileName,
 	 STRING, "File to use for ircd.log"},
 	{"pidfile", &pidFileName,
@@ -331,7 +324,10 @@ initialize_global_set_options(void)
 		splitchecking = 1;
 	}
 
-	GlobalSetOptions.ident_timeout = IDENT_TIMEOUT;
+	if(ConfigFileEntry.default_ident_timeout)
+		GlobalSetOptions.ident_timeout = ConfigFileEntry.default_ident_timeout;
+	else
+		GlobalSetOptions.ident_timeout = IDENT_TIMEOUT;
 
 	rb_strlcpy(GlobalSetOptions.helperstring,
 		ConfigFileEntry.default_helperstring,
@@ -552,10 +548,6 @@ main(int argc, char *argv[])
 
 	ConfigFileEntry.dpath = DPATH;
 	ConfigFileEntry.configfile = CPATH;	/* Server configuration file */
-	ConfigFileEntry.klinefile = KPATH;	/* Server kline file */
-	ConfigFileEntry.dlinefile = DLPATH;	/* dline file */
-	ConfigFileEntry.xlinefile = XPATH;
-	ConfigFileEntry.resvfile = RESVPATH;
 	ConfigFileEntry.connect_timeout = 30;	/* Default to 30 */
 	
 	umask(077);		/* better safe than sorry --SRB */
@@ -662,6 +654,9 @@ main(int argc, char *argv[])
 	init_cache();
 	init_monitor();
 	init_isupport();
+
+        construct_cflags_strings();
+
 	load_all_modules(1);
 #ifndef STATIC_MODULES
 	load_core_modules(1);
@@ -673,14 +668,16 @@ main(int argc, char *argv[])
 	if (testing_conf)
 		fprintf(stderr, "\nBeginning config test\n");
 	read_conf_files(YES);	/* cold start init conf files */
-	rehash_bans(0);
 #ifndef STATIC_MODULES
 
 	mod_add_path(MODULE_DIR); 
 	mod_add_path(MODULE_DIR "/autoload"); 
 #endif
 
+	init_bandb();
 	init_ssld();
+
+	rehash_bans(0);
 
 	initialize_server_capabs();	/* Set up default_server_capabs */
 	initialize_global_set_options();
@@ -739,7 +736,6 @@ main(int argc, char *argv[])
 	rb_dlinkAddAlloc(&me, &global_serv_list);
 
 	construct_umodebuf();
-        construct_noparam_modes();
 
 	check_class();
 	write_pidfile(pidFileName);

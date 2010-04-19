@@ -120,6 +120,8 @@ extern const char *form_str(int);
 
 #define RPL_PRIVS            270 /* from ircu */
 
+#define RPL_WHOISCERTFP      276 /* from oftc-hybrid */
+
 #define RPL_ACCEPTLIST	     281
 #define RPL_ENDOFACCEPT      282
 
@@ -154,6 +156,7 @@ extern const char *form_str(int);
 #define RPL_LIST             322
 #define RPL_LISTEND          323
 #define RPL_CHANNELMODEIS    324
+#define RPL_CHANNELMLOCK     325 /* from sorircd 1.3 --nenolod */
 
 #define RPL_CHANNELURL       328 /* to be sent by services */
 
@@ -347,6 +350,9 @@ extern const char *form_str(int);
 #define RPL_TESTLINE		725
 #define RPL_NOTESTLINE		726
 #define RPL_TESTMASKGECOS	727
+
+#define RPL_QUIETLIST		728
+#define RPL_ENDOFQUIETLIST	729
 
 #define RPL_MONONLINE		730
 #define RPL_MONOFFLINE		731

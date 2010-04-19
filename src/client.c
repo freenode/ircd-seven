@@ -243,6 +243,7 @@ free_local_client(struct Client *client_p)
 		rb_event_delete(client_p->localClient->override_timeout_event);
 	}
 
+	rb_free(client_p->localClient->auth_user);
 	rb_free(client_p->localClient->challenge);
 	rb_free(client_p->localClient->fullcaps);
 	rb_free(client_p->localClient->mangledhost);
@@ -266,6 +267,7 @@ free_client(struct Client *client_p)
 	s_assert(&me != client_p);
 	free_local_client(client_p);
 	free_pre_client(client_p);
+	rb_free(client_p->certfp);
 	rb_bh_free(client_heap, client_p);
 }
 
@@ -427,10 +429,10 @@ notify_banned_client(struct Client *client_p, struct ConfItem *aconf, int ban)
 	const char *reason = NULL;
 	const char *exit_reason = conn_closed;
 
-	if(ConfigFileEntry.kline_with_reason && !EmptyString(aconf->passwd))
+	if(ConfigFileEntry.kline_with_reason)
 	{
-		reason = aconf->passwd;
-		exit_reason = aconf->passwd;
+		reason = get_user_ban_reason(aconf);
+		exit_reason = reason;
 	}
 	else
 	{
@@ -596,7 +598,7 @@ check_xlines(void)
 				sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 						     "XLINE over-ruled for %s, client is kline_exempt [%s]",
 						     get_client_name(client_p, HIDE_IP),
-						     aconf->name);
+						     aconf->host);
 				continue;
 			}
 
@@ -1116,7 +1118,7 @@ exit_aborted_clients(void *unused)
  *
  */
 void
-dead_link(struct Client *client_p)
+dead_link(struct Client *client_p, int sendqex)
 {
 	struct abort_client *abt;
 
@@ -1126,7 +1128,7 @@ dead_link(struct Client *client_p)
 
 	abt = (struct abort_client *) rb_malloc(sizeof(struct abort_client));
 
-	if(client_p->flags & FLAGS_SENDQEX)
+	if(sendqex)
 		rb_strlcpy(abt->notice, "Max SendQ exceeded", sizeof(abt->notice));
 	else
 		rb_snprintf(abt->notice, sizeof(abt->notice), "Write error: %s", strerror(errno));
@@ -1681,14 +1683,14 @@ make_user(struct Client *client_p)
  * side effects - add's an Server information block to a client
  *                if it was not previously allocated.
  */
-server_t *
+struct Server *
 make_server(struct Client *client_p)
 {
-	server_t *serv = client_p->serv;
+	struct Server *serv = client_p->serv;
 
 	if(!serv)
 	{
-		serv = (server_t *) rb_malloc(sizeof(server_t));
+		serv = (struct Server *) rb_malloc(sizeof(struct Server));
 		client_p->serv = serv;
 	}
 	return client_p->serv;

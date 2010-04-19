@@ -62,15 +62,11 @@
 #define SPATH    BINPATH "/ircd"		   /* ircd executable */
 #define LIPATH   LIBPATH "/libircd" SHARED_SUFFIX  /* ircd library */
 #define CPATH    ETCPATH "/ircd.conf"		   /* ircd.conf file */
-#define KPATH    ETCPATH "/kline.conf"		   /* kline file */
-#define DLPATH   ETCPATH "/dline.conf"		   /* dline file */
-#define XPATH	 ETCPATH "/xline.conf"		   /* xline file */
-#define RESVPATH ETCPATH "/resv.conf"		   /* resv file */
-#define RPATH    ETCPATH "/ircd.rsa"		   /* ircd rsa private keyfile */
 #define MPATH    ETCPATH "/ircd.motd"		   /* MOTD file */
 #define LPATH    LOGPATH "/ircd.log"		   /* ircd logfile */
 #define PPATH    ETCPATH "/ircd.pid"		   /* pid file */
 #define OPATH    ETCPATH "/opers.motd"		   /* oper MOTD file */
+#define DBPATH   ETCPATH "/ban.db"                 /* bandb file */
 
 /* IGNORE_BOGUS_TS
  * Ignore bogus timestamps from other servers. Yes this will desync

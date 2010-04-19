@@ -615,6 +615,12 @@ conf_set_oper_flags(void *data)
 }
 
 static void
+conf_set_oper_fingerprint(void *data)
+{
+	yy_oper->certfp = rb_strdup((char *) data);
+}
+
+static void
 conf_set_oper_privset(void *data)
 {
 	yy_oper->privset = privilegeset_get((char *) data);
@@ -895,8 +901,8 @@ conf_end_auth(struct TopConf *tc)
 	rb_dlink_node *ptr;
 	rb_dlink_node *next_ptr;
 
-	if(EmptyString(yy_aconf->name))
-		yy_aconf->name = rb_strdup("NOMATCH");
+	if(EmptyString(yy_aconf->info.name))
+		yy_aconf->info.name = rb_strdup("NOMATCH");
 
 	/* didnt even get one ->host? */
 	if(EmptyString(yy_aconf->host))
@@ -912,8 +918,7 @@ conf_end_auth(struct TopConf *tc)
 	if ((found_conf = find_exact_conf_by_address("*", CONF_CLIENT, "*")) && found_conf->spasswd == NULL)
 		conf_report_error("Ignoring redundant auth block (after *@*)");
 	else if ((found_conf = find_exact_conf_by_address(yy_aconf->host, CONF_CLIENT, yy_aconf->user)) &&
-			( (!found_conf->spasswd && !yy_aconf->spasswd) ||
-			  (found_conf->spasswd && yy_aconf->spasswd &&
+			(!found_conf->spasswd || (yy_aconf->spasswd &&
 			    0 == irccmp(found_conf->spasswd, yy_aconf->spasswd))))
 		conf_report_error("Ignoring duplicate auth block for %s@%s",
 				yy_aconf->user, yy_aconf->host);
@@ -931,7 +936,7 @@ conf_end_auth(struct TopConf *tc)
 			yy_tmp->spasswd = rb_strdup(yy_aconf->spasswd);
 		
 		/* this will always exist.. */
-		yy_tmp->name = rb_strdup(yy_aconf->name);
+		yy_tmp->info.name = rb_strdup(yy_aconf->info.name);
 
 		if(yy_aconf->className)
 			yy_tmp->className = rb_strdup(yy_aconf->className);
@@ -1067,8 +1072,8 @@ conf_set_auth_spoof(void *data)
 		return;
 	}
 
-	rb_free(yy_aconf->name);
-	yy_aconf->name = rb_strdup(data);
+	rb_free(yy_aconf->info.name);
+	yy_aconf->info.name = rb_strdup(data);
 	yy_aconf->flags |= CONF_FLAGS_SPOOF_IP;
 }
 
@@ -1084,8 +1089,8 @@ static void
 conf_set_auth_redir_serv(void *data)
 {
 	yy_aconf->flags |= CONF_FLAGS_REDIR;
-	rb_free(yy_aconf->name);
-	yy_aconf->name = rb_strdup(data);
+	rb_free(yy_aconf->info.name);
+	yy_aconf->info.name = rb_strdup(data);
 }
 
 static void
@@ -2042,6 +2047,7 @@ static struct ConfEntry conf_operator_table[] =
 	{ "snomask",    CF_QSTRING, conf_set_oper_snomask,      0, NULL },
 	{ "user",	CF_QSTRING, conf_set_oper_user,		0, NULL },
 	{ "password",	CF_QSTRING, conf_set_oper_password,	0, NULL },
+	{ "fingerprint",	CF_QSTRING, conf_set_oper_fingerprint,	0, NULL },
 	{ "\0",	0, NULL, 0, NULL }
 };
 
@@ -2133,6 +2139,7 @@ static struct ConfEntry conf_general_table[] =
 	{ "post_registration_delay", CF_TIME, NULL, 0, &ConfigFileEntry.post_registration_delay	},
 	{ "connect_timeout",	CF_TIME,  NULL, 0, &ConfigFileEntry.connect_timeout	},
 	{ "default_floodcount", CF_INT,   NULL, 0, &ConfigFileEntry.default_floodcount	},
+	{ "default_ident_timeout",	CF_INT, NULL, 0, &ConfigFileEntry.default_ident_timeout		},
 	{ "disable_auth",	CF_YESNO, NULL, 0, &ConfigFileEntry.disable_auth	},
 	{ "dots_in_ident",	CF_INT,   NULL, 0, &ConfigFileEntry.dots_in_ident	},
 	{ "failed_oper_notice",	CF_YESNO, NULL, 0, &ConfigFileEntry.failed_oper_notice	},
@@ -2174,6 +2181,7 @@ static struct ConfEntry conf_general_table[] =
 	{ "warn_no_nline",	CF_YESNO, NULL, 0, &ConfigFileEntry.warn_no_nline	},
 	{ "hide_opers",		CF_YESNO, NULL, 0, &ConfigFileEntry.operhide		},
 	{ "expire_override_time",CF_TIME, NULL, 0, &ConfigFileEntry.expire_override_time},
+	{ "use_propagated_bans",CF_YESNO, NULL, 0, &ConfigFileEntry.use_propagated_bans	},
 	{ "\0", 		0, 	  NULL, 0, NULL }
 };
 

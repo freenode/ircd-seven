@@ -156,7 +156,6 @@ m_join(struct Client *client_p, struct Client *source_p, int parc, const char *p
 	char *p = NULL, *p2 = NULL;
 	char *chanlist;
 	char *mykey;
-	int successful_join_count = 0;	/* Number of channels successfully joined */
 
 	jbuf[0] = '\0';
 
@@ -288,13 +287,8 @@ m_join(struct Client *client_p, struct Client *source_p, int parc, const char *p
 		{
 			sendto_one(source_p, form_str(ERR_TOOMANYCHANNELS),
 				   me.name, source_p->name, name);
-			if(successful_join_count)
-				source_p->localClient->last_join_time = rb_current_time();
 			return 0;
 		}
-
-		if(flags == 0)	/* if channel doesn't exist, don't penalize */
-			successful_join_count++;
 
 		if(chptr == NULL)	/* If I already have a chptr, no point doing this */
 		{
@@ -304,8 +298,6 @@ m_join(struct Client *client_p, struct Client *source_p, int parc, const char *p
 			{
 				sendto_one(source_p, form_str(ERR_UNAVAILRESOURCE),
 					   me.name, source_p->name, name);
-				if(successful_join_count > 0)
-					successful_join_count--;
 				continue;
 			}
 		}
@@ -323,8 +315,6 @@ m_join(struct Client *client_p, struct Client *source_p, int parc, const char *p
 			if(i != ERR_CUSTOM)
 				sendto_one(source_p, form_str(i), me.name, source_p->name, name);
 
-			if(successful_join_count > 0)
-				successful_join_count--;
 			continue;
 		}
 		else if(chptr != chptr2)
@@ -332,6 +322,10 @@ m_join(struct Client *client_p, struct Client *source_p, int parc, const char *p
 
 		chptr = chptr2;
 
+
+		if(flags == 0 &&
+				!IsOper(source_p) && !IsExemptSpambot(source_p))
+			check_spambot_warning(source_p, name);
 
 		/* add the user to the channel */
 		add_user_to_channel(chptr, source_p, flags);
@@ -387,9 +381,6 @@ m_join(struct Client *client_p, struct Client *source_p, int parc, const char *p
 		}
 
 		channel_member_names(chptr, source_p, 1);
-
-		if(successful_join_count)
-			source_p->localClient->last_join_time = rb_current_time();
 
 		hook_info.client = source_p;
 		hook_info.chptr = chptr;
@@ -983,8 +974,6 @@ ms_sjoin(struct Client *client_p, struct Client *source_p, int parc, const char 
  * output	- NONE
  * side effects	- Use has decided to join 0. This is legacy
  *		  from the days when channels were numbers not names. *sigh*
- *		  There is a bunch of evilness necessary here due to
- * 		  anti spambot code.
  */
 static void
 do_join_0(struct Client *client_p, struct Client *source_p)
@@ -999,12 +988,12 @@ do_join_0(struct Client *client_p, struct Client *source_p)
 
 	sendto_server(client_p, NULL, CAP_TS6, NOCAPS, ":%s JOIN 0", use_id(source_p));
 
-	if(source_p->user->channel.head && MyConnect(source_p) &&
-	   !IsOper(source_p) && !IsExemptSpambot(source_p))
-		check_spambot_warning(source_p, NULL);
-
 	while((ptr = source_p->user->channel.head))
 	{
+		if(MyConnect(source_p) &&
+		   !IsOper(source_p) && !IsExemptSpambot(source_p))
+			check_spambot_warning(source_p, NULL);
+
 		msptr = ptr->data;
 		chptr = msptr->chptr;
 		sendto_channel_local(ALL_MEMBERS, chptr, ":%s!%s@%s PART %s",

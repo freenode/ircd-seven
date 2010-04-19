@@ -36,6 +36,7 @@ INCLUDES	= -I../include -I../libratbox/include $(SSL_INCLUDES)
 CPPFLAGS	= ${INCLUDES} @CPPFLAGS@
 
 CORE_SRCS = \
+  core/m_ban.c \
   core/m_die.c \
   core/m_error.c \
   core/m_join.c \
@@ -55,6 +56,7 @@ TSRCS =                          \
   m_away.c \
   m_cap.c \
   m_capab.c \
+  m_certfp.c \
   m_challenge.c \
   m_chghost.c \
   m_close.c \

@@ -43,6 +43,7 @@
 #include "send.h"
 #include "s_newconf.h"
 #include "s_stats.h"
+#include "tgchange.h"
 #include "inline/stringops.h"
 
 static int m_message(int, const char *, struct Client *, struct Client *, int, const char **);
@@ -90,7 +91,6 @@ static int build_target_list(int p_or_n, const char *command,
 			     struct Client *client_p,
 			     struct Client *source_p, const char *nicks_channels, const char *text);
 
-static struct Channel *find_allowing_channel(struct Client *source_p, struct Client *target_p);
 static int flood_attack_client(int p_or_n, struct Client *source_p, struct Client *target_p);
 static int flood_attack_channel(int p_or_n, struct Client *source_p,
 				struct Channel *chptr, char *chname);
@@ -407,12 +407,6 @@ build_target_list(int p_or_n, const char *command, struct Client *client_p,
 			continue;
 		}
 
-		if(strchr(nick, '@') || (IsOper(source_p) && (*nick == '$')))
-		{
-			handle_special(p_or_n, command, client_p, source_p, nick, text);
-			continue;
-		}
-
 		if(IsServer(client_p) && *nick == '=' && nick[1] == '#')
 		{
 			nick++;
@@ -436,6 +430,12 @@ build_target_list(int p_or_n, const char *command, struct Client *client_p,
 				sendto_one_numeric(source_p, ERR_NOSUCHNICK,
 						   form_str(ERR_NOSUCHNICK), nick);
 
+			continue;
+		}
+
+		if(strchr(nick, '@') || (IsOper(source_p) && (*nick == '$')))
+		{
+			handle_special(p_or_n, command, client_p, source_p, nick, text);
 			continue;
 		}
 
@@ -531,10 +531,10 @@ msg_channel(int p_or_n, const char *command,
 		if(result == CAN_SEND_OPV ||
 		   !flood_attack_channel(p_or_n, source_p, chptr, chptr->chname))
 		{
-			if (p_or_n != NOTICE && *text == '\001')
+			if (p_or_n != NOTICE && *text == '\001' &&
+					strncasecmp(text + 1, "ACTION", 6))
 			{
-				if (chptr->mode.mode & MODE_NOCTCP &&
-					0 != strncasecmp(text+1, "ACTION", 6))
+				if (chptr->mode.mode & MODE_NOCTCP)
 				{
 					sendto_one_numeric(source_p, ERR_CANNOTSENDTOCHAN,
 							   form_str(ERR_CANNOTSENDTOCHAN), chptr->chname);
@@ -689,10 +689,6 @@ msg_channel_flags(int p_or_n, const char *command, struct Client *client_p,
 	sendto_channel_message(client_p, type, source_p, chptr, command, target, "%s", text);
 }
 
-#define PREV_FREE_TARGET(x) ((FREE_TARGET(x) == 0) ? 9 : FREE_TARGET(x) - 1)
-#define PREV_TARGET(i) ((i == 0) ? i = 9 : --i)
-#define NEXT_TARGET(i) ((i == 9) ? i = 0 : ++i)
-
 static void
 expire_tgchange(void *unused)
 {
@@ -711,77 +707,6 @@ expire_tgchange(void *unused)
 			rb_free(target);
 		}
 	}
-}
-
-static int
-add_target(struct Client *source_p, struct Client *target_p)
-{
-	int i, j;
-	uint32_t hashv;
-
-	/* can msg themselves or services without using any target slots */
-	if(source_p == target_p || IsService(target_p))
-		return 1;
-
-	/* special condition for those who have had PRIVMSG crippled to allow them
-	 * to talk to IRCops still.
-	 *
-	 * XXX: is this controversial?
-	 */
-	if(source_p->localClient->target_last > rb_current_time() && IsOper(target_p))
-		return 1;
-
-	hashv = fnv_hash_upper((const unsigned char *)use_id(target_p), 32);
-
-	if(USED_TARGETS(source_p))
-	{
-		/* hunt for an existing target */
-		for(i = PREV_FREE_TARGET(source_p), j = USED_TARGETS(source_p);
-		    j; --j, PREV_TARGET(i))
-		{
-			if(source_p->localClient->targets[i] == hashv)
-				return 1;
-		}
-
-		/* first message after connect, we may only start clearing
-		 * slots after this message --anfl
-		 */
-		if(!IsTGChange(source_p))
-		{
-			SetTGChange(source_p);
-			source_p->localClient->target_last = rb_current_time();
-		}
-		/* clear as many targets as we can */
-		else if((i = (rb_current_time() - source_p->localClient->target_last) / 60))
-		{
-			if(i > USED_TARGETS(source_p))
-				USED_TARGETS(source_p) = 0;
-			else
-				USED_TARGETS(source_p) -= i;
-
-			source_p->localClient->target_last = rb_current_time();
-		}
-		/* cant clear any, full target list */
-		else if(USED_TARGETS(source_p) == 10)
-		{
-			ServerStats.is_tgch++;
-			add_tgchange(source_p->sockhost);
-			return 0;
-		}
-	}
-	/* no targets in use, reset their target_last so that they cant
-	 * abuse a long idle to get targets back more quickly
-	 */
-	else
-	{
-		source_p->localClient->target_last = rb_current_time();
-		SetTGChange(source_p);
-	}
-
-	source_p->localClient->targets[FREE_TARGET(source_p)] = hashv;
-	NEXT_TARGET(FREE_TARGET(source_p));
-	++USED_TARGETS(source_p);
-	return 1;
 }
 
 /*
@@ -857,6 +782,7 @@ msg_client(int p_or_n, const char *command,
 			/* Here is the anti-flood bot/spambot code -db */
 			if(accept_message(source_p, target_p) || IsOper(source_p))
 			{
+				add_reply_target(target_p, source_p);
 				sendto_anywhere_message(target_p, source_p, command, "%s", text);
 			}
 			else if (IsSetRegOnlyMsg(target_p) && !source_p->user->suser[0])
@@ -884,6 +810,7 @@ msg_client(int p_or_n, const char *command,
 								   form_str(RPL_TARGNOTIFY),
 								   target_p->name);
 
+					add_reply_target(target_p, source_p);
 					sendto_one(target_p, form_str(RPL_UMODEGMSG),
 						   me.name, target_p->name, source_p->name,
 						   source_p->username, source_p->host);
@@ -893,27 +820,15 @@ msg_client(int p_or_n, const char *command,
 			}
 		}
 		else
+		{
+			add_reply_target(target_p, source_p);
 			sendto_anywhere_message(target_p, source_p, command, "%s", text);
+		}
 	}
 	else
 		sendto_anywhere(target_p, source_p, command, ":%s", text);
 
 	return;
-}
-
-static struct Channel *
-find_allowing_channel(struct Client *source_p, struct Client *target_p)
-{
-	rb_dlink_node *ptr;
-	struct membership *msptr;
-
-	RB_DLINK_FOREACH(ptr, source_p->user->channel.head)
-	{
-		msptr = ptr->data;
-		if (is_chanop_voiced(msptr) && IsMember(target_p, msptr->chptr))
-			return msptr->chptr;
-	}
-	return NULL;
 }
 
 /*

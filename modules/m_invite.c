@@ -39,6 +39,7 @@
 #include "parse.h"
 #include "modules.h"
 #include "packet.h"
+#include "tgchange.h"
 
 static int m_invite(struct Client *, struct Client *, int, const char **);
 
@@ -169,6 +170,14 @@ m_invite(struct Client *client_p, struct Client *source_p, int parc, const char 
 
 	if(MyConnect(source_p))
 	{
+		if (ConfigFileEntry.target_change && !IsOper(source_p) &&
+				!find_allowing_channel(source_p, target_p) &&
+				!add_target(source_p, target_p))
+		{
+			sendto_one(source_p, form_str(ERR_TARGCHANGE),
+				   me.name, source_p->name, target_p->name);
+			return 0;
+		}
 		sendto_one(source_p, form_str(RPL_INVITING), 
 			   me.name, source_p->name,
 			   target_p->name, parv[2]);
@@ -186,6 +195,34 @@ m_invite(struct Client *client_p, struct Client *source_p, int parc, const char 
 
 	if(MyConnect(target_p))
 	{
+		if(!IsOper(source_p) && (IsSetCallerId(target_p) ||
+					(IsSetRegOnlyMsg(target_p) && !source_p->user->suser[0])) &&
+				!accept_message(source_p, target_p))
+		{
+			if (IsSetRegOnlyMsg(target_p) && !source_p->user->suser[0])
+			{
+				sendto_one_numeric(source_p, ERR_NONONREG,
+						form_str(ERR_NONONREG),
+						target_p->name);
+				return 0;
+			}
+			else
+			{
+				/* instead of sending RPL_UMODEGMSG,
+				 * just let the invite through
+				 */
+				if((target_p->localClient->last_caller_id_time +
+				    ConfigFileEntry.caller_id_wait) >= rb_current_time())
+				{
+					sendto_one_numeric(source_p, ERR_TARGUMODEG,
+							   form_str(ERR_TARGUMODEG),
+							   target_p->name);
+					return 0;
+				}
+				target_p->localClient->last_caller_id_time = rb_current_time();
+			}
+		}
+		add_reply_target(target_p, source_p);
 		sendto_one(target_p, ":%s!%s@%s INVITE %s :%s", 
 			   source_p->name, source_p->username, source_p->host, 
 			   target_p->name, chptr->chname);

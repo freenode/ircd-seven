@@ -46,11 +46,11 @@ static int mo_testgecos(struct Client *, struct Client *, int, const char **);
 
 struct Message testline_msgtab = {
 	"TESTLINE", 0, 0, 0, MFLG_SLOW,
-	{mg_unreg, mg_ignore, mg_ignore, mg_ignore, mg_ignore, {mo_testline, 2}}
+	{mg_unreg, mg_not_oper, mg_ignore, mg_ignore, mg_ignore, {mo_testline, 2}}
 };
 struct Message testgecos_msgtab = {
 	"TESTGECOS", 0, 0, 0, MFLG_SLOW,
-	{mg_unreg, mg_ignore, mg_ignore, mg_ignore, mg_ignore, {mo_testgecos, 2}}
+	{mg_unreg, mg_not_oper, mg_ignore, mg_ignore, mg_ignore, {mo_testgecos, 2}}
 };
 
 mapi_clist_av1 testline_clist[] = { &testline_msgtab, &testgecos_msgtab, NULL };
@@ -85,7 +85,7 @@ mo_testline(struct Client *client_p, struct Client *source_p, int parc, const ch
 					me.name, source_p->name,
 					resv_p->hold ? 'q' : 'Q',
 					resv_p->hold ? (long) ((resv_p->hold - rb_current_time()) / 60) : 0L,
-					resv_p->name, resv_p->passwd);
+					resv_p->host, resv_p->passwd);
 			/* this is a false positive, so make sure it isn't counted in stats q
 			 * --nenolod
 			 */
@@ -205,7 +205,7 @@ mo_testline(struct Client *client_p, struct Client *source_p, int parc, const ch
 				me.name, source_p->name,
 				resv_p->hold ? 'q' : 'Q',
 				resv_p->hold ? (long) ((resv_p->hold - rb_current_time()) / 60) : 0L,
-				resv_p->name, resv_p->passwd);
+				resv_p->host, resv_p->passwd);
 
 		/* this is a false positive, so make sure it isn't counted in stats q
 		 * --nenolod
@@ -218,7 +218,7 @@ mo_testline(struct Client *client_p, struct Client *source_p, int parc, const ch
 	if(aconf && aconf->status & CONF_CLIENT)
 	{
 		sendto_one_numeric(source_p, RPL_STATSILINE, form_str(RPL_STATSILINE),
-				aconf->name, EmptyString(aconf->spasswd) ? "<NULL>" : aconf->spasswd,
+				aconf->info.name, EmptyString(aconf->spasswd) ? "<NULL>" : aconf->spasswd,
 				show_iline_prefix(source_p, aconf, aconf->user),
 				aconf->host, aconf->port, aconf->className);
 		return 0;
@@ -246,6 +246,6 @@ mo_testgecos(struct Client *client_p, struct Client *source_p, int parc, const c
 			me.name, source_p->name,
 			aconf->hold ? 'x' : 'X',
 			aconf->hold ? (long) ((aconf->hold - rb_current_time()) / 60) : 0L,
-			aconf->name, aconf->passwd);
+			aconf->host, aconf->passwd);
 	return 0;
 }

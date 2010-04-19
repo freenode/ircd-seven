@@ -118,7 +118,9 @@ m_topic(struct Client *client_p, struct Client *source_p, int parc, const char *
 			return 0;
 		}
 
-		if(MyClient(source_p) && (chptr->mode.mode & MODE_TOPICLIMIT) && !is_chanop(msptr))
+		if(!MyClient(source_p) || (((chptr->mode.mode & MODE_TOPICLIMIT) == 0 ||
+					is_chanop(msptr)) &&
+				 can_send(chptr, source_p, msptr)))
 		{
 			if(IsOverride(source_p))
 				sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,

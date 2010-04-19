@@ -74,12 +74,11 @@ int chmode_flags[256];
 
 /* OPTIMIZE ME! -- dwr */
 void
-construct_noparam_modes(void)
+construct_cflags_strings(void)
 {
 	int i;
         char *ptr = cflagsbuf;
 	char *ptr2 = cflagsmyinfo;
-        static int prev_chmode_flags[256];
         
         *ptr = '\0';
 	*ptr2 = '\0';
@@ -100,22 +99,6 @@ construct_noparam_modes(void)
 		{
 			chmode_flags[i] = 0;
 		}
-                
-		if (prev_chmode_flags[i] != 0 && prev_chmode_flags[i] != chmode_flags[i])
-		{
-			if (chmode_flags[i] == 0)
-			{
-                                chmode_table[i].set_func = chm_orphaned;
-				sendto_realops_snomask(SNO_DEBUG, L_NETWIDE, "Cmode +%c is now orphaned", i);
-			}
-			else
-			{
-				sendto_realops_snomask(SNO_DEBUG, L_NETWIDE, "Orphaned cmode +%c is picked up by module", i);
-			}
-			chmode_flags[i] = prev_chmode_flags[i];
-		}
-		else
-			prev_chmode_flags[i] = chmode_flags[i];
                 
 		switch (chmode_flags[i])
 		{
@@ -152,7 +135,7 @@ construct_noparam_modes(void)
  *                0 if no cflags are available
  * side effects - NONE
  */
-unsigned int
+static unsigned int
 find_cflag_slot(void)
 {
 	unsigned int all_cflags = 0, my_cflag = 0, i;
@@ -164,6 +147,34 @@ find_cflag_slot(void)
 		my_cflag <<= 1);
 
 	return my_cflag;
+}
+
+unsigned int
+cflag_add(char c_, ChannelModeFunc function)
+{
+	int c = (unsigned char)c_;
+
+	if (chmode_table[c].set_func != chm_nosuch &&
+			chmode_table[c].set_func != chm_orphaned)
+		return 0;
+
+	if (chmode_table[c].set_func == chm_nosuch)
+		chmode_table[c].mode_type = find_cflag_slot();
+	if (chmode_table[c].mode_type == 0)
+		return 0;
+	chmode_table[c].set_func = function;
+	construct_cflags_strings();
+	return chmode_table[c].mode_type;
+}
+
+void
+cflag_orphan(char c_)
+{
+	int c = (unsigned char)c_;
+
+	s_assert(chmode_flags[c] != 0);
+	chmode_table[c].set_func = chm_orphaned;
+	construct_cflags_strings();
 }
 
 static int
@@ -527,7 +538,7 @@ chm_simple(struct Client *source_p, struct Channel *chptr,
 		return;
 
 	/* setting + */
-	if((dir == MODE_ADD) && !(chptr->mode.mode & mode_type))
+	if((dir == MODE_ADD) && !(chptr->mode.mode & mode_type) && !(chptr->mode_lock.off_mode & mode_type))
 	{
 		chptr->mode.mode |= mode_type;
 
@@ -540,7 +551,7 @@ chm_simple(struct Client *source_p, struct Channel *chptr,
 		mode_changes[mode_count].override = override;
 		mode_changes[mode_count++].arg = NULL;
 	}
-	else if((dir == MODE_DEL) && (chptr->mode.mode & mode_type))
+	else if((dir == MODE_DEL) && (chptr->mode.mode & mode_type) && !(chptr->mode_lock.mode & mode_type))
 	{
 		chptr->mode.mode &= ~mode_type;
 
@@ -763,8 +774,8 @@ chm_ban(struct Client *source_p, struct Channel *chptr,
 	case CHFL_QUIET:
 		list = &chptr->quietlist;
 		errorval = SM_ERR_RPL_Q;
-		rpl_list = RPL_BANLIST;
-		rpl_endlist = RPL_ENDOFBANLIST;
+		rpl_list = RPL_QUIETLIST;
+		rpl_endlist = RPL_ENDOFQUIETLIST;
 		mems = ALL_MEMBERS;
 		caps = 0;
 		break;
@@ -815,10 +826,7 @@ chm_ban(struct Client *source_p, struct Channel *chptr,
 				   me.name, source_p->name, chptr->chname,
 				   buf, banptr->who, banptr->when);
 		}
-		if (mode_type == CHFL_QUIET)
-			sendto_one(source_p, ":%s %d %s %s :End of Channel Quiet List", me.name, rpl_endlist, source_p->name, chptr->chname);
-		else
-			sendto_one(source_p, form_str(rpl_endlist), me.name, source_p->name, chptr->chname);
+		sendto_one(source_p, form_str(rpl_endlist), me.name, source_p->name, chptr->chname);
 		return;
 	}
 
@@ -2037,4 +2045,51 @@ set_channel_mode(struct Client *client_p, struct Client *source_p,
 	/* only propagate modes originating locally, or if we're hubbing */
 	if(MyClient(source_p) || rb_dlink_list_length(&serv_list) > 1)
 		send_cap_mode_changes(client_p, source_p, chptr, mode_changes, mode_count);
+}
+
+/* set_channel_mlock()
+ *
+ * inputs	- client, source, channel, params
+ * output	- 
+ * side effects - channel mlock is changed / MLOCK is propagated
+ */
+void
+set_channel_mlock(struct Client *client_p, struct Client *source_p,
+		  struct Channel *chptr, int parc, const char *parv[])
+{
+	int dir = MODE_ADD;
+	const char *ml = parv[0];
+	char c;
+
+	memset(&chptr->mode_lock, '\0', sizeof(struct Mode));
+
+	for(; (c = *ml) != 0; ml++)
+	{
+		switch (c)
+		{
+		case '+':
+			dir = MODE_ADD;
+			break;
+		case '-':
+			dir = MODE_DEL;
+			break;
+		default:
+			if (chmode_table[(unsigned char) c].set_func == chm_simple)
+				switch(dir)
+				{
+				case MODE_ADD:
+					chptr->mode_lock.mode |= chmode_table[(unsigned char) c].mode_type;
+					chptr->mode_lock.off_mode &= ~chmode_table[(unsigned char) c].mode_type;
+					break;
+				case MODE_DEL:
+					chptr->mode_lock.off_mode |= chmode_table[(unsigned char) c].mode_type;
+					chptr->mode_lock.mode &= ~chmode_table[(unsigned char) c].mode_type;
+					break;
+				}
+			break;
+		}
+	}
+
+	sendto_server(client_p, NULL, CAP_TS6 | CAP_MLOCK, NOCAPS, ":%s MLOCK %ld %s %s",
+		      source_p->id, (long) chptr->channelts, chptr->chname, channel_mlock(chptr, &me));
 }

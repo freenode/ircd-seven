@@ -21,7 +21,7 @@
  *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307
  *  USA
  *
- *  $Id: m_kline.c 3466 2007-05-19 23:36:51Z jilles $
+ *  $Id$
  */
 
 #include "stdinc.h"
@@ -43,6 +43,8 @@
 #include "parse.h"
 #include "modules.h"
 #include "reject.h"
+#include "bandbi.h"
+#include "operhash.h"
 
 static int mo_kline(struct Client *, struct Client *, int, const char **);
 static int ms_kline(struct Client *, struct Client *, int, const char **);
@@ -62,27 +64,28 @@ struct Message unkline_msgtab = {
 };
 
 mapi_clist_av1 kline_clist[] = { &kline_msgtab, &unkline_msgtab, NULL };
-DECLARE_MODULE_AV1(kline, NULL, NULL, kline_clist, NULL, NULL, "$Revision: 3466 $");
+
+DECLARE_MODULE_AV1(kline, NULL, NULL, kline_clist, NULL, NULL, "$Revision$");
 
 /* Local function prototypes */
 static int find_user_host(struct Client *source_p, const char *userhost, char *user, char *host);
 static int valid_comment(struct Client *source_p, char *comment);
 static int valid_user_host(struct Client *source_p, const char *user, const char *host);
-static int valid_wild_card(struct Client *source_p, const char *user, const char *host);
 
 static void handle_remote_kline(struct Client *source_p, int tkline_time,
-		const char *user, const char *host, const char *reason);
+				const char *user, const char *host, const char *reason);
 static void apply_kline(struct Client *source_p, struct ConfItem *aconf,
-			const char *reason, const char *oper_reason, const char *current_date);
+			const char *reason, const char *oper_reason);
 static void apply_tkline(struct Client *source_p, struct ConfItem *aconf,
-			 const char *, const char *, const char *, int);
+			 const char *, const char *, int);
+static void apply_prop_kline(struct Client *source_p, struct ConfItem *aconf,
+			 const char *, const char *, int);
 static int already_placed_kline(struct Client *, const char *, const char *, int);
 
-static void handle_remote_unkline(struct Client *source_p, 
-			const char *user, const char *host);
+static void handle_remote_unkline(struct Client *source_p, const char *user, const char *host);
 static void remove_permkline_match(struct Client *, struct ConfItem *);
-static int flush_write(struct Client *, FILE *, const char *, const char *);
 static int remove_temp_kline(struct Client *, struct ConfItem *);
+static void remove_prop_kline(struct Client *, struct ConfItem *);
 
 /* mo_kline()
  *
@@ -93,24 +96,22 @@ static int remove_temp_kline(struct Client *, struct ConfItem *);
  *   parv[5] - reason
  */
 static int
-mo_kline(struct Client *client_p, struct Client *source_p,
-	 int parc, const char **parv)
+mo_kline(struct Client *client_p, struct Client *source_p, int parc, const char **parv)
 {
+	char def[] = "No Reason";
 	char user[USERLEN + 2];
 	char host[HOSTLEN + 2];
-	char buffer[IRCD_BUFSIZE];
-	char *reason;
+	char *reason = def;
 	char *oper_reason;
-	const char *current_date;
 	const char *target_server = NULL;
 	struct ConfItem *aconf;
 	int tkline_time = 0;
 	int loc = 1;
+	int propagated = ConfigFileEntry.use_propagated_bans;
 
 	if(!IsOperKline(source_p))
 	{
-		sendto_one(source_p, form_str(ERR_NOPRIVS),
-			   me.name, source_p->name, "kline");
+		sendto_one(source_p, form_str(ERR_NOPRIVS), me.name, source_p->name, "kline");
 		return 0;
 	}
 
@@ -125,16 +126,16 @@ mo_kline(struct Client *client_p, struct Client *source_p,
 
 	loc++;
 
-	if(parc >= loc+2 && !irccmp(parv[loc], "ON"))
+	if(parc >= loc + 2 && !irccmp(parv[loc], "ON"))
 	{
 		if(!IsOperRemoteBan(source_p))
 		{
 			sendto_one(source_p, form_str(ERR_NOPRIVS),
-				me.name, source_p->name, "remoteban");
+				   me.name, source_p->name, "remoteban");
 			return 0;
 		}
 
-		target_server = parv[loc+1];
+		target_server = parv[loc + 1];
 		loc += 2;
 	}
 
@@ -146,57 +147,53 @@ mo_kline(struct Client *client_p, struct Client *source_p,
 	}
 
 	reason = LOCAL_COPY(parv[loc]);
-	current_date = smalldate();
-
-	/* Look for an oper reason */
-	if((oper_reason = strchr(reason, '|')) != NULL)
-	{
-		*oper_reason = '\0';
-		oper_reason++;
-	}
-	else
-		oper_reason = "";
-
-	if (tkline_time > 0)
-		rb_snprintf(buffer, sizeof(buffer),
-			   "Temporary K-line %d min. - %s (%s)",
-			   (int) (tkline_time / 60), oper_reason, current_date);
-	else
-		rb_snprintf(buffer, sizeof(buffer), "%s (%s)", oper_reason, current_date);
-
-	oper_reason = buffer;
 
 	if(target_server != NULL)
 	{
 		if (tkline_time)
 			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
-					"%s is adding a temporary %d min. K-Line for [%s@%s] on %s [%s|%s]",
+					"%s is adding a temporary %d min. K-Line for [%s@%s] on %s [%s]",
 					get_oper_name(source_p), tkline_time / 60, user, host, target_server,
-					reason, oper_reason);
+					reason);
 		else
 			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
-					"%s is adding a K-Line for [%s@%s] on %s [%s|%s]",
-					get_oper_name(source_p), user, host, target_server, reason, oper_reason);
+					"%s is adding a K-Line for [%s@%s] on %s [%s]",
+					get_oper_name(source_p), user, host, target_server, reason);
 
 		propagate_generic(source_p, "KLINE", target_server, CAP_KLN,
-				"%d %s %s :%s|%s",
-				tkline_time, user, host, reason, oper_reason);
+				  "%d %s %s :%s", tkline_time, user, host, reason);
 
 		/* If we are sending it somewhere that doesnt include us, stop */
 		if(!match(target_server, me.name))
 			return 0;
+
+		/* Set as local-only. */
+		propagated = 0;
 	}
 	/* if we have cluster servers, send it to them.. */
-	else if(rb_dlink_list_length(&cluster_conf_list) > 0)
-		cluster_generic(source_p, "KLINE", 
+	else if(!propagated && rb_dlink_list_length(&cluster_conf_list) > 0)
+		cluster_generic(source_p, "KLINE",
 				(tkline_time > 0) ? SHARED_TKLINE : SHARED_PKLINE, CAP_KLN,
-				"%lu %s %s :%s|%s",
-				tkline_time, user, host, reason, oper_reason);
+				"%lu %s %s :%s", tkline_time, user, host, reason);
 
-	if(!valid_user_host(source_p, user, host) || 
-	   !valid_wild_card(source_p, user, host) ||
+	if(!valid_user_host(source_p, user, host) ||
 	   !valid_comment(source_p, reason))
 		return 0;
+
+	if(!valid_wild_card(user, host))
+	{
+		sendto_one_notice(source_p,
+				  ":Please include at least %d non-wildcard "
+				  "characters with the user@host",
+				  ConfigFileEntry.min_nonwildcard);
+		return 0;
+	}
+
+	if(propagated && tkline_time == 0)
+	{
+		sendto_one_notice(source_p, ":Cannot set a permanent global ban");
+		return 0;
+	}
 
 	if(already_placed_kline(source_p, user, host, tkline_time))
 		return 0;
@@ -204,28 +201,36 @@ mo_kline(struct Client *client_p, struct Client *source_p,
 	rb_set_time();
 	aconf = make_conf();
 	aconf->status = CONF_KILL;
-	aconf->passwd = rb_strdup(reason);
-	aconf->spasswd = rb_strdup(oper_reason);
+	aconf->created = rb_current_time();
 	aconf->host = rb_strdup(host);
 	aconf->user = rb_strdup(user);
-	aconf->name = rb_strdup(get_oper_name(source_p));
 	aconf->port = 0;
+	aconf->info.oper = operhash_add(get_oper_name(source_p));
 
-	if(tkline_time > 0)
+	/* Look for an oper reason */
+	if((oper_reason = strchr(reason, '|')) != NULL)
 	{
-		apply_tkline(source_p, aconf, reason, oper_reason, current_date, tkline_time);
+		*oper_reason = '\0';
+		oper_reason++;
+
+		if(!EmptyString(oper_reason))
+			aconf->spasswd = rb_strdup(oper_reason);
 	}
+	aconf->passwd = rb_strdup(reason);
+
+	if(propagated)
+		apply_prop_kline(source_p, aconf, reason, oper_reason, tkline_time);
+	else if(tkline_time > 0)
+		apply_tkline(source_p, aconf, reason, oper_reason, tkline_time);
 	else
-	{
-		apply_kline(source_p, aconf, reason, oper_reason, current_date);
-	}
+		apply_kline(source_p, aconf, reason, oper_reason);
 
 	if(ConfigFileEntry.kline_delay)
 	{
 		if(kline_queued == 0)
 		{
 			rb_event_addonce("check_klines", check_klines_event, NULL,
-				     ConfigFileEntry.kline_delay);
+					 ConfigFileEntry.kline_delay);
 			kline_queued = 1;
 		}
 	}
@@ -256,8 +261,7 @@ ms_kline(struct Client *client_p, struct Client *source_p, int parc, const char 
 		return 0;
 
 	propagate_generic(source_p, "KLINE", parv[1], CAP_KLN,
-			"%d %s %s :%s",
-			tkline_time, parv[3], parv[4], parv[5]);
+			  "%d %s %s :%s", tkline_time, parv[3], parv[4], parv[5]);
 
 	if(!match(parv[1], me.name))
 		return 0;
@@ -282,22 +286,29 @@ me_kline(struct Client *client_p, struct Client *source_p, int parc, const char 
 
 static void
 handle_remote_kline(struct Client *source_p, int tkline_time,
-		const char *user, const char *host, const char *kreason)
+		    const char *user, const char *host, const char *kreason)
 {
-	const char *current_date;
 	char *reason = LOCAL_COPY(kreason);
 	struct ConfItem *aconf = NULL;
 	char *oper_reason;
 
 	if(!find_shared_conf(source_p->username, source_p->host,
-				source_p->servptr->name, 
-				(tkline_time > 0) ? SHARED_TKLINE : SHARED_PKLINE))
+			     source_p->servptr->name,
+			     (tkline_time > 0) ? SHARED_TKLINE : SHARED_PKLINE))
 		return;
 
 	if(!valid_user_host(source_p, user, host) ||
-	   !valid_wild_card(source_p, user, host) ||
 	   !valid_comment(source_p, reason))
 		return;
+
+	if(!valid_wild_card(user, host))
+	{
+		sendto_one_notice(source_p,
+				  ":Please include at least %d non-wildcard "
+				  "characters with the user@host",
+				  ConfigFileEntry.min_nonwildcard);
+		return;
+	}
 
 	if(already_placed_kline(source_p, user, host, tkline_time))
 		return;
@@ -305,9 +316,10 @@ handle_remote_kline(struct Client *source_p, int tkline_time,
 	aconf = make_conf();
 
 	aconf->status = CONF_KILL;
+	aconf->created = rb_current_time();
 	aconf->user = rb_strdup(user);
 	aconf->host = rb_strdup(host);
-	aconf->name = rb_strdup(get_oper_name(source_p));
+	aconf->info.oper = operhash_add(get_oper_name(source_p));
 
 	/* Look for an oper reason */
 	if((oper_reason = strchr(reason, '|')) != NULL)
@@ -318,26 +330,19 @@ handle_remote_kline(struct Client *source_p, int tkline_time,
 		if(!EmptyString(oper_reason))
 			aconf->spasswd = rb_strdup(oper_reason);
 	}
-
 	aconf->passwd = rb_strdup(reason);
 
-	current_date = smalldate();
-
 	if(tkline_time > 0)
-	{
-		apply_tkline(source_p, aconf, reason, oper_reason, current_date, tkline_time);
-	}
+		apply_tkline(source_p, aconf, reason, oper_reason, tkline_time);
 	else
-	{
-		apply_kline(source_p, aconf, reason, oper_reason, current_date);
-	}
+		apply_kline(source_p, aconf, reason, oper_reason);
 
 	if(ConfigFileEntry.kline_delay)
 	{
 		if(kline_queued == 0)
 		{
 			rb_event_addonce("check_klines", check_klines_event, NULL,
-				     ConfigFileEntry.kline_delay);
+					 ConfigFileEntry.kline_delay);
 			kline_queued = 1;
 		}
 	}
@@ -361,11 +366,11 @@ mo_unkline(struct Client *client_p, struct Client *source_p, int parc, const cha
 	char splat[] = "*";
 	char *h = LOCAL_COPY(parv[1]);
 	struct ConfItem *aconf;
+	int propagated = 1;
 
 	if(!IsOperUnkline(source_p))
 	{
-		sendto_one(source_p, form_str(ERR_NOPRIVS),
-			   me.name, source_p->name, "unkline");
+		sendto_one(source_p, form_str(ERR_NOPRIVS), me.name, source_p->name, "unkline");
 		return 0;
 	}
 
@@ -405,27 +410,41 @@ mo_unkline(struct Client *client_p, struct Client *source_p, int parc, const cha
 		if(!IsOperRemoteBan(source_p))
 		{
 			sendto_one(source_p, form_str(ERR_NOPRIVS),
-				me.name, source_p->name, "remoteban");
+				   me.name, source_p->name, "remoteban");
 			return 0;
 		}
 
 		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "%s is removing the K-Line for [%s@%s] on %s",
 				get_oper_name(source_p), user, host, parv[3]);
 
-		propagate_generic(source_p, "UNKLINE", parv[3], CAP_UNKLN,
-				"%s %s", user, host);
+		propagate_generic(source_p, "UNKLINE", parv[3], CAP_UNKLN, "%s %s", user, host);
 
 		if(match(parv[3], me.name) == 0)
 			return 0;
+
+		propagated = 0;
 	}
-	else if(rb_dlink_list_length(&cluster_conf_list) > 0)
+
+	aconf = find_exact_conf_by_address(host, CONF_KILL, user);
+
+	/* No clustering for removing a propagated kline */
+	if(propagated && (aconf == NULL || !aconf->lifetime) &&
+			rb_dlink_list_length(&cluster_conf_list) > 0)
 		cluster_generic(source_p, "UNKLINE", SHARED_UNKLINE, CAP_UNKLN,
 				"%s %s", user, host);
 
-	aconf = find_exact_conf_by_address(host, CONF_KILL, user);
 	if(aconf == NULL)
 	{
 		sendto_one_notice(source_p, ":No K-Line for %s@%s", user, host);
+		return 0;
+	}
+	
+	if(aconf->lifetime)
+	{
+		if(propagated)
+			remove_prop_kline(source_p, aconf);
+		else
+			sendto_one_notice(source_p, ":Cannot remove global K-Line %s@%s on specific servers", user, host);
 		return 0;
 	}
 
@@ -446,10 +465,9 @@ mo_unkline(struct Client *client_p, struct Client *source_p, int parc, const cha
 static int
 ms_unkline(struct Client *client_p, struct Client *source_p, int parc, const char *parv[])
 {
-	/* source_p  parv[1]        parv[2]  parv[3]
-	 * oper      target server  user     host    */
-	propagate_generic(source_p, "UNKLINE", parv[1], CAP_UNKLN,
-			"%s %s", parv[2], parv[3]);
+	/* parv[0]  parv[1]        parv[2]  parv[3]
+	 * oper     target server  user     host    */
+	propagate_generic(source_p, "UNKLINE", parv[1], CAP_UNKLN, "%s %s", parv[2], parv[3]);
 
 	if(!match(parv[1], me.name))
 		return 0;
@@ -478,13 +496,18 @@ handle_remote_unkline(struct Client *source_p, const char *user, const char *hos
 	struct ConfItem *aconf;
 
 	if(!find_shared_conf(source_p->username, source_p->host,
-				source_p->servptr->name, SHARED_UNKLINE))
+			     source_p->servptr->name, SHARED_UNKLINE))
 		return;
 
 	aconf = find_exact_conf_by_address(host, CONF_KILL, user);
 	if(aconf == NULL)
 	{
 		sendto_one_notice(source_p, ":No K-Line for %s@%s", user, host);
+		return;
+	}
+	if(aconf->lifetime)
+	{
+		sendto_one_notice(source_p, ":Cannot remove global K-Line %s@%s on specific servers", user, host);
 		return;
 	}
 
@@ -503,11 +526,33 @@ handle_remote_unkline(struct Client *source_p, const char *user, const char *hos
  */
 static void
 apply_kline(struct Client *source_p, struct ConfItem *aconf,
-	    const char *reason, const char *oper_reason, const char *current_date)
+	    const char *reason, const char *oper_reason)
 {
 	add_conf_by_address(aconf->host, CONF_KILL, aconf->user, NULL, aconf);
-	write_confitem(KLINE_TYPE, source_p, aconf->user, aconf->host,
-		       reason, oper_reason, current_date, 0);
+	bandb_add(BANDB_KLINE, source_p, aconf->user, aconf->host,
+		  reason, EmptyString(oper_reason) ? NULL : oper_reason, 0);
+
+	/* no oper reason.. */
+	if(EmptyString(oper_reason))
+	{
+		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+				       "%s added K-Line for [%s@%s] [%s]",
+				       get_oper_name(source_p), aconf->user, aconf->host, reason);
+		ilog(L_KLINE, "K %s 0 %s %s %s",
+		     get_oper_name(source_p), aconf->user, aconf->host, reason);
+	}
+	else
+	{
+		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+				       "%s added K-Line for [%s@%s] [%s|%s]",
+				       get_oper_name(source_p), aconf->user, aconf->host,
+				       reason, oper_reason);
+		ilog(L_KLINE, "K %s 0 %s %s %s|%s",
+		     get_oper_name(source_p), aconf->user, aconf->host, reason, oper_reason);
+	}
+
+	sendto_one_notice(source_p, ":Added K-Line [%s@%s]",
+			  aconf->user, aconf->host);
 }
 
 /* apply_tkline()
@@ -518,7 +563,7 @@ apply_kline(struct Client *source_p, struct ConfItem *aconf,
  */
 static void
 apply_tkline(struct Client *source_p, struct ConfItem *aconf,
-	     const char *reason, const char *oper_reason, const char *current_date, int tkline_time)
+	     const char *reason, const char *oper_reason, int tkline_time)
 {
 	aconf->hold = rb_current_time() + tkline_time;
 	add_temp_kline(aconf);
@@ -527,26 +572,73 @@ apply_tkline(struct Client *source_p, struct ConfItem *aconf,
 	if(EmptyString(oper_reason))
 	{
 		sendto_realops_snomask(SNO_GENERAL, L_ALL,
-				     "%s added temporary %d min. K-Line for [%s@%s] [%s]",
-				     get_oper_name(source_p), tkline_time / 60,
-				     aconf->user, aconf->host, reason);
+				       "%s added temporary %d min. K-Line for [%s@%s] [%s]",
+				       get_oper_name(source_p), tkline_time / 60,
+				       aconf->user, aconf->host, reason);
 		ilog(L_KLINE, "K %s %d %s %s %s",
-			get_oper_name(source_p), tkline_time / 60,
-			aconf->user, aconf->host, reason);
+		     get_oper_name(source_p), tkline_time / 60, aconf->user, aconf->host, reason);
 	}
 	else
 	{
 		sendto_realops_snomask(SNO_GENERAL, L_ALL,
-				     "%s added temporary %d min. K-Line for [%s@%s] [%s|%s]",
-				     get_oper_name(source_p), tkline_time / 60,
-				     aconf->user, aconf->host, reason, oper_reason);
+				       "%s added temporary %d min. K-Line for [%s@%s] [%s|%s]",
+				       get_oper_name(source_p), tkline_time / 60,
+				       aconf->user, aconf->host, reason, oper_reason);
 		ilog(L_KLINE, "K %s %d %s %s %s|%s",
-			get_oper_name(source_p), tkline_time / 60,
-			aconf->user, aconf->host, reason, oper_reason);
+		     get_oper_name(source_p), tkline_time / 60,
+		     aconf->user, aconf->host, reason, oper_reason);
 	}
 
 	sendto_one_notice(source_p, ":Added temporary %d min. K-Line [%s@%s]",
 			  tkline_time / 60, aconf->user, aconf->host);
+}
+
+static void
+apply_prop_kline(struct Client *source_p, struct ConfItem *aconf,
+	     const char *reason, const char *oper_reason, int tkline_time)
+{
+	aconf->flags |= CONF_FLAGS_MYOPER | CONF_FLAGS_TEMPORARY;
+	aconf->hold = rb_current_time() + tkline_time;
+	aconf->lifetime = aconf->hold;
+
+	replace_old_ban(aconf);
+
+	rb_dlinkAddAlloc(aconf, &prop_bans);
+	add_conf_by_address(aconf->host, CONF_KILL, aconf->user, NULL, aconf);
+
+	/* no oper reason.. */
+	if(EmptyString(oper_reason))
+	{
+		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+				       "%s added global %d min. K-Line for [%s@%s] [%s]",
+				       get_oper_name(source_p), tkline_time / 60,
+				       aconf->user, aconf->host, reason);
+		ilog(L_KLINE, "K %s %d %s %s %s",
+		     get_oper_name(source_p), tkline_time / 60, aconf->user, aconf->host, reason);
+	}
+	else
+	{
+		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+				       "%s added global %d min. K-Line for [%s@%s] [%s|%s]",
+				       get_oper_name(source_p), tkline_time / 60,
+				       aconf->user, aconf->host, reason, oper_reason);
+		ilog(L_KLINE, "K %s %d %s %s %s|%s",
+		     get_oper_name(source_p), tkline_time / 60,
+		     aconf->user, aconf->host, reason, oper_reason);
+	}
+
+	sendto_one_notice(source_p, ":Added global %d min. K-Line [%s@%s]",
+			  tkline_time / 60, aconf->user, aconf->host);
+
+	sendto_server(NULL, NULL, CAP_BAN|CAP_TS6, NOCAPS,
+			":%s BAN K %s %s %lu %d %d * :%s%s%s",
+			source_p->id, aconf->user, aconf->host,
+			(unsigned long)aconf->created,
+			(int)(aconf->hold - aconf->created),
+			(int)(aconf->lifetime - aconf->created),
+			reason,
+			oper_reason ? "|" : "",
+			oper_reason ? oper_reason : "");
 }
 
 /* find_user_host()
@@ -561,7 +653,7 @@ find_user_host(struct Client *source_p, const char *userhost, char *luser, char 
 	char *hostp;
 
 	hostp = strchr(userhost, '@');
-	
+
 	if(hostp != NULL)	/* I'm a little user@host */
 	{
 		*(hostp++) = '\0';	/* short and squat */
@@ -573,7 +665,7 @@ find_user_host(struct Client *source_p, const char *userhost, char *luser, char 
 			rb_strlcpy(lhost, hostp, HOSTLEN + 1);	/* here is my host */
 		else
 			strcpy(lhost, "*");
-		}
+	}
 	else
 	{
 		/* no '@', no '.', so its not a user@host or host, therefore
@@ -602,73 +694,14 @@ find_user_host(struct Client *source_p, const char *userhost, char *luser, char 
 static int
 valid_user_host(struct Client *source_p, const char *luser, const char *lhost)
 {
-	/* # and " are invalid, as are '!' (n!u@h kline) and '@' (u@@h kline) */
-	if(strchr(lhost, '#') || strchr(luser, '#') || strchr(lhost, '"') ||
-			strchr(luser, '"') || strchr(luser, '!') ||
-			strchr(lhost, '@'))
+	/* # is invalid, as are '!' (n!u@h kline) and '@' (u@@h kline) */
+	if(strchr(lhost, '#') || strchr(luser, '#') || strchr(luser, '!') || strchr(lhost, '@'))
 	{
 		sendto_one_notice(source_p, ":Invalid K-Line");
 		return 0;
 	}
 
 	return 1;
-}
-
-/* valid_wild_card()
- * 
- * input        - user buffer, host buffer
- * output       - 0 if invalid, 1 if valid
- * side effects -
- */
-static int
-valid_wild_card(struct Client *source_p, const char *luser, const char *lhost)
-{
-	const char *p;
-	char tmpch;
-	int nonwild = 0;
-	int bitlen;
-
-	/* user has no wildcards, always accept -- jilles */
-	if (!strchr(luser, '?') && !strchr(luser, '*'))
-		return 1;
-
-	/* check there are enough non wildcard chars */
-	p = luser;
-	while ((tmpch = *p++))
-	{
-		if(!IsKWildChar(tmpch))
-		{
-			/* found enough chars, return */
-			if(++nonwild >= ConfigFileEntry.min_nonwildcard)
-				return 1;
-		}
-	}
-
-	/* try host, as user didnt contain enough */
-	/* special case for cidr masks -- jilles */
-	if ((p = strrchr(lhost, '/')) != NULL && IsDigit(p[1]))
-	{
-		bitlen = atoi(p + 1);
-		/* much like non-cidr for ipv6, rather arbitrary for ipv4 */
-		if (bitlen > 0 && bitlen >= (strchr(lhost, ':') ? 4 * (ConfigFileEntry.min_nonwildcard - nonwild) : 6 - 2 * nonwild))
-			return 1;
-	}
-	else
-	{
-		p = lhost;
-		while ((tmpch = *p++))
-		{
-			if(!IsKWildChar(tmpch))
-				if(++nonwild >= ConfigFileEntry.min_nonwildcard)
-					return 1;
-		}
-	}
-
-	sendto_one_notice(source_p,
-		   	  ":Please include at least %d non-wildcard "
-			  "characters with the user@host",
-			  ConfigFileEntry.min_nonwildcard);
-	return 0;
 }
 
 /*
@@ -710,13 +743,13 @@ already_placed_kline(struct Client *source_p, const char *luser, const char *lho
 	const char *reason, *p;
 	struct rb_sockaddr_storage iphost, *piphost;
 	struct ConfItem *aconf;
-        int t, bits;
+	int t, bits;
 
 	aconf = find_exact_conf_by_address(lhost, CONF_KILL, luser);
-	if (aconf == NULL && ConfigFileEntry.non_redundant_klines)
+	if(aconf == NULL && ConfigFileEntry.non_redundant_klines)
 	{
 		bits = 0;
-		if((t = parse_netmask(lhost, (struct sockaddr *)&iphost, &bits)) != HM_HOST)
+		if((t = parse_netmask(lhost, (struct sockaddr *) &iphost, &bits)) != HM_HOST)
 		{
 #ifdef RB_IPV6
 			if(t == HM_IPV6)
@@ -724,14 +757,15 @@ already_placed_kline(struct Client *source_p, const char *luser, const char *lho
 			else
 #endif
 				t = AF_INET;
-				
+
 			piphost = &iphost;
 		}
 		else
 			piphost = NULL;
 
-		aconf = find_conf_by_address(lhost, NULL, NULL, (struct sockaddr *)piphost, CONF_KILL, t, luser, NULL);
-		if (aconf != NULL)
+		aconf = find_conf_by_address(lhost, NULL, NULL, (struct sockaddr *) piphost,
+					     CONF_KILL, t, luser, NULL);
+		if(aconf != NULL)
 		{
 			/* The above was really a lookup of a single IP,
 			 * so check if the new kline is wider than the
@@ -739,11 +773,11 @@ already_placed_kline(struct Client *source_p, const char *luser, const char *lho
 			 * -- jilles
 			 */
 			p = strchr(aconf->host, '/');
-			if (bits > 0 && (p == NULL || bits < atoi(p + 1)))
+			if(bits > 0 && (p == NULL || bits < atoi(p + 1)))
 				aconf = NULL;
 		}
 	}
-	if (aconf != NULL)
+	if(aconf != NULL)
 	{
 		/* setting a tkline, or existing one is perm */
 		if(tkline || ((aconf->flags & CONF_FLAGS_TEMPORARY) == 0))
@@ -752,8 +786,7 @@ already_placed_kline(struct Client *source_p, const char *luser, const char *lho
 
 			sendto_one_notice(source_p,
 					  ":[%s@%s] already K-Lined by [%s@%s] - %s",
-					  luser, lhost, aconf->user,
-					  aconf->host, reason);
+					  luser, lhost, aconf->user, aconf->host, reason);
 			return 1;
 		}
 	}
@@ -768,153 +801,19 @@ already_placed_kline(struct Client *source_p, const char *luser, const char *lho
 static void
 remove_permkline_match(struct Client *source_p, struct ConfItem *aconf)
 {
-	FILE *in, *out;
-	int pairme = 0;
-	int error_on_write = NO;
-	char buf[BUFSIZE];
-	char matchbuf[BUFSIZE];
-	char temppath[BUFSIZE];
-	const char *filename;
-	const char *host, *user;
-	mode_t oldumask;
-	int matchlen;
-
-	host = aconf->host;
-	user = aconf->user;
-
-	rb_snprintf(temppath, sizeof(temppath),
-		 "%s.tmp", ConfigFileEntry.klinefile);
-
-	filename = get_conf_name(KLINE_TYPE);
-
-	if((in = fopen(filename, "r")) == 0)
-	{
-		sendto_one_notice(source_p, ":Cannot open %s", filename);
-		return;
-	}
-
-	oldumask = umask(0);
-	if((out = fopen(temppath, "w")) == 0)
-	{
-		sendto_one_notice(source_p, ":Cannot open %s", temppath);
-		fclose(in);
-		umask(oldumask);
-		return;
-	}
-
-	umask(oldumask);
-
-	snprintf(matchbuf, sizeof(matchbuf), "\"%s\",\"%s\"", user, host);
-	matchlen = strlen(matchbuf);
-
-	while (fgets(buf, sizeof(buf), in))
-	{
-		if(error_on_write)
-			break;
-
-		if(!strncasecmp(buf, matchbuf, matchlen))
-		{
-			pairme++;
-			break;
-		}
-		else
-			error_on_write = flush_write(source_p, out, buf, temppath);
-	}
-
-	/* we dropped out of the loop early because we found a match,
-	 * to drop into this somewhat faster loop as we presume we'll never
-	 * have two matching klines --anfl
-	 */
-	if(pairme && !error_on_write)
-	{
-		while(fgets(buf, sizeof(buf), in))
-		{
-			if(error_on_write)
-				break;
-
-			error_on_write = flush_write(source_p, out, buf, temppath);
-		}
-	}
-
-	fclose(in);
-	if (fclose(out))
-		error_on_write = YES;
-
-	/* The result of the rename should be checked too... oh well */
-	/* If there was an error on a write above, then its been reported
-	 * and I am not going to trash the original kline /conf file
-	 */
-	if(error_on_write)
-	{
-		sendto_one_notice(source_p, ":Couldn't write temp kline file, aborted");
-		return;
-	}
-	else if(!pairme)
-	{
-		sendto_one_notice(source_p, ":Cannot find K-Line for %s@%s in file",
-				  user, host);
-
-		if(temppath != NULL)
-			(void) unlink(temppath);
-
-		return;
-	}
-		
-	if (rename(temppath, filename))
-	{
-		sendto_one_notice(source_p, ":Couldn't rename temp file, aborted");
-		return;
-	}
-
-	sendto_one_notice(source_p, ":K-Line for [%s@%s] is removed",
-			  user, host);
+	sendto_one_notice(source_p, ":K-Line for [%s@%s] is removed", aconf->user, aconf->host);
 
 	sendto_realops_snomask(SNO_GENERAL, L_ALL,
-			     "%s has removed the K-Line for: [%s@%s]",
-			     get_oper_name(source_p), user, host);
+			       "%s has removed the K-Line for: [%s@%s]",
+			       get_oper_name(source_p), aconf->user, aconf->host);
 
-	ilog(L_KLINE, "UK %s %s %s",
-		get_oper_name(source_p), user, host);
+	ilog(L_KLINE, "UK %s %s %s", get_oper_name(source_p), aconf->user, aconf->host);
 
 	remove_reject_mask(aconf->user, aconf->host);
+	bandb_del(BANDB_KLINE, aconf->user, aconf->host);
 	delete_one_address_conf(aconf->host, aconf);
 
 	return;
-}
-
-/*
- * flush_write()
- *
- * inputs       - pointer to client structure of oper requesting unkline
- *              - out is the file descriptor
- *              - buf is the buffer to write
- *              - ntowrite is the expected number of character to be written
- *              - temppath is the temporary file name to be written
- * output       - YES for error on write
- *              - NO for success
- * side effects - if successful, the buf is written to output file
- *                if a write failure happesn, and the file pointed to
- *                by temppath, if its non NULL, is removed.
- *
- * The idea here is, to be as robust as possible when writing to the 
- * kline file.
- *
- * -Dianora
- */
-
-static int
-flush_write(struct Client *source_p, FILE * out, const char *buf, const char *temppath)
-{
-	int error_on_write = (fputs(buf, out) < 0) ? YES : NO;
-
-	if(error_on_write)
-	{
-		sendto_one_notice(source_p, ":Unable to write to %s",
-				  temppath);
-		if(temppath != NULL)
-			(void) unlink(temppath);
-	}
-	return (error_on_write);
 }
 
 /* remove_temp_kline()
@@ -929,22 +828,22 @@ remove_temp_kline(struct Client *source_p, struct ConfItem *aconf)
 	rb_dlink_node *ptr;
 	int i;
 
-	for (i = 0; i < LAST_TEMP_TYPE; i++)
+	for(i = 0; i < LAST_TEMP_TYPE; i++)
 	{
 		RB_DLINK_FOREACH(ptr, temp_klines[i].head)
 		{
-			if (aconf == ptr->data)
+			if(aconf == ptr->data)
 			{
 				sendto_one_notice(source_p,
-						":Un-klined [%s@%s] from temporary k-lines",
-						aconf->user, aconf->host);
+						  ":Un-klined [%s@%s] from temporary k-lines",
+						  aconf->user, aconf->host);
 				sendto_realops_snomask(SNO_GENERAL, L_ALL,
-						"%s has removed the temporary K-Line for: [%s@%s]",
-						get_oper_name(source_p), aconf->user, aconf->host);
+						       "%s has removed the temporary K-Line for: [%s@%s]",
+						       get_oper_name(source_p), aconf->user,
+						       aconf->host);
 
 				ilog(L_KLINE, "UK %s %s %s",
-					get_oper_name(source_p),
-					aconf->user, aconf->host);
+				     get_oper_name(source_p), aconf->user, aconf->host);
 				rb_dlinkDestroy(ptr, &temp_klines[i]);
 				remove_reject_mask(aconf->user, aconf->host);
 				delete_one_address_conf(aconf->host, aconf);
@@ -954,4 +853,40 @@ remove_temp_kline(struct Client *source_p, struct ConfItem *aconf)
 	}
 
 	return NO;
+}
+
+static void
+remove_prop_kline(struct Client *source_p, struct ConfItem *aconf)
+{
+	rb_dlink_node *ptr;
+
+	ptr = rb_dlinkFind(aconf, &prop_bans);
+	if (!ptr)
+		return;
+	sendto_one_notice(source_p,
+			  ":Un-klined [%s@%s] from global k-lines",
+			  aconf->user, aconf->host);
+	sendto_realops_snomask(SNO_GENERAL, L_ALL,
+			       "%s has removed the global K-Line for: [%s@%s]",
+			       get_oper_name(source_p), aconf->user,
+			       aconf->host);
+
+	ilog(L_KLINE, "UK %s %s %s",
+	     get_oper_name(source_p), aconf->user, aconf->host);
+	if(aconf->created < rb_current_time())
+		aconf->created = rb_current_time();
+	else
+		aconf->created++;
+	aconf->hold = aconf->created;
+	operhash_delete(aconf->info.oper);
+	aconf->info.oper = operhash_add(get_oper_name(source_p));
+	aconf->flags |= CONF_FLAGS_MYOPER | CONF_FLAGS_TEMPORARY;
+	sendto_server(NULL, NULL, CAP_BAN|CAP_TS6, NOCAPS,
+			":%s BAN K %s %s %lu %d %d * :*",
+			source_p->id, aconf->user, aconf->host,
+			(unsigned long)aconf->created,
+			0,
+			(int)(aconf->lifetime - aconf->created));
+	remove_reject_mask(aconf->user, aconf->host);
+	deactivate_conf(aconf, ptr);
 }

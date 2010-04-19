@@ -945,7 +945,9 @@ check_spambot_warning(struct Client *source_p, const char *name)
 		   JOIN_LEAVE_COUNT_EXPIRE_TIME)
 		{
 			decrement_count = (t_delta / JOIN_LEAVE_COUNT_EXPIRE_TIME);
-			if(decrement_count > source_p->localClient->join_leave_count)
+			if(name != NULL)
+				;
+			else if(decrement_count > source_p->localClient->join_leave_count)
 				source_p->localClient->join_leave_count = 0;
 			else
 				source_p->localClient->join_leave_count -= decrement_count;
@@ -1080,9 +1082,10 @@ set_channel_topic(struct Channel *chptr, const char *topic, const char *topic_in
 	}
 }
 
-/* channel_modes()
+/* channel_modes_real()
  *
  * inputs       - pointer to channel
+ *              - pointer to channel Mode struct
  *              - pointer to client
  * output       - string with simple modes
  * side effects - result from previous calls overwritten
@@ -1090,7 +1093,7 @@ set_channel_topic(struct Channel *chptr, const char *topic, const char *topic_in
  * Stolen from ShadowIRCd 4 --nenolod
  */
 const char *
-channel_modes(struct Channel *chptr, struct Client *client_p)
+channel_modes_real(struct Channel *chptr, struct Mode *mode, struct Client *client_p)
 {
 	int i;
 	char buf1[BUFSIZE];
@@ -1103,36 +1106,32 @@ channel_modes(struct Channel *chptr, struct Client *client_p)
 	*pbuf = '\0';
 
 	for (i = 0; i < 256; i++)
-	{
-		if(chmode_table[i].set_func == chm_hidden && !IsOper(client_p) && IsClient(client_p))
-			continue;
-		if(chptr->mode.mode & chmode_flags[i])
+		if(mode->mode & chmode_flags[i])
 			*mbuf++ = i;
-	}
 
-	if(chptr->mode.limit)
+	if(mode->limit)
 	{
 		*mbuf++ = 'l';
 
 		if(!IsClient(client_p) || IsMember(client_p, chptr))
-			pbuf += rb_sprintf(pbuf, " %d", chptr->mode.limit);
+			pbuf += rb_sprintf(pbuf, " %d", mode->limit);
 	}
 
-	if(*chptr->mode.key)
+	if(*mode->key)
 	{
 		*mbuf++ = 'k';
 
 		if(pbuf > buf2 || !IsClient(client_p) || IsMember(client_p, chptr))
-			pbuf += rb_sprintf(pbuf, " %s", chptr->mode.key);
+			pbuf += rb_sprintf(pbuf, " %s", mode->key);
 	}
 
-	if(chptr->mode.join_num)
+	if(mode->join_num)
 	{
 		*mbuf++ = 'j';
 
 		if(pbuf > buf2 || !IsClient(client_p) || IsMember(client_p, chptr))
-			pbuf += rb_sprintf(pbuf, " %d:%d", chptr->mode.join_num,
-					   chptr->mode.join_time);
+			pbuf += rb_sprintf(pbuf, " %d:%d", mode->join_num,
+					   mode->join_time);
 	}
 
 	if(*chptr->mode.forward)
@@ -1140,7 +1139,7 @@ channel_modes(struct Channel *chptr, struct Client *client_p)
 		*mbuf++ = 'f';
 
 		if(pbuf > buf2 || !IsClient(client_p) || IsMember(client_p, chptr))
-			pbuf += rb_sprintf(pbuf, " %s", chptr->mode.forward);
+			pbuf += rb_sprintf(pbuf, " %s", mode->forward);
 	}
 
 	*mbuf = '\0';
@@ -1366,5 +1365,56 @@ send_cap_mode_changes(struct Client *client_p, struct Client *source_p,
 
 		if(nc != 0)
 			sendto_server(client_p, chptr, cap, nocap, "%s %s", modebuf, parabuf);
+	}
+}
+
+void 
+resv_chan_forcepart(const char *name, const char *reason, int temp_time)
+{
+	rb_dlink_node *ptr;
+	rb_dlink_node *next_ptr;
+	struct Channel *chptr;
+	struct membership *msptr;
+	struct Client *target_p;
+
+	if(!ConfigChannel.resv_forcepart)
+		return;
+
+	/* for each user on our server in the channel list
+	 * send them a PART, and notify opers.
+	 */
+	chptr = find_channel(name);
+	if(chptr != NULL)
+	{
+		RB_DLINK_FOREACH_SAFE(ptr, next_ptr, chptr->locmembers.head)
+		{
+			msptr = ptr->data;
+			target_p = msptr->client_p;
+
+			if(IsExemptResv(target_p))
+				continue;
+
+			sendto_server(target_p, chptr, CAP_TS6, NOCAPS,
+			              ":%s PART %s", target_p->id, chptr->chname);
+
+			sendto_channel_local(ALL_MEMBERS, chptr, ":%s!%s@%s PART %s :%s",
+			                     target_p->name, target_p->username,
+			                     target_p->host, chptr->chname, target_p->name);
+
+			remove_user_from_channel(msptr);
+
+			/* notify opers & user they were removed from the channel */
+			sendto_realops_snomask(SNO_GENERAL, L_ALL,
+			                     "Forced PART for %s!%s@%s from %s (%s)",
+			                     target_p->name, target_p->username, 
+			                     target_p->host, name, reason);
+
+			if(temp_time > 0)
+				sendto_one_notice(target_p, ":*** Channel %s is temporarily unavailable on this server.",
+				           name);
+			else
+				sendto_one_notice(target_p, ":*** Channel %s is no longer available on this server.",
+				           name);
+		}
 	}
 }

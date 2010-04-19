@@ -49,6 +49,8 @@
 #include "blacklist.h"
 #include "privilege.h"
 #include "sslproc.h"
+#include "bandbi.h"
+#include "operhash.h"
 
 struct config_server_hide ConfigServerHide;
 
@@ -61,6 +63,8 @@ extern char linebuf[];
 
 static rb_bh *confitem_heap = NULL;
 
+rb_dlink_list prop_bans;
+
 rb_dlink_list temp_klines[LAST_TEMP_TYPE];
 rb_dlink_list temp_dlines[LAST_TEMP_TYPE];
 rb_dlink_list service_list;
@@ -71,6 +75,7 @@ static void validate_conf(void);
 static void read_conf(FILE *);
 static void clear_out_old_conf(void);
 
+static void expire_prop_bans(void *list);
 static void expire_temp_kd(void *list);
 static void reorganise_temp_kd(void *list);
 
@@ -84,6 +89,8 @@ void
 init_s_conf(void)
 {
 	confitem_heap = rb_bh_create(sizeof(struct ConfItem), CONFITEM_HEAP_SIZE, "confitem_heap");
+
+	rb_event_addish("expire_prop_bans", expire_prop_bans, &prop_bans, 60);
 
 	rb_event_addish("expire_temp_klines", expire_temp_kd, &temp_klines[TEMP_MIN], 60);
 	rb_event_addish("expire_temp_dlines", expire_temp_kd, &temp_dlines[TEMP_MIN], 60);
@@ -141,10 +148,14 @@ free_conf(struct ConfItem *aconf)
 
 	rb_free(aconf->passwd);
 	rb_free(aconf->spasswd);
-	rb_free(aconf->name);
 	rb_free(aconf->className);
 	rb_free(aconf->user);
 	rb_free(aconf->host);
+
+	if(IsConfBan(aconf))
+		operhash_delete(aconf->info.oper);
+	else
+		rb_free(aconf->info.name);
 
 	rb_bh_free(confitem_heap, aconf);
 }
@@ -332,7 +343,7 @@ verify_access(struct Client *client_p, const char *username)
 		if(aconf->flags & CONF_FLAGS_REDIR)
 		{
 			sendto_one_numeric(client_p, RPL_REDIR, form_str(RPL_REDIR),
-					aconf->name ? aconf->name : "", aconf->port);
+					aconf->info.name ? aconf->info.name : "", aconf->port);
 			return (NOT_AUTHORISED);
 		}
 
@@ -349,35 +360,34 @@ verify_access(struct Client *client_p, const char *username)
 				sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 						"%s spoofing: %s as %s",
 						client_p->name,
-						show_ip(NULL, client_p) ? client_p->host : aconf->name,
-						aconf->name);
+						show_ip(NULL, client_p) ? client_p->host : aconf->info.name,
+						aconf->info.name);
 			}
 
 			/* user@host spoof */
-			if((p = strchr(aconf->name, '@')) != NULL)
+			if((p = strchr(aconf->info.name, '@')) != NULL)
 			{
 				char *host = p+1;
 				*p = '\0';
 
-				rb_strlcpy(client_p->username, aconf->name,
+				rb_strlcpy(client_p->username, aconf->info.name,
 					sizeof(client_p->username));
 				rb_strlcpy(client_p->host, host,
 					sizeof(client_p->host));
 				*p = '@';
 			}
 			else
-				rb_strlcpy(client_p->host, aconf->name, sizeof(client_p->host));
+				rb_strlcpy(client_p->host, aconf->info.name, sizeof(client_p->host));
 		}
 		return (attach_iline(client_p, aconf));
 	}
 	else if(aconf->status & CONF_KILL)
 	{
 		if(ConfigFileEntry.kline_with_reason)
-		{
 			sendto_one(client_p,
 					form_str(ERR_YOUREBANNEDCREEP),
-					me.name, client_p->name, aconf->passwd);
-		}
+					me.name, client_p->name,
+					get_user_ban_reason(aconf));
 		add_reject(client_p, aconf->user, aconf->host);
 		return (BANNED_CLIENT);
 	}
@@ -634,63 +644,10 @@ rehash(int sig)
 	return (0);
 }
 
-static struct banconf_entry
-{
-	const char **filename;
-	void (*func) (FILE *);
-	int perm;
-} banconfs[] = {
-	{ &ConfigFileEntry.klinefile,	parse_k_file,	0 },
-	{ &ConfigFileEntry.klinefile,	parse_k_file,	1 },
-	{ &ConfigFileEntry.dlinefile,	parse_d_file,	0 },
-	{ &ConfigFileEntry.dlinefile,	parse_d_file,	1 },
-	{ &ConfigFileEntry.xlinefile,	parse_x_file,	0 },
-	{ &ConfigFileEntry.xlinefile,	parse_x_file,	1 },
-	{ &ConfigFileEntry.resvfile,	parse_resv_file,0 },
-	{ &ConfigFileEntry.resvfile,	parse_resv_file,1 },
-	{ NULL,				NULL,		0 }
-};
-
 void
 rehash_bans(int sig)
 {
-	FILE *file;
-	char buf[MAXPATHLEN];
-	int i;
-
-	if(sig != 0)
-		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
-				"Got signal SIGUSR2, reloading ban confs");
-
-	clear_out_address_conf_bans();
-	clear_s_newconf_bans();
-
-	for(i = 0; banconfs[i].filename; i++)
-	{
-		if(banconfs[i].perm)
-			snprintf(buf, sizeof(buf), "%s.perm", *banconfs[i].filename);
-		else
-			snprintf(buf, sizeof(buf), "%s", *banconfs[i].filename);
-
-		if((file = fopen(buf, "r")) == NULL)
-		{
-			if(banconfs[i].perm)
-				continue;
-
-			ilog(L_MAIN, "Failed reading ban file %s",
-				*banconfs[i].filename);
-			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
-					"Can't open %s file bans could be missing!",
-					*banconfs[i].filename);
-		}
-		else
-		{
-			(banconfs[i].func)(file);
-			fclose(file);
-		}
-	}
-
-	check_banned_lines();
+	bandb_rehash_bans();
 }
 
 /*
@@ -788,6 +745,7 @@ set_default_conf(void)
 	ConfigFileEntry.collision_fnc = YES;
 	ConfigFileEntry.global_snotices = YES;
 	ConfigFileEntry.operspy_dont_care_user_info = NO;
+	ConfigFileEntry.use_propagated_bans = YES;
 
 #ifdef HAVE_LIBZ
 	ConfigFileEntry.compression_level = 4;
@@ -825,6 +783,7 @@ set_default_conf(void)
 	ConfigFileEntry.min_nonwildcard = 4;
 	ConfigFileEntry.min_nonwildcard_simple = 3;
 	ConfigFileEntry.default_floodcount = 8;
+	ConfigFileEntry.default_ident_timeout = 5;
 	ConfigFileEntry.client_flood = CLIENT_FLOOD_DEFAULT;
 	ConfigFileEntry.tkline_expire_notices = 0;
 
@@ -984,6 +943,192 @@ add_temp_dline(struct ConfItem *aconf)
 	add_conf_by_address(aconf->host, CONF_DLINE, aconf->user, NULL, aconf);
 }
 
+/* valid_wild_card()
+ * 
+ * input        - user buffer, host buffer
+ * output       - 0 if invalid, 1 if valid
+ * side effects -
+ */
+int
+valid_wild_card(const char *luser, const char *lhost)
+{
+	const char *p;
+	char tmpch;
+	int nonwild = 0;
+	int bitlen;
+
+	/* user has no wildcards, always accept -- jilles */
+	if(!strchr(luser, '?') && !strchr(luser, '*'))
+		return 1;
+
+	/* check there are enough non wildcard chars */
+	p = luser;
+	while((tmpch = *p++))
+	{
+		if(!IsKWildChar(tmpch))
+		{
+			/* found enough chars, return */
+			if(++nonwild >= ConfigFileEntry.min_nonwildcard)
+				return 1;
+		}
+	}
+
+	/* try host, as user didnt contain enough */
+	/* special case for cidr masks -- jilles */
+	if((p = strrchr(lhost, '/')) != NULL && IsDigit(p[1]))
+	{
+		bitlen = atoi(p + 1);
+		/* much like non-cidr for ipv6, rather arbitrary for ipv4 */
+		if(bitlen > 0
+		   && bitlen >=
+		   (strchr(lhost, ':') ? 4 * (ConfigFileEntry.min_nonwildcard - nonwild) : 6 -
+		    2 * nonwild))
+			return 1;
+	}
+	else
+	{
+		p = lhost;
+		while((tmpch = *p++))
+		{
+			if(!IsKWildChar(tmpch))
+				if(++nonwild >= ConfigFileEntry.min_nonwildcard)
+					return 1;
+		}
+	}
+
+	return 0;
+}
+
+rb_dlink_node *
+find_prop_ban(unsigned int status, const char *user, const char *host)
+{
+	rb_dlink_node *ptr;
+	struct ConfItem *aconf;
+
+	RB_DLINK_FOREACH(ptr, prop_bans.head)
+	{
+		aconf = ptr->data;
+
+		if((aconf->status & ~CONF_ILLEGAL) == status &&
+				(!user || !aconf->user ||
+				 !irccmp(aconf->user, user)) &&
+				!irccmp(aconf->host, host))
+			return ptr;
+	}
+	return NULL;
+}
+
+void
+deactivate_conf(struct ConfItem *aconf, rb_dlink_node *ptr)
+{
+	int i;
+
+	s_assert(ptr->data == aconf);
+
+	switch (aconf->status)
+	{
+		case CONF_KILL:
+			if (aconf->lifetime == 0 &&
+					aconf->flags & CONF_FLAGS_TEMPORARY)
+				for (i = 0; i < LAST_TEMP_TYPE; i++)
+					rb_dlinkFindDestroy(aconf, &temp_klines[i]);
+			/* Make sure delete_one_address_conf() does not
+			 * free the aconf.
+			 */
+			aconf->clients++;
+			delete_one_address_conf(aconf->host, aconf);
+			aconf->clients--;
+			break;
+		case CONF_DLINE:
+			if (aconf->lifetime == 0 &&
+					aconf->flags & CONF_FLAGS_TEMPORARY)
+				for (i = 0; i < LAST_TEMP_TYPE; i++)
+					rb_dlinkFindDestroy(aconf, &temp_dlines[i]);
+			aconf->clients++;
+			delete_one_address_conf(aconf->host, aconf);
+			aconf->clients--;
+			break;
+		case CONF_XLINE:
+			rb_dlinkFindDestroy(aconf, &xline_conf_list);
+			break;
+		case CONF_RESV_NICK:
+			rb_dlinkFindDestroy(aconf, &resv_conf_list);
+			break;
+		case CONF_RESV_CHANNEL:
+			del_from_resv_hash(aconf->host, aconf);
+			break;
+	}
+	if (aconf->lifetime != 0 && rb_current_time() < aconf->lifetime)
+		aconf->status |= CONF_ILLEGAL;
+	else
+	{
+		if (aconf->lifetime != 0)
+			rb_dlinkDestroy(ptr, &prop_bans);
+		free_conf(aconf);
+	}
+}
+
+/* Given a new ban ConfItem, look for any matching ban, update the lifetime
+ * from it and delete it.
+ */
+void
+replace_old_ban(struct ConfItem *aconf)
+{
+	rb_dlink_node *ptr;
+	struct ConfItem *oldconf;
+
+	ptr = find_prop_ban(aconf->status, aconf->user, aconf->host);
+	if(ptr != NULL)
+	{
+		oldconf = ptr->data;
+		/* Remember at least as long as the old one. */
+		if(oldconf->lifetime > aconf->lifetime)
+			aconf->lifetime = oldconf->lifetime;
+		/* Force creation time to increase. */
+		if(oldconf->created >= aconf->created)
+			aconf->created = oldconf->created + 1;
+		/* Leave at least one second of validity. */
+		if(aconf->hold <= aconf->created)
+			aconf->hold = aconf->created + 1;
+		if(aconf->lifetime < aconf->hold)
+			aconf->lifetime = aconf->hold;
+		/* Tell deactivate_conf() to destroy it. */
+		oldconf->lifetime = rb_current_time();
+		deactivate_conf(oldconf, ptr);
+	}
+}
+
+static void
+expire_prop_bans(void *list)
+{
+	rb_dlink_node *ptr;
+	rb_dlink_node *next_ptr;
+	struct ConfItem *aconf;
+
+	RB_DLINK_FOREACH_SAFE(ptr, next_ptr, ((rb_dlink_list *) list)->head)
+	{
+		aconf = ptr->data;
+
+		if(aconf->lifetime <= rb_current_time() ||
+				(aconf->hold <= rb_current_time() &&
+				 !(aconf->status & CONF_ILLEGAL)))
+		{
+			/* Alert opers that a TKline expired - Hwy */
+			/* XXX show what type of ban it is */
+			if(ConfigFileEntry.tkline_expire_notices &&
+					!(aconf->status & CONF_ILLEGAL))
+				sendto_realops_snomask(SNO_GENERAL, L_ALL,
+						     "Propagated ban for [%s%s%s] expired",
+						     aconf->user ? aconf->user : "",
+						     aconf->user ? "@" : "",
+						     aconf->host ? aconf->host : "*");
+
+			/* will destroy or mark illegal */
+			deactivate_conf(aconf, ptr);
+		}
+	}
+}
+
 /* expire_tkline()
  *
  * inputs       - list pointer
@@ -1102,12 +1247,39 @@ get_printable_conf(struct ConfItem *aconf, char **name, char **host,
 	static char null[] = "<NULL>";
 	static char zero[] = "default";
 
-	*name = EmptyString(aconf->name) ? null : aconf->name;
+	*name = EmptyString(aconf->info.name) ? null : aconf->info.name;
 	*host = EmptyString(aconf->host) ? null : aconf->host;
 	*pass = EmptyString(aconf->passwd) ? null : aconf->passwd;
 	*user = EmptyString(aconf->user) ? null : aconf->user;
 	*classname = EmptyString(aconf->className) ? zero : aconf->className;
 	*port = (int) aconf->port;
+}
+
+char *
+get_user_ban_reason(struct ConfItem *aconf)
+{
+	static char reasonbuf[BUFSIZE];
+
+	if (aconf->flags & CONF_FLAGS_TEMPORARY &&
+			(aconf->status == CONF_KILL || aconf->status == CONF_DLINE))
+		rb_snprintf(reasonbuf, sizeof reasonbuf,
+				"Temporary %c-line %d min. - ",
+				aconf->status == CONF_DLINE ? 'D' : 'K',
+				(int)((aconf->hold - aconf->created) / 60));
+	else
+		reasonbuf[0] = '\0';
+	if (aconf->passwd)
+		rb_strlcat(reasonbuf, aconf->passwd, sizeof reasonbuf);
+	else
+		rb_strlcat(reasonbuf, "No Reason", sizeof reasonbuf);
+	if (aconf->created)
+	{
+		rb_strlcat(reasonbuf, " (", sizeof reasonbuf);
+		rb_strlcat(reasonbuf, smalldate(aconf->created),
+				sizeof reasonbuf);
+		rb_strlcat(reasonbuf, ")", sizeof reasonbuf);
+	}
+	return reasonbuf;
 }
 
 void
@@ -1116,20 +1288,21 @@ get_printable_kline(struct Client *source_p, struct ConfItem *aconf,
 		    char **user, char **oper_reason)
 {
 	static char null[] = "<NULL>";
-	static char operreason_buf[BUFSIZE];
+	static char operreasonbuf[BUFSIZE];
 
 	*host = EmptyString(aconf->host) ? null : aconf->host;
-	*reason = EmptyString(aconf->passwd) ? null : aconf->passwd;
 	*user = EmptyString(aconf->user) ? null : aconf->user;
+	*reason = get_user_ban_reason(aconf);
 
-	if((EmptyString(aconf->spasswd) && EmptyString(aconf->name)) || !IsOper(source_p))
+	if(!IsOper(source_p))
 		*oper_reason = NULL;
 	else
 	{
-		rb_snprintf(operreason_buf, sizeof(operreason_buf), "%s (%s)",
-			aconf->spasswd ? aconf->spasswd : "",
-			aconf->name ? aconf->name : null);
-		*oper_reason = operreason_buf;
+		rb_snprintf(operreasonbuf, sizeof operreasonbuf, "%s%s(%s)",
+				EmptyString(aconf->spasswd) ? "" : aconf->spasswd,
+				EmptyString(aconf->spasswd) ? "" : " ",
+				aconf->info.oper);
+		*oper_reason = operreasonbuf;
 	}
 }
 
@@ -1147,7 +1320,7 @@ read_conf_files(int cold)
 
 	conf_fbfile_in = NULL;
 
-	filename = get_conf_name(CONF_TYPE);
+	filename = ConfigFileEntry.configfile;
 
 	/* We need to know the initial filename for the yyerror() to report
 	   FIXME: The full path is in conffilenamebuf first time since we
@@ -1265,8 +1438,11 @@ clear_out_old_conf(void)
 	}
 
 	/* remove any aliases... -- nenolod */
-	irc_dictionary_destroy(alias_dict, free_alias_cb, NULL);
-	alias_dict = NULL;
+	if (alias_dict != NULL)
+	{
+		irc_dictionary_destroy(alias_dict, free_alias_cb, NULL);
+		alias_dict = NULL;
+	}
 
 	destroy_blacklists();
 
@@ -1275,162 +1451,6 @@ clear_out_old_conf(void)
 	/* OK, that should be everything... */
 }
 
-
-/* write_confitem()
- *
- * inputs       - kline, dline or resv type flag
- *              - client pointer to report to
- *              - user name of target
- *              - host name of target
- *              - reason for target
- *              - time string
- *              - type of xline
- * output       - NONE
- * side effects - This function takes care of finding the right conf
- *                file and adding the line to it, as well as notifying
- *                opers and the user.
- */
-void
-write_confitem(KlineType type, struct Client *source_p, char *user,
-	       char *host, const char *reason, const char *oper_reason,
-	       const char *current_date, int xtype)
-{
-	char buffer[1024];
-	FILE *out;
-	const char *filename;	/* filename to use for kline */
-
-	filename = get_conf_name(type);
-
-	if(type == KLINE_TYPE)
-	{
-		if(EmptyString(oper_reason))
-		{
-			sendto_realops_snomask(SNO_GENERAL, L_ALL,
-					"%s added K-Line for [%s@%s] [%s]",
-					get_oper_name(source_p), user, 
-					host, reason);
-			ilog(L_KLINE, "K %s 0 %s %s %s",
-				get_oper_name(source_p), user, host, reason);
-		}
-		else
-		{
-			sendto_realops_snomask(SNO_GENERAL, L_ALL,
-					"%s added K-Line for [%s@%s] [%s|%s]",
-					get_oper_name(source_p), user,
-					host, reason, oper_reason);
-			ilog(L_KLINE, "K %s 0 %s %s %s|%s",
-				get_oper_name(source_p), user, host,
-				reason, oper_reason);
-		}
-
-		sendto_one_notice(source_p, ":Added K-Line [%s@%s]",
-				  user, host);
-	}
-	else if(type == DLINE_TYPE)
-	{
-		if(EmptyString(oper_reason))
-		{
-			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
-					"%s added D-Line for [%s] [%s]",
-					get_oper_name(source_p), host, reason);
-			ilog(L_KLINE, "D %s 0 %s %s",
-				get_oper_name(source_p), host, reason);
-		}
-		else
-		{
-			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
-					"%s added D-Line for [%s] [%s|%s]",
-					get_oper_name(source_p), host, 
-					reason, oper_reason);
-			ilog(L_KLINE, "D %s 0 %s %s|%s",
-				get_oper_name(source_p), host, 
-				reason, oper_reason);
-		}
-
-		sendto_one_notice(source_p, ":Added D-Line [%s] to %s", host, filename);
-
-	}
-	else if(type == RESV_TYPE)
-	{
-		sendto_realops_snomask(SNO_GENERAL, L_ALL,
-				"%s added RESV for [%s] [%s]",
-				get_oper_name(source_p), host, reason);
-		ilog(L_KLINE, "R %s 0 %s %s",
-			get_oper_name(source_p), host, reason);
-
-		sendto_one_notice(source_p, ":Added RESV for [%s] [%s]",
-				  host, reason);
-	}
-
-	if((out = fopen(filename, "a")) == NULL)
-	{
-		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "*** Problem opening %s ", filename);
-		sendto_one_notice(source_p, ":*** Problem opening file, added temporarily only");
-		return;
-	}
-
-	if(oper_reason == NULL)
-		oper_reason = "";
-
-	if(type == KLINE_TYPE)
-	{
-		rb_snprintf(buffer, sizeof(buffer),
-			   "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%ld\n",
-			   user, host, reason, oper_reason, current_date,
-			   get_oper_name(source_p), (long int)rb_current_time());
-	}
-	else if(type == DLINE_TYPE)
-	{
-		rb_snprintf(buffer, sizeof(buffer),
-			   "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",%ld\n", host,
-			   reason, oper_reason, current_date, get_oper_name(source_p), (long int)rb_current_time());
-	}
-	else if(type == RESV_TYPE)
-	{
-		rb_snprintf(buffer, sizeof(buffer), "\"%s\",\"%s\",\"%s\",%ld\n",
-			   host, reason, get_oper_name(source_p), (long int)rb_current_time());
-	}
-
-	if(fputs(buffer, out) == -1)
-	{
-		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "*** Problem writing to %s", filename);
-		sendto_one_notice(source_p, ":*** Problem writing to file, added temporarily only");
-		fclose(out);
-		return;
-	}
-
-	if (fclose(out))
-	{
-		sendto_realops_snomask(SNO_GENERAL, L_ALL, "*** Problem writing to %s", filename);
-		sendto_one_notice(source_p, ":*** Problem writing to file, added temporarily only");
-		return;
-	}
-}
-
-/* get_conf_name
- *
- * inputs       - type of conf file to return name of file for
- * output       - pointer to filename for type of conf
- * side effects - none
- */
-const char *
-get_conf_name(KlineType type)
-{
-	if(type == CONF_TYPE)
-	{
-		return (ConfigFileEntry.configfile);
-	}
-	else if(type == DLINE_TYPE)
-	{
-		return (ConfigFileEntry.dlinefile);
-	}
-	else if(type == RESV_TYPE)
-	{
-		return (ConfigFileEntry.resvfile);
-	}
-
-	return ConfigFileEntry.klinefile;
-}
 
 /*
  * conf_add_class_to_conf

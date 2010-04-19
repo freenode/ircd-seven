@@ -54,6 +54,7 @@ lex.yy.c:	ircd_lexer.l
 	${LEX} ircd_lexer.l
 
 SRCS =                          \
+  bandbi.c			\
   blacklist.c			\
   cache.c			\
   channel.c                     \
@@ -68,7 +69,6 @@ SRCS =                          \
   irc_dictionary.c		\
   ircd.c                        \
   ircd_signal.c                 \
-  kdparse.c			\
   listener.c                    \
   logger.c                      \
   match.c                       \
@@ -76,6 +76,7 @@ SRCS =                          \
   monitor.c			\
   newconf.c			\
   numeric.c                     \
+  operhash.c                    \
   packet.c                      \
   parse.c                       \
   privilege.c			\
@@ -94,6 +95,7 @@ SRCS =                          \
   sslproc.c			\
   substitution.c		\
   supported.c			\
+  tgchange.c			\
   whowas.c
 
 OBJS = ${SRCS:.c=.o}
