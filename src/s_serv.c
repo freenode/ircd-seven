@@ -480,7 +480,7 @@ burst_modes_TS6(struct Client *client_p, struct Channel *chptr,
 	{
 		banptr = ptr->data;
 
-		tlen = strlen(banptr->banstr) + 1;
+		tlen = strlen(banptr->banstr) + (banptr->forward ? strlen(banptr->forward) + 1 : 0) + 1;
 
 		/* uh oh */
 		if(cur_len + tlen > BUFSIZE - 3)
@@ -499,7 +499,10 @@ burst_modes_TS6(struct Client *client_p, struct Channel *chptr,
 			t = buf + mlen;
 		}
 
-		rb_sprintf(t, "%s ", banptr->banstr);
+		if (banptr->forward)
+			rb_sprintf(t, "%s$%s ", banptr->banstr, banptr->forward);
+		else
+			rb_sprintf(t, "%s ", banptr->banstr);
 		t += tlen;
 		cur_len += tlen;
 	}
