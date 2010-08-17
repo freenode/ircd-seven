@@ -1043,7 +1043,7 @@ handle_special(int p_or_n, const char *command, struct Client *client_p,
 		if(MyClient(source_p) && !IsOperMassNotice(source_p))
 		{
 			sendto_one(source_p, form_str(ERR_NOPRIVS),
-				   me.name, source_p->name, "mass_notice");
+				   me.name, source_p->name, "massnotice");
 			return;
 		}
 
