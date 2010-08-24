@@ -56,6 +56,7 @@
 #define SM_ERR_NOPRIVS          0x00000400
 #define SM_ERR_RPL_Q            0x00000800
 #define SM_ERR_RPL_F            0x00001000
+#define SM_ERR_MLOCK            0x00002000
 
 #define MAXMODES_SIMPLE 46 /* a-zA-Z except bqeIov */
 
@@ -1909,7 +1910,17 @@ set_channel_mode(struct Client *client_p, struct Client *source_p,
 		default:
 			/* If this mode char is locked, don't allow local users to change it. */
 			if (MyClient(source_p) && chptr->mode_lock && strchr(chptr->mode_lock, c))
+			{
+				if (!(errors & SM_ERR_MLOCK))
+					sendto_one_numeric(source_p,
+							ERR_MLOCKRESTRICTED,
+							form_str(ERR_MLOCKRESTRICTED),
+							chptr->chname,
+							c,
+							chptr->mode_lock);
+				errors |= SM_ERR_MLOCK;
 				continue;
+			}
 			chmode_table[(unsigned char) c].set_func(fakesource_p, chptr, alevel,
 				       parc, &parn, parv,
 				       &errors, dir, c,
@@ -2058,12 +2069,15 @@ set_channel_mode(struct Client *client_p, struct Client *source_p,
  */
 void
 set_channel_mlock(struct Client *client_p, struct Client *source_p,
-		  struct Channel *chptr, const char *newmlock)
+		  struct Channel *chptr, const char *newmlock, int propagate)
 {
 	rb_free(chptr->mode_lock);
 	chptr->mode_lock = newmlock ? rb_strdup(newmlock) : NULL;
 
-	sendto_server(client_p, NULL, CAP_TS6 | CAP_MLOCK, NOCAPS, ":%s MLOCK %ld %s :%s",
-		      source_p->id, (long) chptr->channelts, chptr->chname,
-		      chptr->mode_lock ? chptr->mode_lock : "");
+	if (propagate)
+	{
+		sendto_server(client_p, NULL, CAP_TS6 | CAP_MLOCK, NOCAPS, ":%s MLOCK %ld %s :%s",
+			      source_p->id, (long) chptr->channelts, chptr->chname,
+			      chptr->mode_lock ? chptr->mode_lock : "");
+	}
 }

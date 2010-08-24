@@ -70,8 +70,7 @@ static struct clicap
 } clicap_list[] = {
 	_CLICAP("identify-msg", CLICAP_IDENTIFY_MSG, 0, 0),
 	_CLICAP("multi-prefix",	CLICAP_MULTI_PREFIX, 0, 0),
-	_CLICAP("sasl", CLICAP_SASL, 0, 0),
-	_CLICAP("source-account-hostmask", CLICAP_ACCOUNT_HOSTMASK, 0, 0),
+	_CLICAP("sasl", CLICAP_SASL, 0, 0)
 };
 
 #define CLICAP_LIST_LEN (sizeof(clicap_list) / sizeof(struct clicap))
