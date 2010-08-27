@@ -2,6 +2,15 @@ This is ircd-seven 1.1, Copyright (c) 2005-2010 Stephen Bennett and the
 Charybdis team.
 See LICENSE for licensing details (GPL v2).
 
+-- ircd-seven-1.1.0
+
+misc
+- The burst_klines extension has been removed; charybdis-3.3's propagating bans
+  make it redundant.
+- All changes and new functionality from charybdis-3.3 has been brought in.
+  Relative to ircd-seven-1.0, this means CERTFP, bandb, and everything changed
+  in charybdis-3.3.0.
+
 -- charybdis-3.3.0
 
 server protocol
@@ -40,6 +49,10 @@ misc
 - Numerous bug fixes and code cleanups.
 
 -- ircd-seven-1.0.0
+
+ircd-seven-1.0.0 is based on the charybdis-3.2 development tree. It contains
+many, but not all, of the changes mentioned for 3.2.0. Notable omissions are
+bandb and CERTFP.
 
 server protocol
 - New REMOVE command and capability (see below, in 'user').
