@@ -1,5 +1,82 @@
-This is charybdis 3.2, Copyright (c) 2005-2010 Charybdis team.
+This is ircd-seven 1.1, Copyright (c) 2005-2010 Stephen Bennett and the 
+Charybdis team.
 See LICENSE for licensing details (GPL v2).
+
+-- ircd-seven-1.0.0
+
+server protocol
+- New REMOVE command and capability (see below, in 'user').
+- TOPIC is always accepted from remote users. Previously +o/+t checks were done
+  on all users, local or remote.
+user
+- User mode +i (invisible) also now hides the user's channel list from WHOIS, in
+  line with traditional freenode/hyperion behaviour.
+- Add REMOVE command. The semantics of this are exactly as for KICK, but it will
+  be sent to clients as ':victim PART #channel :requested by op: "reason"'.
+- User-provided PART messages are quoted, to prevent spoofing REMOVEs.
+- Add forwarding bans. Appending '$#channel' to any ban mask will cause matching
+  users to be forwarded (in the same manner as channel mode +f) to #channel when
+  they attempt to join. Conditions for setting these are the same as for mode
+  +f.
+- $ is no longer allowed in channel names, to remove ambiguities when forwarding
+  bans and extended bans are combined.
+- Add IDENTIFY-MSG client capability. This will prepend all PRIVMSG and NOTICE
+  text with + or -, depending upon whether the source user is logged in to an
+  account which owns the nickname they are currently using.
+- New channel mode +C will block channel-wide CTCP requests, other than ACTION.
+- KILLs by services clients are no longer displayed as such to users; the client
+  will appear to quit with the message 'Disconnected by services'. The KILL
+  source and message will still be displayed to the user exiting, and to opers
+  via server notices.
+oper
+- The operator privilege flags have been completely rearranged relative to
+  charybdis.
+- New umode +O, or 'helper'. This denotes an IRC Operator with none of the
+  privilege usually granted by user mode +o. Oper-only commands except for
+  OPERWALL will not be available even if the appropriate privilege flags are
+  granted. This is intended to work with the operwall and helpop privileges
+  only.
+- New umode +h, to appear in /stats p. This now only shows users with the +h
+  umode set who are not AWAY.
+- Opername and privilege information is displayed in WHOIS output to those with
+  appropriate privileges.
+- New umode +p, for oper-override. This allows the operator to join any channel,
+  send to any channel they are in, and perform operator actions on any channel,
+  regardless of channel modes and operator status. Any use of oper-override will
+  cause network-wide server notices to be sent. This user mode will expire after
+  a configurable time period.
+- New GRANT command, to grant or revoke operator privileges to a given user,
+  without requiring O:line changes.
+- DIE, RESTART, and the MOD* commands may be used remotely, with the appropriate
+  shared flags.
+- New DEHELPER command, to unset user mode +h on an idle operator.
+- New channel mode +M prevents IRC Operators from being kicked from the channel
+  in question. This is completely invisible to non-opers.
+- Lots of server notices that were previously local are now global.
+- Real hostnames and IP addresses are shown to opers in WHOIS for all users, not
+  only those with dynamic (services) spoofs.
+- New sno_channelcreate extension (snomask +l), to notify on new channel
+  creation.
+- New sno_globalnickchange extension module, to make snomask +n include nick
+  changes on all servers.
+config
+- Add general::hide_opers, to control whether IRC Operator status is visible to
+  non-opers.
+- Add general::expire_override_time, to control the maximum duration that user
+  mode +p may be active.
+- Remove channel::use_forward. It is unconditionally enabled.
+- Add channel::disable_local_channels, to do as its name suggests.
+- Bring in general::post_registration_delay from ratbox. This introduces a
+  configurable delay between a client completing registration, and the server
+  starting to parse commands from it.
+- New sasl_usercloak extension module. This allows including the user's SASL
+  account name in an on-connect auth{} spoof.
+misc
+- Numerous extension modules have been removed, either because they no longer
+  work or because they do not fit with the intended use of ircd-seven.
+- Add new burst_klines extension, to send all active K/D/X:lines and RESVs to a
+  new server when linking.
+- The default mode for new channels is +ns, changed from +nt.
 
 -- charybdis-3.2.0
 
