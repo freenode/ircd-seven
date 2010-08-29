@@ -253,6 +253,7 @@ struct config_channel_entry
 	int disable_local_channels;
 	int only_ascii_channels;
 	int resv_forcepart;
+	int channel_target_change;
 };
 
 struct config_server_hide

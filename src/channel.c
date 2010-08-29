@@ -710,6 +710,7 @@ is_quieted(struct Channel *chptr, struct Client *who, struct membership *msptr,
  * input	- client to check, channel to check for, key
  * output	- reason for not being able to join, else 0, channel name to forward to
  * side effects -
+ * caveats      - this function should only be called on a local user.
  */
 int
 can_join(struct Client *source_p, struct Channel *chptr, char *key, const char **forward)
