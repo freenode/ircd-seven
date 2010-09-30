@@ -163,16 +163,7 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if(flag & FLAG_MD5)
-	{
-		if(length == 0)
-			length = 8;
-		if(flag & FLAG_SALT)
-			salt = make_md5_salt_para(saltpara);
-		else
-			salt = make_md5_salt(length);
-	}
-	else if(flag & FLAG_BLOWFISH)
+	if(flag & FLAG_BLOWFISH)
 	{
 		if(length == 0)
 			length = 22;
@@ -219,7 +210,7 @@ main(int argc, char *argv[])
 			salt = make_ext_salt(rounds);
 		}
 	}
-	else
+	else if (flag & FLAG_DES)
 	{
 		if(flag & FLAG_SALT)
 		{
@@ -237,6 +228,15 @@ main(int argc, char *argv[])
 		{
 			salt = make_des_salt();
 		}
+	}
+	else
+	{
+		if(length == 0)
+			length = 8;
+		if(flag & FLAG_SALT)
+			salt = make_md5_salt_para(saltpara);
+		else
+			salt = make_md5_salt(length);
 	}
 
 	if(flag & FLAG_PASS)
