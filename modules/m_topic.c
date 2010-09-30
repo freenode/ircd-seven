@@ -40,6 +40,7 @@
 #include "modules.h"
 #include "packet.h"
 #include "tgchange.h"
+#include "inline/stringops.h"
 
 static int m_topic(struct Client *, struct Client *, int, const char **);
 static int ms_topic(struct Client *, struct Client *, int, const char **);
@@ -127,7 +128,7 @@ m_topic(struct Client *client_p, struct Client *source_p, int parc, const char *
 			return 0;
 		}
 
-		if(!MyClient(source_p) || (((chptr->mode.mode & MODE_TOPICLIMIT) == 0 ||
+		if(MyClient(source_p) && !(((chptr->mode.mode & MODE_TOPICLIMIT) == 0 ||
 					is_chanop(msptr)) &&
 				 can_send(chptr, source_p, msptr)))
 		{
