@@ -752,7 +752,7 @@ msg_client(int p_or_n, const char *command,
 		 */
 		if(p_or_n != NOTICE && IsSetCallerId(source_p) &&
 				!accept_message(target_p, source_p) &&
-				!IsOper(target_p))
+				!IsAnyOper(target_p))
 		{
 			if(rb_dlink_list_length(&source_p->localClient->allow_list) <
 					ConfigFileEntry.max_accept)
