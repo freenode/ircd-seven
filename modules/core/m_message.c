@@ -820,7 +820,7 @@ msg_client(int p_or_n, const char *command,
 					(IsSetRegOnlyMsg(target_p) && !source_p->user->suser[0])))
 		{
 			/* Here is the anti-flood bot/spambot code -db */
-			if(accept_message(source_p, target_p) || IsOper(source_p))
+			if(accept_message(source_p, target_p) || IsAnyOper(source_p))
 			{
 				add_reply_target(target_p, source_p);
 				sendto_anywhere_message(target_p, source_p, command, "%s", text);
