@@ -1010,7 +1010,6 @@ handle_special(int p_or_n, const char *command, struct Client *client_p,
 {
 	struct Client *target_p;
 	char *server;
-	char *s;
 
 	/* user[%host]@server addressed?
 	 * NOTE: users can send to user@server, but not user%host@server

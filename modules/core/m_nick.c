@@ -445,7 +445,7 @@ ms_euid(struct Client *client_p, struct Client *source_p, int parc, const char *
 	{
 		char buf[BUFSIZE];
 		buf[0] = '\0';
-		for (char **p = &parv[0]; *p; p++)
+		for (const char **p = &parv[0]; *p; p++)
 		{
 		    if (!p[1])
 			strcat(buf, ":");

@@ -34,8 +34,8 @@ static void
 h_gnc_nick_change(hook_data *data)
 {
 	struct Client *source_p = data->client;
-	char *oldnick = data->arg1;
-	char *newnick = data->arg2;
+	const char *oldnick = data->arg1;
+	const char *newnick = data->arg2;
 
 	sendto_realops_snomask_from(SNO_NCHANGE, L_ALL, source_p->servptr,
 				"Nick change: From %s to %s [%s@%s]",

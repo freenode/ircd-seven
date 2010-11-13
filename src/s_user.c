@@ -882,7 +882,7 @@ static void
 expire_umode_p(void *data)
 {
 	struct Client *source_p = data;
-	char *parv[4] = {source_p->name, source_p->name, "-p", NULL};
+	const char *parv[4] = {source_p->name, source_p->name, "-p", NULL};
 	source_p->localClient->override_timeout_event = NULL;
 	user_mode(source_p, source_p, 3, parv);
 }
