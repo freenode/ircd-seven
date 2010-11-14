@@ -4,6 +4,8 @@ See LICENSE for licensing details (GPL v2).
 
 -- ircd-seven-1.1.0
 
+oper
+- User mode +O, as well as +o, is now exempted from the effects of +g/+R.
 misc
 - The burst_klines extension has been removed; charybdis-3.3's propagating bans
   make it redundant.
