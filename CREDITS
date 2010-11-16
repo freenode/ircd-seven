@@ -1,9 +1,9 @@
 ircd-seven has been developed to meet the policy needs of the
 freenode IRC network. The ircd is based closely on Charybdis
-(http://www.ircd-charybdis.net/) which in turn is an evolution
-from ircd-ratbox. Charybdis has a dedicated, large and active
-development team with whom we have worked closely throughout
-the development of ircd-seven.
+(http://www.atheme.org/project/charybdis) which in turn is an
+evolution from ircd-ratbox. Charybdis has a dedicated, large
+and active development team with whom we have worked closely
+throughout the development of ircd-seven.
  
 ircd-seven development is currently led by Stephen Bennett
 (spb, stephen -at- freenode.net)
