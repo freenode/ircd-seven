@@ -1394,6 +1394,8 @@ oper_up(struct Client *source_p, struct oper_conf *oper_p)
 		source_p->umodes |= UMODE_ADMIN;
 	if(!IsOperOperwall(source_p))
 		source_p->umodes &= ~UMODE_OPERWALL;
+	if (!IsOperOverride(source_p))
+		source_p->umodes &= ~UMODE_OVERRIDE;
 	hdata.client = source_p;
 	hdata.oldumodes = old;
 	hdata.oldsnomask = oldsnomask;
