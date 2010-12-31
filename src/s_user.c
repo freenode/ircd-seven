@@ -1418,6 +1418,13 @@ oper_up(struct Client *source_p, struct oper_conf *oper_p)
 	sendto_one_notice(source_p, ":*** Oper privs are %s", oper_p->privset->privs);
 	send_oper_motd(source_p);
 
+	/* If we're setting +p, expire it */
+	if(ConfigFileEntry.expire_override_time && MyClient(source_p) && source_p->umodes & UMODE_OVERRIDE)
+	{
+		source_p->localClient->override_timeout_event =
+			rb_event_addonce("expire_override", expire_umode_p, source_p, ConfigFileEntry.expire_override_time);
+	}
+
 	return (1);
 }
 
