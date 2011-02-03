@@ -594,6 +594,9 @@ conf_end_oper(struct TopConf *tc)
 				return 0;
 			}
 		}
+
+		if(!EmptyString(yy_oper->certfp))
+			yy_tmpoper->certfp = rb_strdup(yy_oper->certfp);
 #endif
 
 		/* all is ok, put it on oper_conf_list */
@@ -617,6 +620,8 @@ conf_set_oper_flags(void *data)
 static void
 conf_set_oper_fingerprint(void *data)
 {
+	if (yy_oper->certfp)
+		rb_free(yy_oper->certfp);
 	yy_oper->certfp = rb_strdup((char *) data);
 }
 
@@ -1244,9 +1249,9 @@ conf_end_connect(struct TopConf *tc)
 		return 0;
 	}
 
-	if(EmptyString(yy_server->passwd) || EmptyString(yy_server->spasswd))
+	if((EmptyString(yy_server->passwd) || EmptyString(yy_server->spasswd)) && EmptyString(yy_server->certfp))
 	{
-		conf_report_error("Ignoring connect block for %s -- missing password.",
+		conf_report_error("Ignoring connect block for %s -- no fingerprint or password credentials provided.",
 					yy_server->name);
 		return 0;
 	}
@@ -1316,6 +1321,17 @@ conf_set_connect_accept_password(void *data)
 		rb_free(yy_server->passwd);
 	}
 	yy_server->passwd = rb_strdup(data);
+}
+
+static void
+conf_set_connect_fingerprint(void *data)
+{
+	if (yy_server->certfp)
+		rb_free(yy_server->certfp);
+	yy_server->certfp = rb_strdup((char *) data);
+
+	/* force SSL to be enabled if fingerprint is enabled. */
+	yy_server->flags |= SERVER_SSL;
 }
 
 static void
@@ -1867,7 +1883,7 @@ conf_call_set(struct TopConf *tc, char *item, conf_parm_t * value, int type)
 
 	/* if it takes one thing, make sure they only passed one thing,
 	   and handle as needed. */
-	if(value->type & CF_FLIST && !cf->cf_type & CF_FLIST)
+	if((value->v.list->type & CF_FLIST) && !(cf->cf_type & CF_FLIST))
 	{
 		conf_report_error
 			("Option %s::%s does not take a list of values.", tc->tc_name, item);
@@ -2092,6 +2108,7 @@ static struct ConfEntry conf_connect_table[] =
 {
 	{ "send_password",	CF_QSTRING,   conf_set_connect_send_password,	0, NULL },
 	{ "accept_password",	CF_QSTRING,   conf_set_connect_accept_password,	0, NULL },
+	{ "fingerprint",	CF_QSTRING,   conf_set_connect_fingerprint,	0, NULL },
 	{ "flags",	CF_STRING | CF_FLIST, conf_set_connect_flags,	0, NULL },
 	{ "host",	CF_QSTRING, conf_set_connect_host,	0, NULL },
 	{ "vhost",	CF_QSTRING, conf_set_connect_vhost,	0, NULL },
@@ -2206,6 +2223,7 @@ static struct ConfEntry conf_channel_table[] =
 	{ "disable_local_channels", CF_YESNO, NULL, 0, &ConfigChannel.disable_local_channels },
 	{ "resv_forcepart",     CF_YESNO, NULL, 0, &ConfigChannel.resv_forcepart	},
 	{ "channel_target_change", CF_YESNO, NULL, 0, &ConfigChannel.channel_target_change	},
+	{ "disable_local_channels", CF_YESNO, NULL, 0, &ConfigChannel.disable_local_channels },
 	{ "\0", 		0, 	  NULL, 0, NULL }
 };
 

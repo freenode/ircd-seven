@@ -774,6 +774,7 @@ set_default_conf(void)
 	ConfigChannel.no_create_on_split = YES;
 	ConfigChannel.resv_forcepart = YES;
 	ConfigChannel.channel_target_change = YES;
+	ConfigChannel.disable_local_channels = NO;
 
 	ConfigServerHide.flatten_links = 0;
 	ConfigServerHide.links_delay = 300;
@@ -1565,9 +1566,7 @@ yyerror(const char *msg)
 int
 conf_fgets(char *lbuf, int max_size, FILE * fb)
 {
-	char *buff;
-
-	if((buff = fgets(lbuf, max_size, fb)) == NULL)
+	if(fgets(lbuf, max_size, fb) == NULL)
 		return (0);
 
 	return (strlen(lbuf));

@@ -124,7 +124,7 @@ do_kick(int kick_or_remove, struct Client *client_p, struct Client *source_p, in
 			return 0;
 		}
 
-		if(!is_chanop(msptr))
+		if(get_channel_access(source_p, msptr) < CHFL_CHANOP)
 		{
 			if(MyConnect(source_p))
 			{
@@ -206,6 +206,7 @@ do_kick(int kick_or_remove, struct Client *client_p, struct Client *source_p, in
 
 			hookdata.client = source_p;
 			hookdata.chptr = chptr;
+			hookdata.msptr = msptr;
 			hookdata.target = who;
 			hookdata.approved = 1;
 

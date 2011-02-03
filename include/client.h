@@ -307,10 +307,8 @@ struct ListClient
 {
 	unsigned int hash_indice;
 	unsigned int users_min, users_max;
-
-	/* It would be nice to add other modifiers,
-	 * but not for 1.1 --nenolod
-	 */
+	time_t created_min, created_max, topic_min, topic_max;
+	int operspy;
 };
 
 /*
@@ -467,6 +465,8 @@ struct ListClient
 #define CLICAP_MULTI_PREFIX	0x0001
 #define CLICAP_SASL		0x0002
 #define CLICAP_IDENTIFY_MSG	0x0004
+#define CLICAP_ACCOUNT_NOTIFY	0x0008
+#define CLICAP_EXTENDED_JOIN	0x0010
 
 /*
  * flags macros.

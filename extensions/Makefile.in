@@ -51,6 +51,7 @@ SRCS =                          \
   sno_channelcreate.c           \
   ip_cloaking_3.0.c		\
   ip_cloaking_4.0.c		\
+  override.c			\
   sno_farconnect.c		\
   sno_globalkline.c		\
   sno_globalnickchange.c        \
@@ -71,6 +72,7 @@ SRCS =                          \
   m_opme.c			\
   m_sendbans.c			\
   m_webirc.c			\
+  m_roleplay.c			\
   no_locops.c			\
   sasl_usercloak.c		\
   spy_admin_notice.c		\

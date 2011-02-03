@@ -60,7 +60,7 @@ struct Channel
 	rb_dlink_list members;	/* channel members */
 	rb_dlink_list locmembers;	/* local channel members */
 
-	rb_dlink_list invites;
+rb_dlink_list invites;
 	rb_dlink_list banlist;
 	rb_dlink_list exceptlist;
 	rb_dlink_list invexlist;
@@ -148,8 +148,9 @@ typedef int (*ExtbanFunc)(const char *data, struct Client *client_p,
 
 /* channel status flags */
 #define CHFL_PEON		0x0000	/* normal member of channel */
-#define CHFL_CHANOP     	0x0001	/* Channel operator */
-#define CHFL_VOICE      	0x0002	/* the power to speak */
+#define CHFL_VOICE      	0x0001	/* the power to speak */
+#define CHFL_CHANOP	     	0x0002	/* Channel operator */
+
 #define CHFL_BANNED		0x0008  /* cached as banned */
 #define CHFL_QUIETED		0x0010  /* cached as being +q victim */
 #define ONLY_SERVERS		0x0020
@@ -224,6 +225,8 @@ extern void destroy_channel(struct Channel *);
 
 extern int can_send(struct Channel *chptr, struct Client *who, 
 		    struct membership *);
+extern int flood_attack_channel(int p_or_n, struct Client *source_p,
+				struct Channel *chptr, char *chname);
 extern int is_banned(struct Channel *chptr, struct Client *who,
 		     struct membership *msptr, const char *, const char *, const char **);
 extern int is_quieted(struct Channel *chptr, struct Client *who,
@@ -283,5 +286,8 @@ extern int match_extban(const char *banstr, struct Client *client_p, struct Chan
 extern int valid_extban(const char *banstr, struct Client *client_p, struct Channel *chptr, long mode_type);
 const char * get_extban_string(void);
 
+extern int get_channel_access(struct Client *source_p, struct membership *msptr);
+
+extern void send_channel_join(struct Channel *chptr, struct Client *client_p);
 
 #endif /* INCLUDED_channel_h */

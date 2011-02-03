@@ -73,6 +73,8 @@ char cflagsmyinfo[256];
 
 int chmode_flags[256];
 
+extern int h_get_channel_access;
+
 /* OPTIMIZE ME! -- dwr */
 void
 construct_cflags_strings(void)
@@ -178,13 +180,26 @@ cflag_orphan(char c_)
 	construct_cflags_strings();
 }
 
-static int
+int
 get_channel_access(struct Client *source_p, struct membership *msptr)
 {
-	if(!MyClient(source_p) || is_chanop(msptr))
+	hook_data_channel_approval moduledata;
+
+	if(!MyClient(source_p))
 		return CHFL_CHANOP;
 
-	return CHFL_PEON;
+	if (msptr == NULL)
+		return CHFL_PEON;
+
+	moduledata.client = source_p;
+	moduledata.chptr = msptr->chptr;
+	moduledata.msptr = msptr;
+	moduledata.target = NULL;
+	moduledata.approved = is_chanop(msptr) ? CHFL_CHANOP : CHFL_PEON;
+
+	call_hook(h_get_channel_access, &moduledata);
+
+	return moduledata.approved;
 }
 
 /* add_id()
@@ -1531,52 +1546,6 @@ chm_key(struct Client *source_p, struct Channel *chptr,
 	}
 }
 
-void
-chm_regonly(struct Client *source_p, struct Channel *chptr,
-	    int alevel, int parc, int *parn,
-	    const char **parv, int *errors, int dir, char c, long mode_type)
-{
-	int override = 0;
-
-	if(alevel != CHFL_CHANOP)
-	{
-		if(IsOverride(source_p))
-			override = 1;
-		else
-		{
-			if(!(*errors & SM_ERR_NOOPS))
-				sendto_one(source_p, form_str(ERR_CHANOPRIVSNEEDED),
-					   me.name, source_p->name, chptr->chname);
-			*errors |= SM_ERR_NOOPS;
-			return;
-		}
-	}
-
-	if(dir == MODE_QUERY)
-		return;
-
-	if(((dir == MODE_ADD) && (chptr->mode.mode & mode_type)) ||
-	   ((dir == MODE_DEL) && !(chptr->mode.mode & mode_type)))
-		return;
-
-	if(MyClient(source_p) && (++mode_limit_simple > MAXMODES_SIMPLE))
-		return;
-
-	if(dir == MODE_ADD)
-		chptr->mode.mode |= mode_type;
-	else
-		chptr->mode.mode &= ~mode_type;
-
-	mode_changes[mode_count].letter = c;
-	mode_changes[mode_count].dir = dir;
-	mode_changes[mode_count].caps = CAP_SERVICE;
-	mode_changes[mode_count].nocaps = 0;
-	mode_changes[mode_count].mems = ALL_MEMBERS;
-	mode_changes[mode_count].id = NULL;
-	mode_changes[mode_count].override = override;
-	mode_changes[mode_count++].arg = NULL;
-}
-
 /* *INDENT-OFF* */
 struct ChannelMode chmode_table[256] =
 {
@@ -1695,7 +1664,7 @@ struct ChannelMode chmode_table[256] =
   {chm_op,	0 },			/* o */
   {chm_simple,	MODE_PRIVATE },		/* p */
   {chm_ban,	CHFL_QUIET },		/* q */
-  {chm_regonly, MODE_REGONLY },		/* r */
+  {chm_simple,  MODE_REGONLY },		/* r */
   {chm_simple,	MODE_SECRET },		/* s */
   {chm_simple,	MODE_TOPICLIMIT },	/* t */
   {chm_nosuch,	0 },			/* u */

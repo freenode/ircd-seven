@@ -62,6 +62,8 @@ static struct ChCapCombo chcap_combos[NCHCAP_COMBOS];
 static void free_topic(struct Channel *chptr);
 
 static int h_can_join;
+static int h_can_send;
+int h_get_channel_access;
 
 /* init_channels()
  *
@@ -78,6 +80,8 @@ init_channels(void)
 	member_heap = rb_bh_create(sizeof(struct membership), MEMBER_HEAP_SIZE, "member_heap");
 
 	h_can_join = register_hook("can_join");
+	h_can_send = register_hook("can_send");
+	h_get_channel_access = register_hook("get_channel_access");
 }
 
 /*
@@ -121,6 +125,27 @@ free_ban(struct Ban *bptr)
 	rb_bh_free(ban_heap, bptr);
 }
 
+/*
+ * send_channel_join()
+ *
+ * input        - channel to join, client joining.
+ * output       - none
+ * side effects - none
+ */
+void
+send_channel_join(struct Channel *chptr, struct Client *client_p)
+{
+	if (!IsClient(client_p))
+		return;
+
+	sendto_channel_local_with_capability(ALL_MEMBERS, NOCAPS, CLICAP_EXTENDED_JOIN, chptr, ":%s!%s@%s JOIN %s",
+					     client_p->name, client_p->username, client_p->host, chptr->chname);
+
+	sendto_channel_local_with_capability(ALL_MEMBERS, CLICAP_EXTENDED_JOIN, NOCAPS, chptr, ":%s!%s@%s JOIN %s %s :%s",
+					     client_p->name, client_p->username, client_p->host, chptr->chname,
+					     EmptyString(client_p->user->suser) ? "*" : client_p->user->suser,
+					     client_p->info);
+}
 
 /* find_channel_membership()
  *
@@ -727,6 +752,10 @@ can_join(struct Client *source_p, struct Channel *chptr, char *key, const char *
 
 	s_assert(source_p->localClient != NULL);
 
+	moduledata.client = source_p;
+	moduledata.chptr = chptr;
+	moduledata.approved = 0;
+
 	rb_sprintf(src_host, "%s!%s@%s", source_p->name, source_p->username, source_p->host);
 	rb_sprintf(src_iphost, "%s!%s@%s", source_p->name, source_p->username, source_p->sockhost);
 	if(source_p->localClient->mangledhost != NULL)
@@ -747,10 +776,16 @@ can_join(struct Client *source_p, struct Channel *chptr, char *key, const char *
 	}
 
 	if((is_banned(chptr, source_p, NULL, src_host, src_iphost, forward)) == CHFL_BAN)
-		return (ERR_BANNEDFROMCHAN);
+	{
+		moduledata.approved = ERR_BANNEDFROMCHAN;
+		goto finish_join_check;
+	}
 
 	if(*chptr->mode.key && (EmptyString(key) || irccmp(chptr->mode.key, key)))
-		return (ERR_BADCHANNELKEY);
+	{
+		moduledata.approved = ERR_BADCHANNELKEY;
+		goto finish_join_check;
+	}
 
 	/* All checks from this point on will forward... */
 	if(forward)
@@ -766,7 +801,7 @@ can_join(struct Client *source_p, struct Channel *chptr, char *key, const char *
 		if(invite == NULL)
 		{
 			if(!ConfigChannel.use_invex)
-				return (ERR_INVITEONLYCHAN);
+				moduledata.approved = ERR_INVITEONLYCHAN;
 			RB_DLINK_FOREACH(ptr, chptr->invexlist.head)
 			{
 				invex = ptr->data;
@@ -778,7 +813,7 @@ can_join(struct Client *source_p, struct Channel *chptr, char *key, const char *
 					break;
 			}
 			if(ptr == NULL)
-				return (ERR_INVITEONLYCHAN);
+				moduledata.approved = ERR_INVITEONLYCHAN;
 		}
 	}
 
@@ -805,13 +840,10 @@ can_join(struct Client *source_p, struct Channel *chptr, char *key, const char *
 				break;
 		}
 		if (invite == NULL)
-			return i;
+			moduledata.approved = i;
 	}
 
-	moduledata.client = source_p;
-	moduledata.chptr = chptr;
-	moduledata.approved = 0;
-
+finish_join_check:
 	call_hook(h_can_join, &moduledata);
 
 	return moduledata.approved;
@@ -826,12 +858,16 @@ can_join(struct Client *source_p, struct Channel *chptr, char *key, const char *
 int
 can_send(struct Channel *chptr, struct Client *source_p, struct membership *msptr)
 {
+	hook_data_channel_approval moduledata;
+
+	moduledata.approved = CAN_SEND_NONOP;
+
 	if(IsServer(source_p) || IsService(source_p))
 		return CAN_SEND_OPV;
 
 	if(MyClient(source_p) && hash_find_resv(chptr->chname) &&
 	   !IsOper(source_p) && !IsExemptResv(source_p))
-		return CAN_SEND_NO;
+		moduledata.approved = CAN_SEND_NO;
 
 	if(msptr == NULL)
 	{
@@ -844,17 +880,16 @@ can_send(struct Channel *chptr, struct Client *source_p, struct membership *mspt
 			 * theres no possibility of caching them --fl
 			 */
 			if(chptr->mode.mode & MODE_NOPRIVMSGS || chptr->mode.mode & MODE_MODERATED)
-				return CAN_SEND_NO;
+				moduledata.approved = CAN_SEND_NO;
 			else
-				return CAN_SEND_NONOP;
+				moduledata.approved = CAN_SEND_NONOP;
+
+			return moduledata.approved;
 		}
 	}
 
-	if(is_chanop_voiced(msptr))
-		return CAN_SEND_OPV;
-
 	if(chptr->mode.mode & MODE_MODERATED)
-		return CAN_SEND_NO;
+		moduledata.approved = CAN_SEND_NO;
 
 	if(MyClient(source_p))
 	{
@@ -862,14 +897,75 @@ can_send(struct Channel *chptr, struct Client *source_p, struct membership *mspt
 		if(msptr->bants == chptr->bants)
 		{
 			if(can_send_banned(msptr))
-				return CAN_SEND_NO;
+				moduledata.approved = CAN_SEND_NO;
 		}
 		else if(is_banned(chptr, source_p, msptr, NULL, NULL, NULL) == CHFL_BAN
 			|| is_quieted(chptr, source_p, msptr, NULL, NULL) == CHFL_BAN)
-			return CAN_SEND_NO;
+			moduledata.approved = CAN_SEND_NO;
 	}
 
-	return CAN_SEND_NONOP;
+	if(is_chanop_voiced(msptr))
+		moduledata.approved = CAN_SEND_OPV;
+
+	call_hook(h_can_send, &moduledata);
+
+	return moduledata.approved;
+}
+
+/*
+ * flood_attack_channel
+ * inputs       - flag 0 if PRIVMSG 1 if NOTICE. RFC
+ *                says NOTICE must not auto reply
+ *              - pointer to source Client 
+ *		- pointer to target channel
+ * output	- 1 if target is under flood attack
+ * side effects	- check for flood attack on target chptr
+ */
+int
+flood_attack_channel(int p_or_n, struct Client *source_p, struct Channel *chptr, char *chname)
+{
+	int delta;
+
+	if(GlobalSetOptions.floodcount && MyClient(source_p))
+	{
+		if((chptr->first_received_message_time + 1) < rb_current_time())
+		{
+			delta = rb_current_time() - chptr->first_received_message_time;
+			chptr->received_number_of_privmsgs -= delta;
+			chptr->first_received_message_time = rb_current_time();
+			if(chptr->received_number_of_privmsgs <= 0)
+			{
+				chptr->received_number_of_privmsgs = 0;
+				chptr->flood_noticed = 0;
+			}
+		}
+
+		if((chptr->received_number_of_privmsgs >= GlobalSetOptions.floodcount)
+		   || chptr->flood_noticed)
+		{
+			if(chptr->flood_noticed == 0)
+			{
+				sendto_realops_snomask(SNO_BOTS, *chptr->chname == '&' ? L_ALL : L_NETWIDE,
+						     "Possible Flooder %s[%s@%s] on %s target: %s",
+						     source_p->name, source_p->username,
+						     source_p->orighost,
+						     source_p->servptr->name, chptr->chname);
+				chptr->flood_noticed = 1;
+
+				/* Add a bit of penalty */
+				chptr->received_number_of_privmsgs += 2;
+			}
+			if(MyClient(source_p) && (p_or_n != 1))
+				sendto_one(source_p,
+					   ":%s NOTICE %s :*** Message to %s throttled due to flooding",
+					   me.name, source_p->name, chptr->chname);
+			return 1;
+		}
+		else
+			chptr->received_number_of_privmsgs++;
+	}
+
+	return 0;
 }
 
 /* find_bannickchange_channel()

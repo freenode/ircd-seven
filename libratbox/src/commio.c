@@ -1310,7 +1310,7 @@ inet_ntop6(const unsigned char *src, char *dst, unsigned int size)
 	{
 		return (NULL);
 	}
-	return strcpy(dst, tmp);
+	return memcpy(dst, tmp, tp - tmp);
 }
 #endif
 
