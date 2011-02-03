@@ -10,11 +10,11 @@ AC_PREREQ(2.57)
 dnl Sneaky way to get an Id tag into the configure script
 AC_COPYRIGHT([$Id: configure.ac 3516 2007-06-10 16:14:03Z jilles $])
 
-AC_INIT([ircd-seven],[1.0.92])
+AC_INIT([ircd-seven],[1.0.93])
 
 AC_CONFIG_HEADER(include/setup.h)
 
-AC_DEFINE([CHARYBDIS_VERSION], ["3.3.0"], [Version of charybdis on which this release is based])
+AC_DEFINE([CHARYBDIS_VERSION], ["3.4-dev"], [Version of charybdis on which this release is based])
 
 AC_PREFIX_DEFAULT($HOME/ircd)
 
