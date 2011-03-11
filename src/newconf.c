@@ -1592,6 +1592,7 @@ conf_set_general_default_umodes(void *data)
 		/* don't allow +o */
 		case 'o':
 		case 'S':
+		case 'Z':
 		case ' ':
 			break;
 
