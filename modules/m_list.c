@@ -261,7 +261,7 @@ static int mo_list(struct Client *client_p, struct Client *source_p, int parc, c
 				}
 			}
 			/* Only accept operspy as the first option. */
-			else if (*args == '!' && IsOperSpy(source_p) && i == 0)
+			else if (*args == '!' && IsOperAuspex(source_p) && i == 0)
 			{
 				params->operspy = 1;
 				report_operspy(source_p, "LIST", p);
