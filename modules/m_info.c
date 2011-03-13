@@ -122,10 +122,34 @@ static struct InfoStruct info_table[] = {
 		"Prepend 'Client Exit:' to user QUIT messages"
 	},
 	{
-		"client_flood",
+		"client_flood_max_lines",
 		OUTPUT_DECIMAL,
-		&ConfigFileEntry.client_flood,
+		&ConfigFileEntry.client_flood_max_lines,
 		"Number of lines before a client Excess Flood's",
+	},
+	{
+		"client_flood_burst_rate",
+		OUTPUT_DECIMAL,
+		&ConfigFileEntry.client_flood_burst_rate,
+		"Rate at which burst lines are processed",
+	},
+	{
+		"client_flood_burst_max",
+		OUTPUT_DECIMAL,
+		&ConfigFileEntry.client_flood_burst_max,
+		"Number of lines to permit at client_flood_burst_rate",
+	},
+	{
+		"client_flood_message_num",
+		OUTPUT_DECIMAL,
+		&ConfigFileEntry.client_flood_message_num,
+		"Number of messages to allow per client_flood_message_time outside of burst",
+	},
+	{
+		"client_flood_message_time",
+		OUTPUT_DECIMAL,
+		&ConfigFileEntry.client_flood_message_time,
+		"Time to allow per client_flood_message_num outside of burst",
 	},
 	{
 		"post_registration_delay",

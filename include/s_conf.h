@@ -208,7 +208,6 @@ struct config_file_entry
 	int min_nonwildcard;
 	int min_nonwildcard_simple;
 	int default_floodcount;
-	int client_flood;
 	int default_ident_timeout;
 	int use_egd;
 	int ping_cookie;
@@ -231,6 +230,13 @@ struct config_file_entry
 	int operhide;
 	int expire_override_time;
 	int use_propagated_bans;
+
+	int client_flood_max_lines;
+	int client_flood_burst_rate;
+	int client_flood_burst_max;
+	int client_flood_message_time;
+	int client_flood_message_num;
+
 };
 
 struct config_channel_entry
