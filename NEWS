@@ -6,12 +6,30 @@ See LICENSE for licensing details (GPL v2).
 
 oper
 - User mode +O, as well as +o, is now exempted from the effects of +g/+R.
+config
+- Flood control is now configurable.
 misc
 - The burst_klines extension has been removed; charybdis-3.3's propagating bans
   make it redundant.
-- All changes and new functionality from charybdis-3.3 has been brought in.
-  Relative to ircd-seven-1.0, this means CERTFP, bandb, and everything changed
-  in charybdis-3.3.0.
+- All changes and new functionality from charybdis 3.2, 3.3 and early 3.4
+  development have been brought in.  Relative to ircd-seven-1.0, this means
+  CERTFP, bandb, and everything changed in charybdis-3.3.0.
+
+-- charybdis-3.4.0
+
+server protocol
+- SSL client certificates can now be used as linking credentials
+user
+- ERR_TOOMANYCHANNELS is now sent for every channel join that failed, instead of
+  only the first one.
+- Two new client capabilities are available: ACCOUNT-NOTIFY and EXTENDED-JOIN.
+  These allow clients to track account names of other clients which share
+  a channel.
+config
+- The disable_local_channels configuration option has been ported from
+  ircd-seven.
+- SHA-256 and SHA-512 hashes may now be used for passwords. DES is no longer
+  supported.
 
 -- charybdis-3.3.0
 
