@@ -5,7 +5,7 @@
 configure
 Makefile
 
-*.swp
+*.sw?
 
 .deps/
 .libs/
@@ -17,7 +17,10 @@ include/setup.h
 libratbox/include/libratbox_config.h
 libratbox/include/librb-config.h
 libratbox/include/stamp-h1
+libratbox/libratbox.pc
 libratbox/libtool
+libratbox/src/version.c
+libratbox/src/version.c.last
 src/ircd
 src/lex.yy.c
 src/version.c.last
@@ -30,4 +33,6 @@ tools/convertilines
 tools/convertklines
 tools/mkpasswd
 tools/viconf
+bandb/bandb
+bandb/bantool
 
