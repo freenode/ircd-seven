@@ -1297,10 +1297,24 @@ get_printable_kline(struct Client *source_p, struct ConfItem *aconf,
 		*oper_reason = NULL;
 	else
 	{
-		rb_snprintf(operreasonbuf, sizeof operreasonbuf, "%s%s(%s)",
-				EmptyString(aconf->spasswd) ? "" : aconf->spasswd,
-				EmptyString(aconf->spasswd) ? "" : " ",
-				aconf->info.oper);
+		size_t operreasonlen = 0;
+		operreasonbuf[0] = '\0';
+		if (!EmptyString(aconf->spasswd))
+		{
+			rb_strlcat(operreasonbuf, aconf->spasswd, sizeof operreasonbuf);
+			rb_strlcat(operreasonbuf, " ", sizeof operreasonbuf);
+		}
+
+		operreasonlen = rb_strlcat(operreasonbuf, "(", sizeof operreasonbuf);
+		if (aconf->flags & CONF_FLAGS_TEMPORARY &&
+			(aconf->status == CONF_KILL || aconf->status == CONF_DLINE))
+		{
+			rb_snprintf(operreasonbuf + operreasonlen, sizeof operreasonbuf - operreasonlen,
+					"%d minutes, ", (int)((aconf->hold - aconf->created)/60));
+		}
+		rb_strlcat(operreasonbuf, aconf->info.oper, sizeof operreasonbuf);
+		operreasonlen = rb_strlcat(operreasonbuf, ")", sizeof operreasonbuf);
+
 		*oper_reason = operreasonbuf;
 	}
 }
