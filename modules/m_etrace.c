@@ -158,7 +158,7 @@ do_etrace(struct Client *source_p, int ipv4, int ipv6)
 
 		sendto_one(source_p, form_str(RPL_ETRACE),
 			   me.name, source_p->name, 
-			   IsOper(target_p) ? "Oper" : "User", 
+			   SeesOper(source_p, target_p) ? "Oper" : "User", 
 			   get_client_class(target_p),
 			   target_p->name, target_p->username, target_p->host,
 			   show_ip(source_p, target_p) ? target_p->sockhost : "255.255.255.255",
