@@ -1265,15 +1265,8 @@ char *
 get_user_ban_reason(struct ConfItem *aconf)
 {
 	static char reasonbuf[BUFSIZE];
+	reasonbuf[0] = '\0';
 
-	if (aconf->flags & CONF_FLAGS_TEMPORARY &&
-			(aconf->status == CONF_KILL || aconf->status == CONF_DLINE))
-		rb_snprintf(reasonbuf, sizeof reasonbuf,
-				"Temporary %c-line %d min. - ",
-				aconf->status == CONF_DLINE ? 'D' : 'K',
-				(int)((aconf->hold - aconf->created) / 60));
-	else
-		reasonbuf[0] = '\0';
 	if (aconf->passwd)
 		rb_strlcat(reasonbuf, aconf->passwd, sizeof reasonbuf);
 	else
