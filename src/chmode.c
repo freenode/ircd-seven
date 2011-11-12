@@ -103,20 +103,9 @@ construct_cflags_strings(void)
 			chmode_flags[i] = 0;
 		}
                 
-		switch (chmode_flags[i])
+		if(chmode_flags[i] != 0)
 		{
-		    case MODE_REGONLY:
-			if(rb_dlink_list_length(&service_list))
-			{
-			    *ptr++ = (char) i;
-			}
-
-			break;
-		    default:
-			if(chmode_flags[i] != 0)
-			{
-			    *ptr++ = (char) i;
-			}
+			*ptr++ = (char) i;
 		}
 		
 		/* Should we leave orphaned check here? -- dwr */
