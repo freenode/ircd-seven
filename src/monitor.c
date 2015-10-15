@@ -36,8 +36,9 @@
 #include "monitor.h"
 #include "hash.h"
 #include "numeric.h"
+#include "send.h"
 
-struct monitor *monitorTable[MONITOR_HASH_SIZE];
+static rb_dlink_list monitorTable[MONITOR_HASH_SIZE];
 static rb_bh *monitor_heap;
 
 void
@@ -56,11 +57,13 @@ struct monitor *
 find_monitor(const char *name, int add)
 {
 	struct monitor *monptr;
+	rb_dlink_node *ptr;
 
 	unsigned int hashv = hash_monitor_nick(name);
 
-	for(monptr = monitorTable[hashv]; monptr; monptr = monptr->hnext)
+	RB_DLINK_FOREACH(ptr, monitorTable[hashv].head)
 	{
+		monptr = ptr->data;
 		if(!irccmp(monptr->name, name))
 			return monptr;
 	}
@@ -69,10 +72,9 @@ find_monitor(const char *name, int add)
 	{
 		monptr = rb_bh_alloc(monitor_heap);
 		rb_strlcpy(monptr->name, name, sizeof(monptr->name));
+		monptr->hashv = hashv;
 
-		monptr->hnext = monitorTable[hashv];
-		monitorTable[hashv] = monptr;
-
+		rb_dlinkAdd(monptr, &monptr->node, &monitorTable[hashv]);
 		return monptr;
 	}
 
@@ -82,6 +84,10 @@ find_monitor(const char *name, int add)
 void
 free_monitor(struct monitor *monptr)
 {
+	if (rb_dlink_list_length(&monptr->users) > 0)
+		return;
+
+	rb_dlinkDelete(&monptr->node, &monitorTable[monptr->hashv]);
 	rb_bh_free(monitor_heap, monptr);
 }
 
@@ -139,6 +145,8 @@ clear_monitor(struct Client *client_p)
 
 		rb_dlinkFindDestroy(client_p, &monptr->users);
 		rb_free_rb_dlink_node(ptr);
+
+		free_monitor(monptr);
 	}
 
 	client_p->localClient->monitor_list.head = client_p->localClient->monitor_list.tail = NULL;
