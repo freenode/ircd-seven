@@ -27,37 +27,37 @@ typedef struct {
 
 static hint hints[] = {
     {
-        "[freenode-info] channel flooding and no channel staff around to help? Please check with freenode support: http://freenode.net/faq.shtml#gettinghelp",
+        "[freenode-info] channel flooding and no channel staff around to help? Please check with freenode support: http://freenode.net/people ",
         NULL,
         1,
         1
     },
     {
-        "[freenode-info] channel trolls and no channel staff around to help? please check with freenode support: http://freenode.net/faq.shtml#gettinghelp",
+        "[freenode-info] channel trolls and no channel staff around to help? please check with freenode support: http://freenode.net/people",
         NULL,
         1,
         1,
     },
     {
-        "[freenode-info] if you're at a conference and other people are having trouble connecting, please mention it to staff: http://freenode.net/faq.shtml#gettinghelp",
+        "[freenode-info] if you're at a conference and other people are having trouble connecting, please mention it to staff: http://freenode.net/people",
         NULL,
         1,
         1
     },
     {
-        "[freenode-info] why register and identify? your IRC nick is how people know you. http://freenode.net/faq.shtml#nicksetup",
+        "[freenode-info] why register and identify? your IRC nick is how people know you. http://freenode.net/kb/answer/registration",
         NULL,
         0,
         1
     },
     {
-        "[freenode-info] please register your nickname...don't forget to auto-identify! http://freenode.net/faq.shtml#nicksetup",
+        "[freenode-info] please register your nickname...don't forget to auto-identify! http://freenode.net/kb/answer/registration",
         NULL,
         0,
         1,
     },
     {
-        "[freenode-info] help freenode weed out clonebots -- please register your IRC nick and auto-identify: http://freenode.net/faq.shtml#nicksetup",
+        "[freenode-info] help freenode weed out clonebots -- please register your IRC nick and auto-identify: http://freenode.net/kb/answer/registration",
         NULL,
         0,
         1
