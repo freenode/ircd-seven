@@ -318,7 +318,7 @@ single_whois(struct Client *source_p, struct Client *target_p, int operspy)
 				     GlobalSetOptions.helperstring)));
 	}
 
-	if(MyClient(target_p) && !EmptyString(target_p->user->opername) &&
+	if(MyClient(target_p) && !EmptyString(target_p->user->opername) && target_p->localClient->privset &&
 	   (IsOperAdmin(source_p) || IsAdmin(source_p) || (source_p == target_p)))
 	{
 		char buf[512];
