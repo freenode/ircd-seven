@@ -114,7 +114,7 @@ m_challenge(struct Client *client_p, struct Client *source_p, int parc, const ch
 	int len = 0;
 
 	/* if theyre an oper, reprint oper motd and ignore */
-	if(IsOper(source_p))
+	if(IsAnyOper(source_p))
 	{
 		sendto_one(source_p, form_str(RPL_YOUREOPER), me.name, source_p->name);
 		send_oper_motd(source_p);
