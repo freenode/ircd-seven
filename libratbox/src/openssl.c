@@ -14,7 +14,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
@@ -635,7 +635,8 @@ rb_get_ssl_certfp(rb_fde_t *F, uint8_t certfp[RB_SSL_CERTFP_LEN])
 			res == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN ||
 			res == X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE ||
 			res == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT ||
-			res == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY)
+			res == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY ||
+			res == X509_V_ERR_CERT_UNTRUSTED)
 		{
                         unsigned int certfp_length = RB_SSL_CERTFP_LEN;
                         X509_digest(cert, EVP_sha1(), certfp, &certfp_length);
@@ -657,7 +658,7 @@ rb_supports_ssl(void)
 void
 rb_get_ssl_info(char *buf, size_t len)
 {
-	rb_snprintf(buf, len, "Using SSL: %s compiled: 0x%lx, library 0x%lx", 
+	rb_snprintf(buf, len, "Using SSL: %s compiled: 0x%lx, library 0x%lx",
 		    SSLeay_version(SSLEAY_VERSION), OPENSSL_VERSION_NUMBER, SSLeay());
 }
 
