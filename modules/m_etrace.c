@@ -269,7 +269,7 @@ m_chantrace(struct Client *client_p, struct Client *source_p, int parc, const ch
 
 		sendto_one(source_p, form_str(RPL_ETRACE),
 				me.name, source_p->name, 
-				IsOper(target_p) ? "Oper" : "User",
+				SeesOper(target_p) ? "Oper" : "User",
 				/* class field -- pretend its server.. */
 				target_p->servptr->name,
 				target_p->name, target_p->username, target_p->host,
