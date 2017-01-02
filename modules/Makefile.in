@@ -63,7 +63,6 @@ TSRCS =                          \
   m_cmessage.c \
   m_connect.c \
   m_dline.c \
-  m_encap.c \
   m_etrace.c \
   m_grant.c \
   m_help.c \
