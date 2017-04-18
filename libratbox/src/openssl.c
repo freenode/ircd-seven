@@ -631,7 +631,13 @@ rb_get_ssl_certfp(rb_fde_t *F, uint8_t certfp[RB_SSL_CERTFP_LEN])
 		return 0;
 
 	cert = SSL_get_peer_certificate((SSL *) F->ssl);
-	if(cert != NULL)
+#if OPENSSL_VERSION_NUMBER >= 0x10100000
+	unsigned char sha1_hash[SHA_DIGEST_LENGTH];
+	if(cert != NULL && X509_digest( cert, EVP_sha1(), sha1_hash, NULL ))
+#else
+	unsigned char * sha1_hash;
+	if(cert != NULL && (sha1_hash = cert->sha1_hash))
+#endif
 	{
 		res = SSL_get_verify_result((SSL *) F->ssl);
 		if(res == X509_V_OK ||
@@ -639,7 +645,7 @@ rb_get_ssl_certfp(rb_fde_t *F, uint8_t certfp[RB_SSL_CERTFP_LEN])
 				res == X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE ||
 				res == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT)
 		{
-			memcpy(certfp, cert->sha1_hash, RB_SSL_CERTFP_LEN);
+			memcpy(certfp, sha1_hash, RB_SSL_CERTFP_LEN);
 			return 1;
 		}
 		X509_free(cert);
