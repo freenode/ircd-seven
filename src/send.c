@@ -558,20 +558,20 @@ sendto_channel_opmod(struct Client *one, struct Client *source_p,
 	if(IsServer(source_p))
 	{
 		rb_linebuf_putmsg(&rb_linebuf_local, NULL, NULL,
-			       ":%s %s %s :%s",
+			       ":%s %s @%s :%s",
 			       source_p->name, command, chptr->chname, text);
 		rb_linebuf_putmsg(&rb_linebuf_local_id, NULL, NULL,
-			       ":%s %s %s :%s",
+			       ":%s %s @%s :%s",
 			       source_p->name, command, chptr->chname, text);
 	}
 	else
 	{
 		rb_linebuf_putmsg(&rb_linebuf_local, NULL, NULL,
-			       ":%s!%s@%s %s %s :%s",
+			       ":%s!%s@%s %s @%s :%s",
 			       source_p->name, source_p->username, 
 			       source_p->host, command, chptr->chname, text);
 		rb_linebuf_putmsg(&rb_linebuf_local_id, NULL, NULL,
-			       ":%s!%s@%s %s %s :%c%s",
+			       ":%s!%s@%s %s @%s :%c%s",
 			       source_p->name, source_p->username, 
 			       source_p->host, command, chptr->chname,
 			       IsIdentifiedMsg(source_p) ? '+' : '-', text);
@@ -579,7 +579,7 @@ sendto_channel_opmod(struct Client *one, struct Client *source_p,
 
 	if (chptr->mode.mode & MODE_MODERATED)
 		rb_linebuf_putmsg(&rb_linebuf_old, NULL, NULL,
-			       ":%s %s %s :%s",
+			       ":%s %s @%s :%s",
 			       use_id(source_p), command, chptr->chname, text);
 	else
 		rb_linebuf_putmsg(&rb_linebuf_old, NULL, NULL,
