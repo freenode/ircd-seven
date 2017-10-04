@@ -572,10 +572,6 @@ rb_init_prng(const char *path, prng_seed_t seed_type)
 
 	switch (seed_type)
 	{
-	case RB_PRNG_EGD:
-		if(RAND_egd(path) == -1)
-			return -1;
-		break;
 	case RB_PRNG_FILE:
 		if(RAND_load_file(path, -1) == -1)
 			return -1;
@@ -639,7 +635,9 @@ rb_get_ssl_certfp(rb_fde_t *F, uint8_t certfp[RB_SSL_CERTFP_LEN])
 				res == X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE ||
 				res == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT)
 		{
-			memcpy(certfp, cert->sha1_hash, RB_SSL_CERTFP_LEN);
+                        unsigned int certfp_length = RB_SSL_CERTFP_LEN;
+                        X509_digest(cert, EVP_sha1(), certfp, &certfp_length);
+                        X509_free(cert);
 			return 1;
 		}
 		X509_free(cert);
