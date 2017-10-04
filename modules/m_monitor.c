@@ -1,5 +1,5 @@
 /* modules/m_monitor.c
- * 
+ *
  *  Copyright (C) 2005 Lee Hardy <lee@leeh.co.uk>
  *  Copyright (C) 2005 ircd-ratbox development team
  *
@@ -38,6 +38,7 @@
 #include "monitor.h"
 #include "numeric.h"
 #include "s_conf.h"
+#include "send.h"
 
 static int m_monitor(struct Client *, struct Client *, int, const char **);
 
@@ -79,7 +80,7 @@ add_monitor(struct Client *client_p, const char *nicks)
 			continue;
 
 		if(rb_dlink_list_length(&client_p->localClient->monitor_list) >=
-			ConfigFileEntry.max_monitor)
+			(unsigned long)ConfigFileEntry.max_monitor)
 		{
 			char buf[100];
 
@@ -110,7 +111,7 @@ add_monitor(struct Client *client_p, const char *nicks)
 
 		if((target_p = find_named_person(name)) != NULL)
 		{
-			if(cur_onlen + strlen(target_p->name) + 
+			if(cur_onlen + strlen(target_p->name) +
 			   strlen(target_p->username) + strlen(target_p->host) + 3 >= BUFSIZE-3)
 			{
 				sendto_one(client_p, "%s", onbuf);
@@ -229,7 +230,7 @@ list_monitor(struct Client *client_p)
 	}
 
 	sendto_one(client_p, "%s", buf);
-	sendto_one(client_p, form_str(RPL_ENDOFMONLIST), 
+	sendto_one(client_p, form_str(RPL_ENDOFMONLIST),
 			me.name, client_p->name);
 }
 
@@ -258,7 +259,7 @@ show_monitor_status(struct Client *client_p)
 
 		if((target_p = find_named_person(monptr->name)) != NULL)
 		{
-			if(cur_onlen + strlen(target_p->name) + 
+			if(cur_onlen + strlen(target_p->name) +
 			   strlen(target_p->username) + strlen(target_p->host) + 3 >= BUFSIZE-3)
 			{
 				sendto_one(client_p, "%s", onbuf);
