@@ -35,6 +35,7 @@
 #include "config.h"
 #include "ircd.h"
 #include "match.h"
+#include "numeric.h"
 #include "s_conf.h"
 #include "s_newconf.h"
 #include "msg.h"
@@ -64,6 +65,101 @@ m_ban(struct Client *client_p, struct Client *source_p, int parc, const char *pa
 	if (IsOper(source_p))
 		sendto_one_notice(source_p, ":To ban a user from a server or from the network, see /QUOTE HELP KLINE");
 	return 0;
+}
+
+/* clusterfuck alert: this stuff is static so just copypaste it from src/client */
+enum
+{
+	D_LINED,
+	K_LINED
+};
+
+static void
+notify_banned_client(struct Client *client_p, struct ConfItem *aconf, int ban)
+{
+	static const char conn_closed[] = "Connection closed";
+	static const char d_lined[] = "D-lined";
+	static const char k_lined[] = "K-lined";
+	const char *reason = NULL;
+	const char *exit_reason = conn_closed;
+
+	if(ConfigFileEntry.kline_with_reason)
+	{
+		reason = get_user_ban_reason(aconf);
+		exit_reason = reason;
+	}
+	else
+	{
+		reason = aconf->status == D_LINED ? d_lined : k_lined;
+	}
+
+	if(ban == D_LINED && !IsPerson(client_p))
+		sendto_one(client_p, "NOTICE DLINE :*** You have been D-lined");
+	else
+		sendto_one(client_p, form_str(ERR_YOUREBANNEDCREEP),
+			   me.name, client_p->name, reason);
+
+	exit_client(client_p, client_p, &me,
+			EmptyString(ConfigFileEntry.kline_reason) ? exit_reason :
+			 ConfigFileEntry.kline_reason);
+}
+
+static void
+check_one_kline(struct ConfItem *kline)
+{
+	struct Client *client_p;
+	rb_dlink_node *ptr;
+	rb_dlink_node *next_ptr;
+
+	RB_DLINK_FOREACH_SAFE(ptr, next_ptr, lclient_list.head)
+	{
+		client_p = ptr->data;
+
+		if(IsMe(client_p) || !IsPerson(client_p))
+			continue;
+
+		if(!match(kline->user, client_p->username))
+			continue;
+
+		/* match one kline */
+		{
+			int matched = 0;
+			int masktype;
+			int bits;
+			struct rb_sockaddr_storage sockaddr;
+
+			masktype = parse_netmask(kline->host, (struct sockaddr *)&sockaddr, &bits);
+
+			switch (masktype) {
+			case HM_IPV4:
+			case HM_IPV6:
+				if(comp_with_mask_sock((struct sockaddr *)&client_p->localClient->ip,
+						(struct sockaddr *)&sockaddr, bits))
+					matched = 1;
+			case HM_HOST:
+				if (match(kline->host, client_p->orighost))
+					matched = 1;
+			}
+
+			if (!matched)
+				continue;
+		}
+
+		if(IsExemptKline(client_p))
+		{
+			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
+						 "KLINE over-ruled for %s, client is kline_exempt [%s@%s]",
+						 get_client_name(client_p, HIDE_IP),
+						 kline->user, kline->host);
+			continue;
+		}
+
+		sendto_realops_snomask(SNO_GENERAL, L_ALL,
+					 "KLINE active for %s",
+					 get_client_name(client_p, HIDE_IP));
+
+		notify_banned_client(client_p, kline, K_LINED);
+	}
 }
 
 /* ms_ban()
@@ -283,19 +379,7 @@ ms_ban(struct Client *client_p, struct Client *source_p, int parc, const char *p
 			else
 			{
 				add_conf_by_address(aconf->host, CONF_KILL, aconf->user, NULL, aconf);
-				if(ConfigFileEntry.kline_delay ||
-						(IsServer(source_p) &&
-						 !HasSentEob(source_p)))
-				{
-					if(kline_queued == 0)
-					{
-						rb_event_addonce("check_klines", check_klines_event, NULL,
-								 ConfigFileEntry.kline_delay);
-						kline_queued = 1;
-					}
-				}
-				else
-					check_klines();
+				check_one_kline(aconf);
 			}
 			break;
 		case CONF_XLINE:
