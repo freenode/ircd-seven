@@ -139,13 +139,6 @@ mr_nick(struct Client *client_p, struct Client *source_p, int parc, const char *
 		return 0;
 	}
 
-	/* due to the scandinavian origins, (~ being uppercase of ^) and ~
-	 * being disallowed as a nick char, we need to chop the first ~
-	 * instead of just erroring.
-	 */
-	if((s = strchr(parv[1], '~')))
-		*s = '\0';
-
 	/* copy the nick and terminate it */
 	rb_strlcpy(nick, parv[1], sizeof(nick));
 
@@ -197,13 +190,6 @@ m_nick(struct Client *client_p, struct Client *source_p, int parc, const char *p
 		sendto_one(source_p, form_str(ERR_NONICKNAMEGIVEN), me.name, source_p->name);
 		return 0;
 	}
-
-	/* due to the scandinavian origins, (~ being uppercase of ^) and ~
-	 * being disallowed as a nick char, we need to chop the first ~
-	 * instead of just erroring.
-	 */
-	if((s = strchr(parv[1], '~')))
-		*s = '\0';
 
 	/* mark end of grace period, to prevent nickflooding */
 	if(!IsFloodDone(source_p))
