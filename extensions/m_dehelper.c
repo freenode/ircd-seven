@@ -57,6 +57,11 @@ static int m_dehelper(struct Client *client_p, struct Client *source_p, int parc
 {
 	struct Client *target_p;
 
+	if (!IsAnyOper(source_p))
+	{
+		sendto_one_numeric(source_p, ERR_NOPRIVILEGES, form_str(ERR_NOPRIVILEGES));
+		return 0;
+	}
 	if (!IsOperDehelper(source_p))
 	{
 		sendto_one(source_p, form_str(ERR_NOPRIVS), me.name, source_p->name, "dehelper");
