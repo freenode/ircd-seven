@@ -38,6 +38,10 @@
 #include "monitor.h"
 #include "numeric.h"
 #include "s_conf.h"
+#include "supported.h"
+
+static int _modinit(void);
+static void _moddeinit(void);
 
 static int m_monitor(struct Client *, struct Client *, int, const char **);
 
@@ -47,7 +51,18 @@ struct Message monitor_msgtab = {
 };
 
 mapi_clist_av1 monitor_clist[] = { &monitor_msgtab, NULL };
-DECLARE_MODULE_AV1(monitor, NULL, NULL, monitor_clist, NULL, NULL, "$Revision: 312 $");
+DECLARE_MODULE_AV1(monitor, _modinit, _moddeinit, monitor_clist, NULL, NULL, "$Revision: 312 $");
+
+static int _modinit(void)
+{
+	add_isupport("MONITOR", isupport_intptr, &ConfigFileEntry.max_monitor);
+	return 0;
+}
+
+static void _moddeinit(void)
+{
+	delete_isupport("MONITOR");
+}
 
 static void
 add_monitor(struct Client *client_p, const char *nicks)
@@ -181,6 +196,8 @@ del_monitor(struct Client *client_p, const char *nicks)
 
 		rb_dlinkFindDestroy(client_p, &monptr->users);
 		rb_dlinkFindDestroy(monptr, &client_p->localClient->monitor_list);
+
+		free_monitor(monptr);
 	}
 }
 

@@ -14,7 +14,7 @@
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- *  
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program; if not, write to the Free Software
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
@@ -312,7 +312,7 @@ rb_init_ssl(void)
 		ret = 0;
 	}
 	/* Disable SSLv2, make the client use our settings */
-	SSL_CTX_set_options(ssl_server_ctx, SSL_OP_NO_SSLv2 | SSL_OP_CIPHER_SERVER_PREFERENCE);
+	SSL_CTX_set_options(ssl_server_ctx, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_CIPHER_SERVER_PREFERENCE);
 	SSL_CTX_set_verify(ssl_server_ctx, SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE, verify_accept_all_cb);
 
 	ssl_client_ctx = SSL_CTX_new(TLSv1_client_method());
@@ -572,10 +572,6 @@ rb_init_prng(const char *path, prng_seed_t seed_type)
 
 	switch (seed_type)
 	{
-	case RB_PRNG_EGD:
-		if(RAND_egd(path) == -1)
-			return -1;
-		break;
 	case RB_PRNG_FILE:
 		if(RAND_load_file(path, -1) == -1)
 			return -1;
@@ -634,12 +630,17 @@ rb_get_ssl_certfp(rb_fde_t *F, uint8_t certfp[RB_SSL_CERTFP_LEN])
 	if(cert != NULL)
 	{
 		res = SSL_get_verify_result((SSL *) F->ssl);
-		if(res == X509_V_OK ||
-				res == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN ||
-				res == X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE ||
-				res == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT)
+		if(
+			res == X509_V_OK ||
+			res == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN ||
+			res == X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE ||
+			res == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT ||
+			res == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY ||
+			res == X509_V_ERR_CERT_UNTRUSTED)
 		{
-			memcpy(certfp, cert->sha1_hash, RB_SSL_CERTFP_LEN);
+                        unsigned int certfp_length = RB_SSL_CERTFP_LEN;
+                        X509_digest(cert, EVP_sha1(), certfp, &certfp_length);
+                        X509_free(cert);
 			return 1;
 		}
 		X509_free(cert);
@@ -657,7 +658,7 @@ rb_supports_ssl(void)
 void
 rb_get_ssl_info(char *buf, size_t len)
 {
-	rb_snprintf(buf, len, "Using SSL: %s compiled: 0x%lx, library 0x%lx", 
+	rb_snprintf(buf, len, "Using SSL: %s compiled: 0x%lx, library 0x%lx",
 		    SSLeay_version(SSLEAY_VERSION), OPENSSL_VERSION_NUMBER, SSLeay());
 }
 

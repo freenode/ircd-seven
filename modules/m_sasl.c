@@ -83,6 +83,12 @@ mr_authenticate(struct Client *client_p, struct Client *source_p,
 		return 0;
 	}
 
+	if (*parv[1] == ':' || strchr(parv[1], ' '))
+	{
+		exit_client(client_p, client_p, client_p, "Malformed AUTHENTICATE");
+		return;
+	}
+
 	if(source_p->preClient->sasl_complete)
 	{
 		sendto_one(source_p, form_str(ERR_SASLALREADY), me.name, EmptyString(source_p->name) ? "*" : source_p->name);
@@ -108,12 +114,11 @@ mr_authenticate(struct Client *client_p, struct Client *source_p,
 	if(agent_p == NULL)
 	{
 		sendto_server(NULL, NULL, CAP_TS6|CAP_ENCAP, NOCAPS, ":%s ENCAP * SASL %s * H %s %s", me.id,
-					source_p->id, source_p->host, source_p->sockhost);
+				source_p->id, source_p->host, source_p->sockhost);
 
-		if (!strcmp(parv[1], "EXTERNAL") && source_p->certfp != NULL)
+		if(source_p->certfp)
 			sendto_server(NULL, NULL, CAP_TS6|CAP_ENCAP, NOCAPS, ":%s ENCAP * SASL %s * S %s %s", me.id,
-					source_p->id, parv[1],
-					source_p->certfp);
+					source_p->id, parv[1], source_p->certfp);
 		else
 			sendto_server(NULL, NULL, CAP_TS6|CAP_ENCAP, NOCAPS, ":%s ENCAP * SASL %s * S %s", me.id,
 					source_p->id, parv[1]);
