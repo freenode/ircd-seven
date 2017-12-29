@@ -5,20 +5,20 @@ dnl TODO: clean up all the OpenSSL and shared module checking stuff;
 dnl the most major changes have already been made and it looks like
 dnl said functions need to be just about as complex as they already are.
 
-AC_PREREQ(2.57)
+AC_PREREQ([2.69])
 
 dnl Sneaky way to get an Id tag into the configure script
 AC_COPYRIGHT([$Id: configure.ac 3516 2007-06-10 16:14:03Z jilles $])
 
 AC_INIT([ircd-seven],[1.1.5])
 
-AC_CONFIG_HEADER(include/setup.h)
+AC_CONFIG_HEADERS(include/setup.h)
 
 AC_DEFINE([CHARYBDIS_VERSION], ["3.4-dev"], [Version of charybdis on which this release is based])
 
 AC_PREFIX_DEFAULT($HOME/ircd)
 
-AC_GNU_SOURCE
+AC_USE_SYSTEM_EXTENSIONS
 
 OLD_CFLAGS="$CFLAGS"
 dnl Checks for programs.
@@ -199,7 +199,7 @@ if test ! -z "$CFLAGS"; then
 	IRC_CFLAGS="$IRC_CFLAGS $CFLAGS"
 fi
 
-AC_ISC_POSIX
+AC_SEARCH_LIBS([strerror],[cposix])
 AC_C_INLINE
 AC_PROG_GCC_TRADITIONAL
 AC_PROG_MAKE_SET
@@ -270,7 +270,7 @@ AC_CHECK_TYPE(socklen_t, ,
 #include <sys/socket.h>])
 
 AC_ARG_ENABLE(ipv6,
-AC_HELP_STRING([--enable-ipv6],[Enable IPv6 support]),[ipv6=$enableval],[ipv6=no])
+AS_HELP_STRING([--enable-ipv6],[Enable IPv6 support]),[ipv6=$enableval],[ipv6=no])
 
 AC_SEARCH_LIBS(crypt, [crypt descrypt],,)
 
@@ -420,8 +420,8 @@ fi
 dnl OpenSSL support
 AC_MSG_CHECKING(for OpenSSL)
 AC_ARG_ENABLE(openssl,
-[AC_HELP_STRING([--enable-openssl[=DIR]],[Enable OpenSSL support (DIR optional).])
-AC_HELP_STRING([--disable-openssl],[Disable OpenSSL support.])],
+[AS_HELP_STRING([--enable-openssl[=DIR]],[Enable OpenSSL support (DIR optional).])
+AS_HELP_STRING([--disable-openssl],[Disable OpenSSL support.])],
 [cf_enable_openssl=$enableval],
 [cf_enable_openssl="auto"])
 
@@ -522,11 +522,11 @@ dnl Specialized functions and libraries
 dnl ===================================
 
 AC_ARG_WITH(zlib-path,
-AC_HELP_STRING([--with-zlib-path=DIR],[Path to libz.so for ziplinks support.]),
+AS_HELP_STRING([--with-zlib-path=DIR],[Path to libz.so for ziplinks support.]),
 [LIBS="$LIBS -L$withval"],)
 
 AC_ARG_ENABLE(zlib,
-AC_HELP_STRING([--disable-zlib],[Disable ziplinks support]),
+AS_HELP_STRING([--disable-zlib],[Disable ziplinks support]),
 [zlib=$enableval],[zlib=yes])
 
 if test "$zlib" = yes; then
@@ -544,7 +544,7 @@ fi
 dnl IO Loop Selection
 dnl =================
 
-AC_ARG_ENABLE(ports, AC_HELP_STRING([--enable-ports],[Force solaris I/O ports subsystem usage.]),
+AC_ARG_ENABLE(ports, AS_HELP_STRING([--enable-ports],[Force solaris I/O ports subsystem usage.]),
 [ if test $enableval = yes; then 
 	SELECT_TYPE_EXPLICIT="ports"
   else
@@ -552,7 +552,7 @@ AC_ARG_ENABLE(ports, AC_HELP_STRING([--enable-ports],[Force solaris I/O ports su
   fi
 ],)
 
-AC_ARG_ENABLE(poll, AC_HELP_STRING([--enable-poll],[Force poll() usage.]),
+AC_ARG_ENABLE(poll, AS_HELP_STRING([--enable-poll],[Force poll() usage.]),
 [ if test $enableval = yes; then 
 	SELECT_TYPE_EXPLICIT="poll"
   else
@@ -560,7 +560,7 @@ AC_ARG_ENABLE(poll, AC_HELP_STRING([--enable-poll],[Force poll() usage.]),
   fi
 ],)
 
-AC_ARG_ENABLE(select, AC_HELP_STRING([--enable-select],[Force select() usage.]),
+AC_ARG_ENABLE(select, AS_HELP_STRING([--enable-select],[Force select() usage.]),
 [ if test $enableval = yes; then 
 	SELECT_TYPE_EXPLICIT="select" 
   else
@@ -568,7 +568,7 @@ AC_ARG_ENABLE(select, AC_HELP_STRING([--enable-select],[Force select() usage.]),
   fi
 ],)
 
-AC_ARG_ENABLE(kqueue, AC_HELP_STRING([--enable-kqueue],[Force kqueue() usage.]),
+AC_ARG_ENABLE(kqueue, AS_HELP_STRING([--enable-kqueue],[Force kqueue() usage.]),
 [ if test $enableval = yes; then 
 	SELECT_TYPE_EXPLICIT="kqueue"
   else
@@ -576,7 +576,7 @@ AC_ARG_ENABLE(kqueue, AC_HELP_STRING([--enable-kqueue],[Force kqueue() usage.]),
   fi
 ],)
 
-AC_ARG_ENABLE(epoll, AC_HELP_STRING([--enable-epoll],[Force sys_epoll usage (Linux only).]),
+AC_ARG_ENABLE(epoll, AS_HELP_STRING([--enable-epoll],[Force sys_epoll usage (Linux only).]),
 [ if test $enableval = yes; then 
 	SELECT_TYPE_EXPLICIT="epoll"
 	AC_CHECK_FUNCS(epoll_ctl, [haveepoll=yes], [haveepoll=no])
@@ -591,8 +591,7 @@ dnl **********************************************************************
 
 AC_MSG_CHECKING([whether to modify confdir])
 AC_ARG_WITH(confdir, 
-AC_HELP_STRING([--with-confdir=DIR],
-	       [Directory to install config files.]),
+AS_HELP_STRING([--with-confdir=DIR],[Directory to install config files.]),
 	       [ confdir=`echo $withval | sed 's/\/$//'`
 		 AC_MSG_RESULT(yes)
 		 AC_DEFINE_DIR(ETC_DIR, confdir, [Prefix where config files are installed.])
@@ -609,8 +608,7 @@ dnl **********************************************************************
 
 AC_MSG_CHECKING([whether to modify logdir])
 AC_ARG_WITH(logdir, 
-AC_HELP_STRING([--with-logdir=DIR],
-	       [Directory where to write logfiles.]),
+AS_HELP_STRING([--with-logdir=DIR],[Directory where to write logfiles.]),
 	       [ logdir=`echo $withval | sed 's/\/$//'`
 		 AC_MSG_RESULT(yes)
 		 AC_DEFINE_DIR(LOG_DIR, logdir, [Prefix where to write logfiles.])
@@ -627,8 +625,7 @@ dnl **********************************************************************
 
 AC_MSG_CHECKING([whether to modify helpdir])
 AC_ARG_WITH(helpdir, 
-AC_HELP_STRING([--with-helpdir=DIR],
-	       [Directory to install help files.]),
+AS_HELP_STRING([--with-helpdir=DIR],[Directory to install help files.]),
 	       [ helpdir=`echo $withval | sed 's/\/$//'`
 		 AC_MSG_RESULT(yes)
 		 AC_DEFINE_DIR(HELP_DIR, helpdir, [Prefix where help files are installed.])
@@ -645,8 +642,7 @@ dnl **********************************************************************
 
 AC_MSG_CHECKING([whether to modify moduledir])
 AC_ARG_WITH(moduledir, 
-AC_HELP_STRING([--with-moduledir=DIR],
-	       [Directory to install modules.]),
+AS_HELP_STRING([--with-moduledir=DIR],[Directory to install modules.]),
 	       [ moduledir=`echo $withval | sed 's/\/$//'`
 		 AC_MSG_RESULT(yes)
 		 AC_DEFINE_DIR(MODULE_DIR, moduledir, [Prefix where modules are installed.])
@@ -695,8 +691,7 @@ if test ! "x$use_epoll" = "xno"; then
 	if test "x$ac_cv_header_sys_epoll_h" = "xyes"; then
 		if test "x$haveepoll" = "xyes" ; then
                 	AC_MSG_CHECKING(for epoll support in kernel)
-	                AC_TRY_RUN(
-#include <stdint.h>
+	                AC_RUN_IFELSE([AC_LANG_SOURCE([[#include <stdint.h>
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/epoll.h>
@@ -710,11 +705,10 @@ main(int argc, char **argv)
 
         epfd = epoll_create(256);
         return (epfd == -1 ? 1 : 0);
-}, [AC_MSG_RESULT(yes)
+}]])],[AC_MSG_RESULT(yes)
 	    AC_DEFINE(HAVE_EPOLL, 1,
 	        [Define if your system supports the epoll system calls])
-	    SELECT_TYPE="epoll"], 
-	    AC_MSG_RESULT(no), AC_MSG_RESULT(no))
+	    SELECT_TYPE="epoll"],[AC_MSG_RESULT(no)],[AC_MSG_RESULT(no)])
 		fi
 	fi
 
@@ -723,8 +717,7 @@ haveepollsyscall=no
 if test "x$ac_cv_header_sys_epoll_h" = "xyes"; then
 	if test "x$haveepoll" = "xno" ; then
                 AC_MSG_CHECKING(for epoll system call)
-                AC_TRY_RUN(
-#include <stdint.h>
+                AC_RUN_IFELSE([AC_LANG_SOURCE([[#include <stdint.h>
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/epoll.h>
@@ -744,11 +737,10 @@ main(int argc, char **argv)
 
         epfd = epoll_create(256);
         exit (epfd == -1 ? 1 : 0);
-}, [AC_MSG_RESULT(yes)
+}]])],[AC_MSG_RESULT(yes)
     AC_DEFINE(HAVE_EPOLL, 1,
         [Define if your system supports the epoll system calls])
-    SELECT_TYPE="epoll"], 
-    AC_MSG_RESULT(no), AC_MSG_RESULT(no))
+    SELECT_TYPE="epoll"],[AC_MSG_RESULT(no)],[AC_MSG_RESULT(no)])
 	fi
 fi
 
@@ -770,7 +762,7 @@ dnl Debug-related options
 dnl =====================
 
 AC_ARG_ENABLE(assert,
-AC_HELP_STRING([--enable-assert],[Enable assert(). Choose between soft(warnings) and hard(aborts the daemon)]),
+AS_HELP_STRING([--enable-assert],[Enable assert(). Choose between soft(warnings) and hard(aborts the daemon)]),
 [assert=$enableval], [assert=no])
 
 if test "$assert" = no; then
@@ -784,7 +776,7 @@ fi
 
 AC_MSG_CHECKING(if you want IO Debugging hooks)
 AC_ARG_ENABLE(iodebug,
-AC_HELP_STRING([--enable-iodebug],[Enable IO Debugging hooks]),
+AS_HELP_STRING([--enable-iodebug],[Enable IO Debugging hooks]),
 [iodebug=$enableval], [iodebug=no])
 
 if test "$iodebug" = yes; then
@@ -797,7 +789,7 @@ fi
 
 AC_MSG_CHECKING(if you want to do a profile build)
 AC_ARG_ENABLE(profile,
-AC_HELP_STRING([--enable-profile],[Enable profiling]),
+AS_HELP_STRING([--enable-profile],[Enable profiling]),
 [profile=$enableval], [profile=no])
 
 if test "$profile" = yes; then
@@ -813,7 +805,7 @@ else
 fi
 
 AC_ARG_ENABLE(balloc,
-AC_HELP_STRING([--disable-balloc],[Disable the block allocator.]),
+AS_HELP_STRING([--disable-balloc],[Disable the block allocator.]),
 [balloc=$enableval], [balloc=yes])
 
 if test "$balloc" = no; then
@@ -821,7 +813,7 @@ if test "$balloc" = no; then
 fi
 
 AC_ARG_ENABLE(small-net,
-AC_HELP_STRING([--enable-small-net],[Enable small network support.]),
+AS_HELP_STRING([--enable-small-net],[Enable small network support.]),
 [small_net=$enableval], [small_net=no])
 
 if test "$small_net" = yes; then
@@ -864,10 +856,10 @@ dnl so enable small net unless you really need this much support
 fi
 
 AC_ARG_WITH(nicklen,
-AC_HELP_STRING([--with-nicklen=LENGTH],[Set the nick length to LENGTH (default 15, max 50)]),
+AS_HELP_STRING([--with-nicklen=LENGTH],[Set the nick length to LENGTH (default 15, max 50)]),
 [
   if ! expr "$withval" + 0 >/dev/null 2>&1; then 
-	AC_ERROR([NICKLEN must be a numeric value])
+	AC_MSG_ERROR(NICKLEN must be a numeric value)
   fi 
   if test $withval -ge 50; then
 	NICKLEN=50
@@ -878,7 +870,7 @@ AC_HELP_STRING([--with-nicklen=LENGTH],[Set the nick length to LENGTH (default 1
 ], [NICKLEN=15])
 
 AC_ARG_WITH(topiclen,           
-AC_HELP_STRING([--with-topiclen=NUMBER],[Set the max topic length to NUMBER (default 390, max 390)]),
+AS_HELP_STRING([--with-topiclen=NUMBER],[Set the max topic length to NUMBER (default 390, max 390)]),
 [
  if test $withval -ge 390; then
 	TOPICLEN=390
@@ -1031,7 +1023,7 @@ fi
 # -- jilles
 CWARNS=""
 AC_ARG_ENABLE(warnings,
-AC_HELP_STRING([--enable-warnings],[Enable all sorts of warnings for debugging.]),
+AS_HELP_STRING([--enable-warnings],[Enable all sorts of warnings for debugging.]),
 [
 IRC_CFLAGS="$IRC_CFLAGS -O0"
 CFLAGS="$IRC_CFLAGS"
