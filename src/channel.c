@@ -894,8 +894,9 @@ can_send(struct Channel *chptr, struct Client *source_p, struct membership *mspt
 			 */
 			if(chptr->mode.mode & MODE_NOPRIVMSGS || chptr->mode.mode & MODE_MODERATED)
 				moduledata.approved = CAN_SEND_NO;
-			else
-				moduledata.approved = CAN_SEND_NONOP;
+			if(is_banned(chptr, source_p, NULL, NULL, NULL, NULL) == CHFL_BAN ||
+					is_quieted(chptr, source_p, NULL, NULL, NULL) == CHFL_BAN)
+				moduledata.approved = CAN_SEND_NO;
 
 			return moduledata.approved;
 		}
