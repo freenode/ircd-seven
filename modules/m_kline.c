@@ -87,6 +87,7 @@ static void remove_permkline_match(struct Client *, struct ConfItem *);
 static int remove_temp_kline(struct Client *, struct ConfItem *);
 static void remove_prop_kline(struct Client *, struct ConfItem *);
 
+
 /* mo_kline()
  *
  *   parv[1] - temp time or user@host
@@ -225,17 +226,7 @@ mo_kline(struct Client *client_p, struct Client *source_p, int parc, const char 
 	else
 		apply_kline(source_p, aconf, reason, oper_reason);
 
-	if(ConfigFileEntry.kline_delay)
-	{
-		if(kline_queued == 0)
-		{
-			rb_event_addonce("check_klines", check_klines_event, NULL,
-					 ConfigFileEntry.kline_delay);
-			kline_queued = 1;
-		}
-	}
-	else
-		check_klines();
+	check_one_kline(aconf);
 
 	return 0;
 }
@@ -337,17 +328,7 @@ handle_remote_kline(struct Client *source_p, int tkline_time,
 	else
 		apply_kline(source_p, aconf, reason, oper_reason);
 
-	if(ConfigFileEntry.kline_delay)
-	{
-		if(kline_queued == 0)
-		{
-			rb_event_addonce("check_klines", check_klines_event, NULL,
-					 ConfigFileEntry.kline_delay);
-			kline_queued = 1;
-		}
-	}
-	else
-		check_klines();
+	check_one_kline(aconf);
 
 	return;
 }

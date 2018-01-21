@@ -35,6 +35,7 @@
 #include "config.h"
 #include "ircd.h"
 #include "match.h"
+#include "numeric.h"
 #include "s_conf.h"
 #include "s_newconf.h"
 #include "msg.h"
@@ -65,6 +66,7 @@ m_ban(struct Client *client_p, struct Client *source_p, int parc, const char *pa
 		sendto_one_notice(source_p, ":To ban a user from a server or from the network, see /QUOTE HELP KLINE");
 	return 0;
 }
+
 
 /* ms_ban()
  *
@@ -283,19 +285,7 @@ ms_ban(struct Client *client_p, struct Client *source_p, int parc, const char *p
 			else
 			{
 				add_conf_by_address(aconf->host, CONF_KILL, aconf->user, NULL, aconf);
-				if(ConfigFileEntry.kline_delay ||
-						(IsServer(source_p) &&
-						 !HasSentEob(source_p)))
-				{
-					if(kline_queued == 0)
-					{
-						rb_event_addonce("check_klines", check_klines_event, NULL,
-								 ConfigFileEntry.kline_delay);
-						kline_queued = 1;
-					}
-				}
-				else
-					check_klines();
+				check_one_kline(aconf);
 			}
 			break;
 		case CONF_XLINE:
