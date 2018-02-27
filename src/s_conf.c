@@ -775,6 +775,7 @@ set_default_conf(void)
 	ConfigChannel.resv_forcepart = YES;
 	ConfigChannel.channel_target_change = YES;
 	ConfigChannel.disable_local_channels = NO;
+	ConfigChannel.opmod_send_cprivmsg = NO;
 
 	ConfigServerHide.flatten_links = 0;
 	ConfigServerHide.links_delay = 300;
