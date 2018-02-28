@@ -357,6 +357,8 @@ int match_ips(const char *s1, const char *s2)
 	char *len;
 	void *ipptr, *maskptr;
 	int cidrlen, aftype;
+	size_t cidr_strlen;
+	char *end_ptr;
 
 	strcpy(mask, s1);
 	strcpy(address, s2);
@@ -367,8 +369,10 @@ int match_ips(const char *s1, const char *s2)
 
 	*len++ = '\0';
 
-	cidrlen = atoi(len);
-	if (cidrlen == 0)
+	cidr_strlen = strlen(len);
+	end_ptr = len;
+	cidrlen = strtol(len, &end_ptr, 10);
+	if (end_ptr - len != cidr_strlen)
 		return 0;
 
 #ifdef RB_IPV6
@@ -413,6 +417,8 @@ int match_cidr(const char *s1, const char *s2)
 	char *len;
 	void *ipptr, *maskptr;
 	int cidrlen, aftype;
+	size_t cidr_strlen;
+	char *end_ptr;
 
 	strcpy(mask, s1);
 	strcpy(address, s2);
@@ -435,8 +441,10 @@ int match_cidr(const char *s1, const char *s2)
 
 	*len++ = '\0';
 
-	cidrlen = atoi(len);
-	if (cidrlen == 0)
+	cidr_strlen = strlen(len);
+	end_ptr = len;
+	cidrlen = strtol(len, &end_ptr, 10);
+	if (end_ptr - len != cidr_strlen)
 		return 0;
 
 #ifdef RB_IPV6

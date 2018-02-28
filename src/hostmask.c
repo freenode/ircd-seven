@@ -74,8 +74,12 @@ parse_netmask(const char *text, struct sockaddr  *naddr, int *nb)
 		{
 			*ptr = '\0';
 			ptr++;
-			*b = atoi(ptr);
-			if(*b > 128)
+
+			size_t cidr_len = strlen(ptr);
+			char *end_ptr = ptr;
+			*b = strtol(ptr, &end_ptr, 10);
+
+			if(*b > 128 || end_ptr - ptr != cidr_len)
 				*b = 128;
 		} else
 			*b = 128;
@@ -91,8 +95,12 @@ parse_netmask(const char *text, struct sockaddr  *naddr, int *nb)
 		{
 			*ptr = '\0';
 			ptr++;
-			*b = atoi(ptr);
-			if(*b > 32)
+
+			size_t cidr_len = strlen(ptr);
+			char *end_ptr = ptr;
+			*b = strtol(ptr, &end_ptr, 10);
+
+			if(*b > 32 || end_ptr - ptr != cidr_len)
 				*b = 32;
 		} else
 			*b = 32;
