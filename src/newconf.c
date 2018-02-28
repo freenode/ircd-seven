@@ -2229,6 +2229,7 @@ static struct ConfEntry conf_channel_table[] =
 	{ "resv_forcepart",     CF_YESNO, NULL, 0, &ConfigChannel.resv_forcepart	},
 	{ "channel_target_change", CF_YESNO, NULL, 0, &ConfigChannel.channel_target_change	},
 	{ "disable_local_channels", CF_YESNO, NULL, 0, &ConfigChannel.disable_local_channels },
+	{ "opmod_send_cprivmsg", CF_YESNO, NULL, 0, &ConfigChannel.opmod_send_cprivmsg	},
 	{ "\0", 		0, 	  NULL, 0, NULL }
 };
 
