@@ -158,7 +158,7 @@ static int mo_list(struct Client *client_p, struct Client *source_p, int parc, c
 {
 	struct ListClient *params;
 	char *p, *args;
-	int i;
+	int i, parse_failed = 0;
 
 	if (source_p->localClient->safelist_data != NULL)
 	{
@@ -207,14 +207,24 @@ static int mo_list(struct Client *client_p, struct Client *source_p, int parc, c
 					else
 						params->users_max--;
 				}
+				else
+				{
+					parse_failed = 1;
+					break;
+				}
 			}
 			else if (*args == '>')
 			{
 				args++;
 				if (IsDigit(*args))
+				{
 					params->users_min = atoi(args) + 1;
+				}
 				else
-					params->users_min = 0;
+				{
+					parse_failed = 1;
+					break;
+				}
 			}
 			else if (*args == 'C' || *args == 'c')
 			{
@@ -227,6 +237,11 @@ static int mo_list(struct Client *client_p, struct Client *source_p, int parc, c
 					{
 						params->created_max = rb_current_time() - (60 * atoi(args));
 					}
+					else
+					{
+						parse_failed = 1;
+						break;
+					}
 				}
 				else if (*args == '<')
 				{
@@ -236,6 +251,16 @@ static int mo_list(struct Client *client_p, struct Client *source_p, int parc, c
 					{
 						params->created_min = rb_current_time() - (60 * atoi(args));
 					}
+					else
+					{
+						parse_failed = 1;
+						break;
+					}
+				}
+				else
+				{
+					parse_failed = 1;
+					break;
 				}
 			}
 			else if (*args == 'T' || *args == 't')
@@ -249,6 +274,11 @@ static int mo_list(struct Client *client_p, struct Client *source_p, int parc, c
 					{
 						params->topic_max = rb_current_time() - (60 * atoi(args));
 					}
+					else
+					{
+						parse_failed = 1;
+						break;
+					}
 				}
 				else if (*args == '<')
 				{
@@ -258,6 +288,16 @@ static int mo_list(struct Client *client_p, struct Client *source_p, int parc, c
 					{
 						params->topic_min = rb_current_time() - (60 * atoi(args));
 					}
+					else
+					{
+						parse_failed = 1;
+						break;
+					}
+				}
+				else
+				{
+					parse_failed = 1;
+					break;
 				}
 			}
 			/* Only accept operspy as the first option. */
@@ -265,6 +305,11 @@ static int mo_list(struct Client *client_p, struct Client *source_p, int parc, c
 			{
 				params->operspy = 1;
 				report_operspy(source_p, "LIST", p);
+			}
+			else
+			{
+				parse_failed = 1;
+				break;
 			}
 
 			if (EmptyString(p))
@@ -274,7 +319,17 @@ static int mo_list(struct Client *client_p, struct Client *source_p, int parc, c
 		}
 	}
 
-	safelist_client_instantiate(source_p, params);
+	if (parse_failed)
+	{
+		sendto_one(source_p, form_str(RPL_LISTSTART), me.name, source_p->name);
+		sendto_one_notice(source_p, ":Invalid parameters for /LIST");
+		sendto_one(source_p, form_str(RPL_LISTEND), me.name, source_p->name);
+		rb_free(params);
+	}
+	else
+	{
+		safelist_client_instantiate(source_p, params);
+	}
 
 	return 0;
 }
