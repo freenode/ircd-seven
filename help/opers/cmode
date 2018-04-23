@@ -31,7 +31,7 @@ NO PARAMETERS:
 
 WITH PARAMETERS:
      +f     - Forward.  Forwards users who cannot join because of +i,
-              +j, +l or +r.
+              +j, +l, +S, or +r.
               PARAMS: /mode #channel +f #channel2
      +j     - Join throttle.  Limits number of joins to the channel per time.
               PARAMS: /mode #channel +j count:time
