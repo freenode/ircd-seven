@@ -18,7 +18,7 @@
       We will likely have a workaround implemented in the next version.
 
 BUG REPORTS: If you run this code and encounter problems, you should report
- the bug on http://dev.freenode.net/ircd-seven or via IRC,
+ the bug on https://github.com/freenode/ircd-seven or via IRC,
  irc.freenode.net #freenode-seven.
 
  Please include a gdb backtrace and keep your binaries, modules and core file
