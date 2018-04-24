@@ -28,10 +28,14 @@ NO PARAMETERS:
               (however, new forwards can still be set subject to +F).
      +C     - Disable CTCP. All CTCP messages to the channel, except ACTION,
               are disallowed.
+     +S     - This ensures only users that have connected via TLS/SSL (and
+              so have user mode +Z) are able to join; you can not /invite
+              them through it. It will not prevent the use of the channel
+              by any non-TLS/SSL users already present.
 
 WITH PARAMETERS:
      +f     - Forward.  Forwards users who cannot join because of +i,
-              +j, +l or +r.
+              +j, +l, +S, or +r.
               PARAMS: /mode #channel +f #channel2
      +j     - Join throttle.  Limits number of joins to the channel per time.
               PARAMS: /mode #channel +j count:time
