@@ -113,6 +113,7 @@ struct ConfItem
 #define CONF_FLAGS_EXTEND_CHANS		0x00080000
 #define CONF_FLAGS_ENCRYPTED            0x00100000
 #define CONF_FLAGS_EXEMPTDNSBL		0x00200000
+#define CONF_FLAGS_NEED_AUTH            0x00400000
 
 
 /* Macros for struct ConfItem */
@@ -132,6 +133,7 @@ struct ConfItem
 #define IsConfSpoofNotice(x)    ((x)->flags & CONF_FLAGS_SPOOF_NOTICE)
 #define IsConfEncrypted(x)      ((x)->flags & CONF_FLAGS_ENCRYPTED)
 #define IsNeedSasl(x)		((x)->flags & CONF_FLAGS_NEED_SASL)
+#define IsConfNeedAuth(x)	((x)->flags & CONF_FLAGS_NEED_AUTH)
 #define IsConfExemptDNSBL(x)	((x)->flags & CONF_FLAGS_EXEMPTDNSBL)
 #define IsConfExtendChans(x)	((x)->flags & CONF_FLAGS_EXTEND_CHANS)
 #define IsConfSSLNeeded(x)	((x)->flags & CONF_FLAGS_NEED_SSL)

@@ -210,6 +210,14 @@ m_join(struct Client *client_p, struct Client *source_p, int parc, const char *p
 			continue;
 		}
 
+		if(IsQuarantined(source_p))
+		{
+			sendto_one_numeric(source_p, ERR_NEEDREGGEDNICK,
+					"%s :Cannot join channel - you need to be identified with services - see https://freenode.net/kb/answer/registration",
+					name);
+			continue;
+		}
+
 		if(splitmode && !IsOper(source_p) && (*name != '&') &&
 		   ConfigChannel.no_join_on_split)
 		{

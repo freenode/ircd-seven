@@ -740,7 +740,7 @@ static  const char *  replies[] = {
 /* 716 ERR_TARGUMODEG */	"%s :is in +g mode (server-side ignore.)",
 /* 717 RPL_TARGNOTIFY */	"%s :has been informed that you messaged them.",
 /* 718 RPL_UMODEGMSG */		":%s 718 %s %s %s@%s :is messaging you, and you have umode +g.",
-/* 719 */	NULL,
+/* 719 ERR_TARGNEEDAUTH */	"%s :User needs to log in with services to receive messages",
 /* 720 RPL_OMOTDSTART */	":%s 720 %s :Start of OPER MOTD",
 /* 721 RPL_OMOTD */		":%s 721 %s :%s",
 /* 722 RPL_ENDOFOMOTD */	":%s 722 %s :End of OPER MOTD",

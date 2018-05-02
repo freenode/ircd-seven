@@ -506,6 +506,14 @@ msg_channel(int p_or_n, const char *command,
 			source_p->localClient->last = rb_current_time();
 	}
 
+	if(IsQuarantined(source_p))
+	{
+		if(p_or_n != NOTICE)
+			sendto_one_numeric(source_p, ERR_CANNOTSENDTOCHAN,
+					   form_str(ERR_CANNOTSENDTOCHAN), chptr->chname);
+		return;
+	}
+
 	if(chptr->mode.mode & MODE_NOCOLOR)
 	{
 		rb_strlcpy(text2, text, BUFSIZE);
@@ -623,6 +631,14 @@ msg_channel_opmod(int p_or_n, const char *command,
 {
 	char text2[BUFSIZE];
 
+	if(IsQuarantined(source_p))
+	{
+		if(p_or_n != NOTICE)
+			sendto_one_numeric(source_p, ERR_CANNOTSENDTOCHAN,
+					   form_str(ERR_CANNOTSENDTOCHAN), chptr->chname);
+		return;
+	}
+
 	if(chptr->mode.mode & MODE_NOCOLOR)
 	{
 		rb_strlcpy(text2, text, BUFSIZE);
@@ -699,6 +715,14 @@ msg_channel_flags(int p_or_n, const char *command, struct Client *client_p,
 			source_p->localClient->last = rb_current_time();
 	}
 
+	if(IsQuarantined(source_p))
+	{
+		if(p_or_n != NOTICE)
+			sendto_one_numeric(source_p, ERR_CANNOTSENDTOCHAN,
+					   form_str(ERR_CANNOTSENDTOCHAN), chptr->chname);
+		return;
+	}
+
 	sendto_channel_message(client_p, type, source_p, chptr, command, target, "%s", text);
 }
 
@@ -739,6 +763,24 @@ msg_client(int p_or_n, const char *command,
 	   struct Client *source_p, struct Client *target_p, const char *text)
 {
 	int do_floodcount = 0;
+
+	if(IsQuarantined(source_p) && !IsMsgNeedAuth(target_p))
+	{
+		if (p_or_n != NOTICE)
+			sendto_one_numeric(source_p, ERR_NONONREG,
+					form_str(ERR_NONONREG),
+					target_p->name);
+		return;
+	}
+
+	if(IsQuarantined(target_p) && !IsMsgNeedAuth(source_p))
+	{
+		if (p_or_n != NOTICE)
+			sendto_one_numeric(source_p, ERR_TARGNEEDAUTH,
+					form_str(ERR_TARGNEEDAUTH),
+					target_p->name);
+		return;
+	}
 
 	if(MyClient(source_p))
 	{

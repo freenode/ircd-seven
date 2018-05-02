@@ -86,9 +86,9 @@ int user_modes[256] = {
 	UMODE_NOFORWARD,	/* Q */
 	UMODE_REGONLYMSG,	/* R */
 	UMODE_SERVICE,		/* S */
-	0,			/* T */
+	UMODE_MSGNEEDAUTH,	/* T */
 	0,			/* U */
-	0,			/* V */
+	UMODE_NEEDAUTH,		/* V */
 	0,			/* W */
 	0,			/* X */
 	0,			/* Y */
@@ -533,6 +533,9 @@ register_local_user(struct Client *client_p, struct Client *source_p, const char
 
 	if (IsSSL(source_p))
 		source_p->umodes |= UMODE_SSLCLIENT;
+
+	if (IsConfNeedAuth(aconf) || IsNeedSasl(aconf))
+		source_p->umodes |= UMODE_NEEDAUTH;
 
 	if (source_p->umodes & UMODE_INVISIBLE)
 		Count.invisi++;
@@ -1092,6 +1095,7 @@ user_mode(struct Client *client_p, struct Client *source_p, int parc, const char
 		/* can only be set on burst */
 		case 'S':
 		case 'Z':
+		case 'V':
 		case ' ':
 		case '\n':
 		case '\r':
@@ -1333,6 +1337,13 @@ user_welcome(struct Client *source_p)
 	}
 	else
 		send_user_motd(source_p);
+
+	if(IsQuarantined(source_p))
+	{
+		sendto_one_notice(source_p, ":You must have an account to use %s.", ServerInfo.network_name);
+		sendto_one_notice(source_p, ":Please log in or register an account.");
+		sendto_one_notice(source_p, ":See https://freenode.net/kb/answer/registration for more information.");
+	}
 }
 
 /* oper_up()

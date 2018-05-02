@@ -422,12 +422,14 @@ struct ListClient
 #define UMODE_NOFORWARD    0x0100	/* don't forward */
 #define UMODE_REGONLYMSG   0x0200	/* only allow logged in users to msg */
 #define UMODE_HELPOP	   0x0400	/* show in stats p */
+#define UMODE_MSGNEEDAUTH  0x0800	/* can talk to need_auth users */
 
 /* user information flags, only settable by remote mode or local oper */
 #define UMODE_OPER         0x1000	/* Operator */
 #define UMODE_ADMIN        0x2000	/* Admin on server */
 #define UMODE_HELPER       0x4000	/* Helper */
 #define UMODE_SSLCLIENT    0x8000	/* using SSL */
+#define UMODE_NEEDAUTH     0x10000	/* required to be identified */
 
 /* oper-controlled privilege umodes. */
 #define UMODE_OVERRIDE     0x20000
@@ -544,11 +546,15 @@ struct ListClient
 #define IsDeaf(x)		((x)->umodes & UMODE_DEAF)
 #define IsNoForward(x)		((x)->umodes & UMODE_NOFORWARD)
 #define IsSetRegOnlyMsg(x)	((x)->umodes & UMODE_REGONLYMSG)
+#define IsNeedAuth(x)		((x)->umodes & UMODE_NEEDAUTH)
+#define IsMsgNeedAuth(x)	( ((x)->umodes & UMODE_MSGNEEDAUTH) || IsService((x)) || IsServer((x)) )
 
 #define IsHelpOp(x)		((x)->umodes & UMODE_HELPOP)
 
 #define SetGotId(x)             ((x)->flags |= FLAGS_GOTID)
 #define IsGotId(x)              (((x)->flags & FLAGS_GOTID) != 0)
+
+#define IsQuarantined(x)	( ((x)->umodes & UMODE_NEEDAUTH) && !*((x)->user->suser) )
 
 /*
  * flags2 macros.

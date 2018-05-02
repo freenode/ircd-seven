@@ -110,6 +110,14 @@ m_invite(struct Client *client_p, struct Client *source_p, int parc, const char 
 		return 0;
 	}
 
+	if(IsQuarantined(target_p))
+	{
+		sendto_one_numeric(source_p, ERR_TARGNEEDAUTH,
+				   form_str(ERR_TARGNEEDAUTH),
+				   target_p->name);
+		return 0;
+	}
+
 	if(((MyConnect(source_p) && !IsExemptResv(source_p)) ||
 			(MyConnect(target_p) && !IsExemptResv(target_p))) &&
 		hash_find_resv(parv[2]))

@@ -136,9 +136,10 @@ m_knock(struct Client *client_p, struct Client *source_p, int parc, const char *
 	
 	if(MyClient(source_p))
 	{
-		/* don't allow a knock if the user is banned */
+		/* don't allow a knock if the user is banned or quarantined */
 		if(is_banned(chptr, source_p, NULL, NULL, NULL, NULL) == CHFL_BAN ||
-				is_quieted(chptr, source_p, NULL, NULL, NULL) == CHFL_BAN)
+				is_quieted(chptr, source_p, NULL, NULL, NULL) == CHFL_BAN ||
+				IsQuarantined(source_p))
 		{
 			sendto_one_numeric(source_p, ERR_CANNOTSENDTOCHAN,
 					   form_str(ERR_CANNOTSENDTOCHAN), name);
