@@ -386,6 +386,10 @@ single_whois(struct Client *source_p, struct Client *target_p, int operspy)
 		}
 	}
 
+	if(IsQuarantined(target_p))
+		sendto_one_numeric(source_p, RPL_WHOISSPECIAL, form_str(RPL_WHOISSPECIAL),
+				   target_p->name, "User must log in with services to use the network");
+
 	hdata.client = source_p;
 	hdata.target = target_p;
 
