@@ -70,6 +70,7 @@ TSRCS =                          \
   m_invite.c \
   m_ison.c \
   m_kline.c \
+  m_filter.c \
   m_knock.c \
   m_links.c \
   m_list.c \
@@ -143,11 +144,11 @@ hpux_shared: $(SH_CORE_OBJS) $(SH_OBJS)
 
 static_modules.c: static_modules.c.SH
 	/bin/sh ./static_modules.c.SH $(S_OBJS)
-	
+
 libmodules.a: $(S_OBJS) static_modules.o
 	$(RM) -f $@
 	$(AR) cqv $@ $(S_OBJS) static_modules.o
-	$(RANLIB) $@ 
+	$(RANLIB) $@
 
 
 install-mkdirs:
@@ -169,7 +170,7 @@ install-mkdirs:
 install: install_@MOD_TARGET@
 
 install_libmodules.a: libmodules.a
-# Ye olde noop here.	
+# Ye olde noop here.
 
 install_shared_modules: install-mkdirs
 	@echo "ircd: installing modules"
