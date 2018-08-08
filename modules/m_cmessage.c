@@ -47,7 +47,7 @@
 static int _modinit(void);
 static void _moddeinit(void);
 
-static int m_cmessage(int, const char *, struct Client *, struct Client *, int, const char **);
+static int m_cmessage(int, enum message_type, struct Client *, struct Client *, int, const char **);
 static int m_cprivmsg(struct Client *, struct Client *, int, const char **);
 static int m_cnotice(struct Client *, struct Client *, int, const char **);
 
@@ -62,6 +62,11 @@ struct Message cnotice_msgtab = {
 
 mapi_clist_av1 cmessage_clist[] = { &cprivmsg_msgtab, &cnotice_msgtab, NULL };
 DECLARE_MODULE_AV1(cmessage, _modinit, _moddeinit, cmessage_clist, NULL, NULL, "$Revision: 1543 $");
+
+static const char *cmdname[MESSAGE_TYPE_COUNT] = {
+	[MESSAGE_TYPE_PRIVMSG] = "PRIVMSG",
+	[MESSAGE_TYPE_NOTICE] = "NOTICE",
+};
 
 static int _modinit(void)
 {
@@ -82,22 +87,24 @@ static void _moddeinit(void)
 static int
 m_cprivmsg(struct Client *client_p, struct Client *source_p, int parc, const char *parv[])
 {
-	return m_cmessage(PRIVMSG, "PRIVMSG", client_p, source_p, parc, parv);
+	return m_cmessage(PRIVMSG, MESSAGE_TYPE_PRIVMSG, client_p, source_p, parc, parv);
 }
 
 static int
 m_cnotice(struct Client *client_p, struct Client *source_p, int parc, const char *parv[])
 {
-	return m_cmessage(NOTICE, "NOTICE", client_p, source_p, parc, parv);
+	return m_cmessage(NOTICE, MESSAGE_TYPE_NOTICE, client_p, source_p, parc, parv);
 }
 
 static int
-m_cmessage(int p_or_n, const char *command,
+m_cmessage(int p_or_n, enum message_type msgtype,
 		struct Client *client_p, struct Client *source_p, int parc, const char *parv[])
 {
 	struct Client *target_p;
 	struct Channel *chptr;
 	struct membership *msptr;
+
+	hook_data_privmsg_user hdata;
 
 	if(!IsFloodDone(source_p))
 		flood_endgrace(source_p);
@@ -122,7 +129,7 @@ m_cmessage(int p_or_n, const char *command,
 	{
 		if(p_or_n != NOTICE)
 			sendto_one_numeric(source_p, ERR_NOTONCHANNEL,
-					form_str(ERR_NOTONCHANNEL), 
+					form_str(ERR_NOTONCHANNEL),
 					chptr->chname);
 		return 0;
 	}
@@ -180,7 +187,18 @@ m_cmessage(int p_or_n, const char *command,
 	if(p_or_n != NOTICE)
 		source_p->localClient->last = rb_current_time();
 
-	sendto_anywhere_message(target_p, source_p, command, "%s", parv[3]);
+	hdata.msgtype = msgtype;
+	hdata.source_p = source_p;
+	hdata.target_p = target_p;
+	hdata.text = parv[3];
+	hdata.approved = 0;
+
+	call_hook(h_privmsg_user, &hdata);
+
+	if (hdata.approved != 0)
+		return;
+
+	sendto_anywhere_message(target_p, source_p, cmdname[msgtype], "%s", hdata.text);
 
 	return 0;
 }
