@@ -886,22 +886,22 @@ msg_client(enum message_type msgtype,
 		sendto_one_numeric(source_p, RPL_AWAY, form_str(RPL_AWAY),
 				   target_p->name, target_p->user->away);
 
+	hdata.msgtype = msgtype;
+	hdata.source_p = source_p;
+	hdata.target_p = target_p;
+	hdata.text = text;
+	hdata.approved = 0;
+
+	call_hook(h_privmsg_user, &hdata);
+
+	/* buffer location may have changed. */
+	text = hdata.text;
+
+	if (hdata.approved != 0)
+		return;
+
 	if(MyClient(target_p))
 	{
-		hdata.msgtype = msgtype;
-		hdata.source_p = source_p;
-		hdata.target_p = target_p;
-		hdata.text = text;
-		hdata.approved = 0;
-
-		call_hook(h_privmsg_user, &hdata);
-
-		/* buffer location may have changed. */
-		text = hdata.text;
-
-		if (hdata.approved != 0)
-			return;
-
 		/* XXX Controversial? allow opers always to send through a +g */
 		if(!IsServer(source_p) && (IsSetCallerId(target_p) ||
 					(IsSetRegOnlyMsg(target_p) && !source_p->user->suser[0])))
