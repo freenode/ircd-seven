@@ -83,7 +83,8 @@ SRCS =                          \
   spy_stats_p_notice.c		\
   spy_trace_notice.c		\
   example_module.c 		\
-  hints.c
+  hints.c		\
+  drain.c
 
 OBJS = ${SRCS:.c=.so}
 
