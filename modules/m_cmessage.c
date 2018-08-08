@@ -198,6 +198,10 @@ m_cmessage(int p_or_n, enum message_type msgtype,
 	if (hdata.approved != 0)
 		return;
 
+	/* the hook may have killed them */
+	if (IsAnyDead(source_p))
+		return;
+
 	sendto_anywhere_message(target_p, source_p, cmdname[msgtype], "%s", hdata.text);
 
 	return 0;

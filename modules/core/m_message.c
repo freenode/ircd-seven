@@ -535,6 +535,10 @@ msg_channel(enum message_type msgtype,
 	if (hdata.approved != 0)
 		return;
 
+	/* the hook may have killed them */
+	if (IsAnyDead(source_p))
+		return;
+
 	/* chanops and voiced can flood their own channel with impunity */
 	if((result = can_send(chptr, source_p, msptr)))
 	{
@@ -664,6 +668,10 @@ msg_channel_opmod(enum message_type msgtype,
 	if (hdata.approved != 0)
 		return;
 
+	/* the hook may have killed them */
+	if (IsAnyDead(source_p))
+		return;
+
 	if(chptr->mode.mode & MODE_OPMODERATE &&
 			(!(chptr->mode.mode & MODE_NOPRIVMSGS) ||
 			 IsMember(source_p, chptr)))
@@ -753,6 +761,10 @@ msg_channel_flags(enum message_type msgtype, struct Client *client_p,
 	text = hdata.text;
 
 	if (hdata.approved != 0)
+		return;
+
+	/* the hook may have killed them */
+	if (IsAnyDead(source_p))
 		return;
 
 	if (msgtype != MESSAGE_TYPE_NOTICE && *text == '\001' &&
@@ -898,6 +910,10 @@ msg_client(enum message_type msgtype,
 	text = hdata.text;
 
 	if (hdata.approved != 0)
+		return;
+
+	/* the hook may have killed them */
+	if (IsAnyDead(source_p))
 		return;
 
 	if(MyClient(target_p))
