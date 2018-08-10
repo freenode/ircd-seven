@@ -425,7 +425,7 @@ static  const char *  replies[] = {
 /* 401 ERR_NOSUCHNICK, */       "%s :No such nick/channel",
 /* 402 ERR_NOSUCHSERVER, */     "%s :No such server",
 /* 403 ERR_NOSUCHCHANNEL, */    "%s :No such channel",
-/* 404 ERR_CANNOTSENDTOCHAN, */ "%s :Cannot send to channel",
+/* 404 ERR_CANNOTSENDTOCHAN, */ "%s :Cannot send to nick/channel",
 /* 405 ERR_TOOMANYCHANNELS, */  ":%s 405 %s %s :You have joined too many channels",
 /* 406 ERR_WASNOSUCHNICK, */    ":%s 406 %s %s :There was no such nickname",
 /* 407 ERR_TOOMANYTARGETS, */   ":%s 407 %s %s :Too many recipients.",
