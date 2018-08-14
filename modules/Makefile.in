@@ -70,7 +70,6 @@ TSRCS =                          \
   m_invite.c \
   m_ison.c \
   m_kline.c \
-  m_filter.c \
   m_knock.c \
   m_links.c \
   m_list.c \

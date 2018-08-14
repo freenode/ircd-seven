@@ -61,6 +61,7 @@ SRCS =                          \
   m_adminwall.c			\
   m_dehelper.c			\
   m_extendchans.c		\
+  m_filter.c		\
   m_findforwards.c		\
   m_identify.c			\
   m_listenoff.c			\
@@ -119,7 +120,7 @@ depend:
 	@rm -f .depend.tmp .depend
 
 clean:
-	${RM} -f *.so *~ 
+	${RM} -f *.so *~
 
 distclean: clean
 	${RM} -f Makefile
