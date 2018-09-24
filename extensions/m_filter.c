@@ -314,7 +314,7 @@ unsigned match_message(const char *prefix,
 	         source->user && source->user->suser[0] != '\0' ? '1' : '0',
 	         command, target,
 	         msg);
-	hs_error_t r = hs_scan(filter_db, msg, strlen(msg), 0, filter_scratch, match_callback, &state);
+	hs_error_t r = hs_scan(filter_db, check_buffer, strlen(check_buffer), 0, filter_scratch, match_callback, &state);
 	if (r != HS_SUCCESS && r != HS_SCAN_TERMINATED)
 		return 0;
 	return state;
