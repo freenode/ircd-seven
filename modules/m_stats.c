@@ -191,7 +191,7 @@ m_stats(struct Client *client_p, struct Client *source_p, int parc, const char *
 
 	statchar = parv[1][0];
 
-	if(MyClient(source_p) && !IsOper(source_p))
+	if(MyClient(source_p) && !IsOper(source_p) && parc > 2)
 	{
 		/* Check the user is actually allowed to do /stats, and isnt flooding */
 		if((last_used + ConfigFileEntry.pace_wait) > rb_current_time())
