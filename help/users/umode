@@ -9,5 +9,6 @@ Usermodes:
          +w     - Can see oper wallops.
          +D     - Deaf - ignores all channel messages.
          +Q     - Prevents you from being affected by channel forwarding.
-         +R     - Prevents non accept unidentified users from messaging you.
+         +R     - Prevents unidentified users from messaging you. You may
+                  exempt individuals with /accept .
          +Z     - Is connected via SSL (cannot be set or unset).
