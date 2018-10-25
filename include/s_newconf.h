@@ -155,6 +155,7 @@ extern void cluster_generic(struct Client *, const char *, int cltype,
 #define HasPrivilege(x, y)	((x)->localClient != NULL && (x)->localClient->privset != NULL && privilegeset_in_set((x)->localClient->privset, (y)))
 
 #define IsOperHelper(x)         HasPrivilege(x, "oper:helpop")
+#define IsOperDehelper(x)       HasPrivilege(x, "oper:dehelper")
 #define IsOperOperwall(x)       HasPrivilege(x, "oper:operwall")
 #define IsOperStaffer(x)        HasPrivilege(x, "oper:staffer")
 #define IsOperKill(x)           HasPrivilege(x, "oper:kill")
