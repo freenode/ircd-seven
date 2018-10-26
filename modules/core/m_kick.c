@@ -189,7 +189,7 @@ do_kick(int kick_or_remove, struct Client *client_p, struct Client *source_p, in
 			return 0;
 		}
 
-		if (MyClient(source_p) && chptr->mode.mode & MODE_NOOPERKICK && IsOper(who))
+		if (MyClient(source_p) && chptr->mode.mode & MODE_NOOPERKICK && IsAnyOper(who))
 		{
 			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 				"Overriding %s from %s on %s in %s (channel is +M)",
