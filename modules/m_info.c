@@ -303,12 +303,6 @@ static struct InfoStruct info_table[] = {
 		"Server is a hub"
 	},
 	{
-		"kline_delay",
-		OUTPUT_DECIMAL,
-		&ConfigFileEntry.kline_delay,
-		"Duration of time to delay kline checking"
-	},
-	{
 		"kline_reason",
 		OUTPUT_STRING,
 		&ConfigFileEntry.kline_reason,
