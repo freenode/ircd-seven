@@ -492,7 +492,7 @@ channel_member_names(struct Channel *chptr, struct Client *client_p, int show_eo
 		/* The old behaviour here was to always output our buffer,
 		 * even if there are no clients we can show.  This happens
 		 * when a client does "NAMES" with no parameters, and all
-		 * the clients on a -sp channel are +i.  I dont see a good
+		 * the clients on a -sp channel are +i.  I don't see a good
 		 * reason for keeping that behaviour, as it just wastes
 		 * bandwidth.  --anfl
 		 */
@@ -543,7 +543,7 @@ is_banned(struct Channel *chptr, struct Client *who, struct membership *msptr,
 	if(!MyClient(who))
 		return 0;
 
-	/* if the buffers havent been built, do it here */
+	/* if the buffers haven't been built, do it here */
 	if(s == NULL)
 	{
 		rb_sprintf(src_host, "%s!%s@%s", who->name, who->username, who->host);
@@ -588,14 +588,14 @@ is_banned(struct Channel *chptr, struct Client *who, struct membership *msptr,
 		{
 			actualExcept = ptr->data;
 
-			/* theyre exempted.. */
+			/* they're exempted.. */
 			if(match(actualExcept->banstr, s) ||
 			   match(actualExcept->banstr, s2) ||
 			   match_cidr(actualExcept->banstr, s2) ||
 			   match_extban(actualExcept->banstr, who, chptr, CHFL_EXCEPTION) ||
 			   (s3 != NULL && match(actualExcept->banstr, s3)))
 			{
-				/* cache the fact theyre not banned */
+				/* cache the fact they're not banned */
 				if(msptr != NULL)
 				{
 					msptr->bants = chptr->bants;
@@ -652,7 +652,7 @@ is_quieted(struct Channel *chptr, struct Client *who, struct membership *msptr,
 	if(!MyClient(who))
 		return 0;
 
-	/* if the buffers havent been built, do it here */
+	/* if the buffers haven't been built, do it here */
 	if(s == NULL)
 	{
 		rb_sprintf(src_host, "%s!%s@%s", who->name, who->username, who->host);
@@ -697,14 +697,14 @@ is_quieted(struct Channel *chptr, struct Client *who, struct membership *msptr,
 		{
 			actualExcept = ptr->data;
 
-			/* theyre exempted.. */
+			/* they're exempted.. */
 			if(match(actualExcept->banstr, s) ||
 			   match(actualExcept->banstr, s2) ||
 			   match_cidr(actualExcept->banstr, s2) ||
 			   match_extban(actualExcept->banstr, who, chptr, CHFL_EXCEPTION) ||
 			   (s3 != NULL && match(actualExcept->banstr, s3)))
 			{
-				/* cache the fact theyre not banned */
+				/* cache the fact they're not banned */
 				if(msptr != NULL)
 				{
 					msptr->bants = chptr->bants;
@@ -881,9 +881,9 @@ can_send(struct Channel *chptr, struct Client *source_p, struct membership *mspt
 
 		if(msptr == NULL)
 		{
-			/* if its +m or +n and theyre not in the channel,
-			 * they cant send.  we dont check bans here because
-			 * theres no possibility of caching them --fl
+			/* if its +m or +n and they're not in the channel,
+			 * they cant send.  we don't check bans here because
+			 * there's no possibility of caching them --fl
 			 */
 			if(chptr->mode.mode & MODE_NOPRIVMSGS || chptr->mode.mode & MODE_MODERATED)
 				moduledata.approved = CAN_SEND_NO;
@@ -1402,8 +1402,8 @@ send_cap_mode_changes(struct Client *client_p, struct Client *source_p,
 		/* loop the list of - modes we have */
 		for (i = 0; i < mode_count; i++)
 		{
-			/* if they dont support the cap we need, or they do support a cap they
-			 * cant have, then dont add it to the modebuf.. that way they wont see
+			/* if they don't support the cap we need, or they do support a cap they
+			 * cant have, then don't add it to the modebuf.. that way they wont see
 			 * the mode
 			 */
 			if((mode_changes[i].letter == 0) ||
@@ -1420,7 +1420,7 @@ send_cap_mode_changes(struct Client *client_p, struct Client *source_p,
 			{
 				arglen = strlen(arg);
 
-				/* dont even think about it! --fl */
+				/* don't even think about it! --fl */
 				if(arglen > MODEBUFLEN - 5)
 					continue;
 			}

@@ -209,7 +209,7 @@ show_lusers(struct Client *source_p)
 **         "foobar" (quite legal, as this server didn't propagate
 **         it).
 **      3) now this server gets nick "foobar" from outside, but
-**         has alread the same defined locally. Current server
+**         has already the same defined locally. Current server
 **         would just issue "KILL foobar" to clean out dups. But,
 **         this is not fair. It should actually request another
 **         nick from local user or kill him/her...
@@ -251,7 +251,7 @@ register_local_user(struct Client *client_p, struct Client *source_p, const char
 		}
 	}
 
-	/* hasnt finished client cap negotiation */
+	/* hasn't finished client cap negotiation */
 	if(source_p->flags & FLAGS_CLICAP)
 		return -1;
 
@@ -266,7 +266,7 @@ register_local_user(struct Client *client_p, struct Client *source_p, const char
 	/* Straight up the maximum rate of flooding... */
 	source_p->localClient->allow_read = MAX_FLOOD_BURST;
 
-	/* XXX - fixme. we shouldnt have to build a users buffer twice.. */
+	/* XXX - fixme. we shouldn't have to build a users buffer twice.. */
 	if(!IsGotId(source_p) && (strchr(username, '[') != NULL))
 	{
 		const char *p;
@@ -523,7 +523,7 @@ register_local_user(struct Client *client_p, struct Client *source_p, const char
 	add_to_hostname_hash(source_p->orighost, source_p);
 
 	/* Allocate a UID if it was not previously allocated.
-	 * If this already occured, it was probably during SASL auth...
+	 * If this already occurred, it was probably during SASL auth...
 	 */
 	if(!*source_p->id)
 	{
@@ -949,7 +949,7 @@ user_mode(struct Client *client_p, struct Client *source_p, int parc, const char
 		return 0;
 	}
 
-	/* Dont know why these were commented out..
+	/* Don't know why these were commented out..
 	 * put them back using new sendto() funcs
 	 */
 
@@ -1086,7 +1086,7 @@ user_mode(struct Client *client_p, struct Client *source_p, int parc, const char
 			break;
 
 			/* we may not get these,
-			 * but they shouldnt be in default
+			 * but they shouldn't be in default
 			 */
 
 		/* can only be set on burst */

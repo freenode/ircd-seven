@@ -77,7 +77,7 @@ static void stats_l_client(struct Client *source_p, struct Client *target_p,
 static void stats_spy(struct Client *, char, const char *);
 static void stats_p_spy(struct Client *);
 
-/* Heres our struct for the stats table */
+/* Here's our struct for the stats table */
 struct StatsStruct
 {
 	char letter;
@@ -1650,7 +1650,7 @@ stats_spy(struct Client *source_p, char statchar, const char *name)
 /* stats_p_spy()
  *
  * input	- pointer to client doing stats
- * ouput	-
+ * output	-
  * side effects - call hook doing_stats_p
  */
 static void

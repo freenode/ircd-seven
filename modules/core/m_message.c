@@ -138,7 +138,7 @@ static void handle_special(enum message_type msgtype,
 ** (I don't think there is a single line left from 6/91. Maybe.)
 ** m_privmsg and m_notice do basically the same thing.
 ** in the original 2.8.2 code base, they were the same function
-** "m_message.c." When we did the great cleanup in conjuncton with bleep
+** "m_message.c." When we did the great cleanup in conjunction with bleep
 ** of ircu fame, we split m_privmsg.c and m_notice.c.
 ** I don't see the point of that now. Its harder to maintain, its
 ** easier to introduce bugs into one version and not the other etc.
@@ -190,7 +190,7 @@ m_message(enum message_type msgtype,
 		return 0;
 	}
 
-	/* Finish the flood grace period if theyre not messaging themselves
+	/* Finish the flood grace period if they're not messaging themselves
 	 * as some clients (ircN) do this as a "lag check"
 	 */
 	if(MyClient(source_p) && !IsFloodDone(source_p) && irccmp(source_p->name, parv[1]))
@@ -243,7 +243,7 @@ m_message(enum message_type msgtype,
  * side effects	- target_table is modified to contain a list of
  *		  pointers to channels or clients
  *		  if source client is an oper
- *		  all the classic old bizzare oper privmsg tricks
+ *		  all the classic old bizarre oper privmsg tricks
  *		  are parsed and sent as is, if prefixed with $
  *		  to disambiguate.
  *
@@ -291,7 +291,7 @@ build_target_list(enum message_type msgtype, struct Client *client_p,
 				}
 			}
 
-			/* non existant channel */
+			/* non existent channel */
 			else if(msgtype != MESSAGE_TYPE_NOTICE)
 				sendto_one_numeric(source_p, ERR_NOSUCHNICK,
 						   form_str(ERR_NOSUCHNICK), nick);
@@ -422,7 +422,7 @@ build_target_list(enum message_type msgtype, struct Client *client_p,
 				}
 			}
 
-			/* non existant channel */
+			/* non existent channel */
 			else if(msgtype != MESSAGE_TYPE_NOTICE)
 				sendto_one_numeric(source_p, ERR_NOSUCHNICK,
 						   form_str(ERR_NOSUCHNICK), nick);
@@ -439,7 +439,7 @@ build_target_list(enum message_type msgtype, struct Client *client_p,
 		/* no matching anything found - error if not NOTICE */
 		if(msgtype != MESSAGE_TYPE_NOTICE)
 		{
-			/* dont give this numeric when source is local,
+			/* don't give this numeric when source is local,
 			 * because its misleading --anfl
 			 */
 			if(!MyClient(source_p) && IsDigit(*nick))
@@ -500,7 +500,7 @@ msg_channel(enum message_type msgtype,
 
 	if(MyClient(source_p))
 	{
-		/* idle time shouldnt be reset by notices --fl */
+		/* idle time shouldn't be reset by notices --fl */
 		if(msgtype != MESSAGE_TYPE_NOTICE)
 			source_p->localClient->last = rb_current_time();
 	}
@@ -729,7 +729,7 @@ msg_channel_flags(enum message_type msgtype, struct Client *client_p,
 
 	if(MyClient(source_p))
 	{
-		/* idletime shouldnt be reset by notice --fl */
+		/* idletime shouldn't be reset by notice --fl */
 		if(msgtype != MESSAGE_TYPE_NOTICE)
 			source_p->localClient->last = rb_current_time();
 	}
@@ -865,7 +865,7 @@ msg_client(enum message_type msgtype,
 		do_floodcount = !IsOper(source_p) &&
 			!find_allowing_channel(source_p, target_p);
 
-		/* target change stuff, dont limit ctcp replies as that
+		/* target change stuff, don't limit ctcp replies as that
 		 * would allow people to start filling up random users
 		 * targets just by ctcping them
 		 */
