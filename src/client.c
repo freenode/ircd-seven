@@ -1210,7 +1210,7 @@ exit_generic_client(struct Client *client_p, struct Client *source_p, struct Cli
 	if(IsAnyOper(source_p))
 		rb_dlinkFindDestroy(source_p, &oper_list);
 
-	sendto_common_channels_local(source_p, NOCAPS, ":%s!%s@%s QUIT :%s",
+	sendto_common_channels_local(source_p, NOCAPS, NOCAPS, ":%s!%s@%s QUIT :%s",
 				     source_p->name,
 				     source_p->username, source_p->host, comment);
 

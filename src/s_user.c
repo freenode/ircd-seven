@@ -147,7 +147,7 @@ show_lusers(struct Client *source_p)
 
 	if((rb_dlink_list_length(&lclient_list) + rb_dlink_list_length(&serv_list)) >
 	   (unsigned long)MaxConnectionCount)
-		MaxConnectionCount = rb_dlink_list_length(&lclient_list) + 
+		MaxConnectionCount = rb_dlink_list_length(&lclient_list) +
 					rb_dlink_list_length(&serv_list);
 
 	sendto_one_numeric(source_p, RPL_LUSERCLIENT, form_str(RPL_LUSERCLIENT),
@@ -155,16 +155,16 @@ show_lusers(struct Client *source_p)
 			   Count.invisi, rb_dlink_list_length(&global_serv_list));
 
 	if(rb_dlink_list_length(&oper_list) > 0)
-		sendto_one_numeric(source_p, RPL_LUSEROP, 
+		sendto_one_numeric(source_p, RPL_LUSEROP,
 				   form_str(RPL_LUSEROP), rb_dlink_list_length(&oper_list));
 
 	if(rb_dlink_list_length(&unknown_list) > 0)
-		sendto_one_numeric(source_p, RPL_LUSERUNKNOWN, 
+		sendto_one_numeric(source_p, RPL_LUSERUNKNOWN,
 				   form_str(RPL_LUSERUNKNOWN),
 				   rb_dlink_list_length(&unknown_list));
 
 	if(rb_dlink_list_length(&global_channel_list) > 0)
-		sendto_one_numeric(source_p, RPL_LUSERCHANNELS, 
+		sendto_one_numeric(source_p, RPL_LUSERCHANNELS,
 				   form_str(RPL_LUSERCHANNELS),
 				   rb_dlink_list_length(&global_channel_list));
 
@@ -172,7 +172,7 @@ show_lusers(struct Client *source_p)
 			   rb_dlink_list_length(&lclient_list),
 			   rb_dlink_list_length(&serv_list));
 
-	sendto_one_numeric(source_p, RPL_LOCALUSERS, 
+	sendto_one_numeric(source_p, RPL_LOCALUSERS,
 			   form_str(RPL_LOCALUSERS),
 			   rb_dlink_list_length(&lclient_list),
 			   Count.max_loc,
@@ -185,7 +185,7 @@ show_lusers(struct Client *source_p)
 
 	sendto_one_numeric(source_p, RPL_STATSCONN,
 			   form_str(RPL_STATSCONN),
-			   MaxConnectionCount, MaxClientCount, 
+			   MaxConnectionCount, MaxClientCount,
 			   Count.totalrestartcount);
 
 	return 0;
@@ -307,7 +307,7 @@ register_local_user(struct Client *client_p, struct Client *source_p, const char
 
 		rb_strlcpy(source_p->host, source_p->sockhost, sizeof(source_p->host));
  	}
- 
+
 
 	aconf = source_p->localClient->att_conf;
 
@@ -615,7 +615,7 @@ introduce_client(struct Client *client_p, struct Client *source_p, struct User *
 		rb_strlcat(sockhost, source_p->sockhost, sizeof(sockhost));
 	} else
 		strcpy(sockhost, source_p->sockhost);
-		
+
 	if (use_euid)
 		sendto_server(client_p, NULL, CAP_EUID | CAP_TS6, NOCAPS,
 				":%s EUID %s %d %ld %s %s %s %s %s %s %s :%s",
@@ -709,7 +709,7 @@ introduce_client(struct Client *client_p, struct Client *source_p, struct User *
 	return 0;
 }
 
-/* 
+/*
  * valid_hostname - check hostname for validity
  *
  * Inputs       - pointer to user
@@ -756,13 +756,13 @@ valid_hostname(const char *hostname)
 	return YES;
 }
 
-/* 
+/*
  * valid_username - check username for validity
  *
  * Inputs       - pointer to user
  * Output       - YES if valid, NO if not
  * Side effects - NONE
- * 
+ *
  * Absolutely always reject any '*' '!' '?' '@' in an user name
  * reject any odd control characters names.
  * Allow '.' in username to allow for "first.last"
@@ -1018,7 +1018,7 @@ user_mode(struct Client *client_p, struct Client *source_p, int parc, const char
 			else
 			{
 				/* Only decrement the oper counts if an oper to begin with
-				 * found by Pat Szuta, Perly , perly@xnet.com 
+				 * found by Pat Szuta, Perly , perly@xnet.com
 				 */
 
 				if(!IsOper(source_p))
@@ -1271,7 +1271,7 @@ send_umode(struct Client *client_p, struct Client *source_p, int old, int sendma
  *
  * inputs	-
  * output	- NONE
- * side effects - 
+ * side effects -
  */
 void
 send_umode_out(struct Client *client_p, struct Client *source_p, int old)
@@ -1289,7 +1289,7 @@ send_umode_out(struct Client *client_p, struct Client *source_p, int old)
 		if((target_p != client_p) && (target_p != source_p) && (*buf))
 		{
 			sendto_one(target_p, ":%s MODE %s :%s",
-				   get_id(source_p, target_p), 
+				   get_id(source_p, target_p),
 				   get_id(source_p, target_p), buf);
 		}
 	}
@@ -1298,7 +1298,7 @@ send_umode_out(struct Client *client_p, struct Client *source_p, int old)
 		send_umode(client_p, source_p, old, 0, buf);
 }
 
-/* 
+/*
  * user_welcome
  *
  * inputs	- client pointer to client to welcome
@@ -1323,7 +1323,7 @@ user_welcome(struct Client *source_p)
 		sendto_one_notice(source_p, ":*** Notice -- motd was last changed at %s", user_motd_changed);
 		sendto_one_notice(source_p, ":*** Notice -- Please read the motd if you haven't read it");
 
-		sendto_one(source_p, form_str(RPL_MOTDSTART), 
+		sendto_one(source_p, form_str(RPL_MOTDSTART),
 			   me.name, source_p->name, me.name);
 
 		sendto_one(source_p, form_str(RPL_MOTD),
@@ -1498,7 +1498,7 @@ change_nick_user_host(struct Client *target_p,	const char *nick, const char *use
 	va_list ap;
 
 	modeval[0] = '\0';
-	
+
 	if(changed)
 	{
 		target_p->tsinfo = newts;
@@ -1512,7 +1512,7 @@ change_nick_user_host(struct Client *target_p,	const char *nick, const char *use
 		vsnprintf(reason, 255, format, ap);
 		va_end(ap);
 
-		sendto_common_channels_local_butone(target_p, NOCAPS, ":%s!%s@%s QUIT :%s",
+		sendto_common_channels_local_butone(target_p, NOCAPS, CLICAP_CHGHOST, ":%s!%s@%s QUIT :%s",
 				target_p->name, target_p->username, target_p->host,
 				reason);
 
@@ -1537,15 +1537,15 @@ change_nick_user_host(struct Client *target_p,	const char *nick, const char *use
 
 			*mptr = '\0';
 
-			sendto_channel_local_with_capability_butone(target_p, ALL_MEMBERS, NOCAPS, CLICAP_EXTENDED_JOIN, chptr,
+			sendto_channel_local_with_capability_butone(target_p, ALL_MEMBERS, NOCAPS, CLICAP_EXTENDED_JOIN | CLICAP_CHGHOST, chptr,
 								    ":%s!%s@%s JOIN %s", nick, user, host, chptr->chname);
-			sendto_channel_local_with_capability_butone(target_p, ALL_MEMBERS, CLICAP_EXTENDED_JOIN, NOCAPS, chptr,
+			sendto_channel_local_with_capability_butone(target_p, ALL_MEMBERS, CLICAP_EXTENDED_JOIN, CLICAP_CHGHOST, chptr,
 								    ":%s!%s@%s JOIN %s %s :%s", nick, user, host, chptr->chname,
 								    EmptyString(target_p->user->suser) ? "*" : target_p->user->suser,
 								    target_p->info);
 
 			if(*mode)
-				sendto_channel_local_butone(target_p, ALL_MEMBERS, chptr,
+				sendto_channel_local_with_capability_butone(target_p, ALL_MEMBERS, NOCAPS, CLICAP_CHGHOST, chptr,
 						":%s MODE %s +%s %s",
 						target_p->servptr->name,
 						chptr->chname, mode, modeval);
@@ -1555,19 +1555,31 @@ change_nick_user_host(struct Client *target_p,	const char *nick, const char *use
 
 		/* Resend away message to away-notify enabled clients. */
 		if (target_p->user->away)
-			sendto_common_channels_local_butone(target_p, CLICAP_AWAY_NOTIFY, ":%s!%s@%s AWAY :%s",
+			sendto_common_channels_local_butone(target_p, CLICAP_AWAY_NOTIFY, CLICAP_CHGHOST, ":%s!%s@%s AWAY :%s",
 							    target_p->name, target_p->username, target_p->host,
 							    target_p->user->away);
 
+		sendto_common_channels_local_butone(target_p, CLICAP_CHGHOST, NOCAPS,
+						    ":%s!%s@%s CHGHOST %s %s",
+						    target_p->name, target_p->username, target_p->host, user, host);
+
 		if(MyClient(target_p) && changed_case)
 			sendto_one(target_p, ":%s!%s@%s NICK %s",
-					target_p->name, target_p->username, target_p->host, nick);
+					target_p->name, user, host, nick);
+
+		/* TODO: send some snotes to SNO_NCHANGE/SNO_CCONN/SNO_CCONNEXT? */
 	}
 	else if(changed_case)
 	{
-		sendto_common_channels_local(target_p, NOCAPS, ":%s!%s@%s NICK :%s",
+		sendto_common_channels_local(target_p, NOCAPS, NOCAPS, ":%s!%s@%s NICK :%s",
 				target_p->name, target_p->username,
 				target_p->host, nick);
+
+		if(MyConnect(target_p))
+			sendto_realops_snomask(SNO_NCHANGE, L_ALL,
+					"Nick change: From %s to %s [%s@%s]",
+					target_p->name, nick,
+					target_p->username, target_p->host);
 	}
 
 	rb_strlcpy(target_p->username, user, sizeof target_p->username);

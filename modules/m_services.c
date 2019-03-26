@@ -107,7 +107,7 @@ me_su(struct Client *client_p, struct Client *source_p,
 	else
 		rb_strlcpy(target_p->user->suser, parv[2], sizeof(target_p->user->suser));
 
-	sendto_common_channels_local_butone(target_p, CLICAP_ACCOUNT_NOTIFY, ":%s!%s@%s ACCOUNT %s",
+	sendto_common_channels_local_butone(target_p, CLICAP_ACCOUNT_NOTIFY, NOCAPS, ":%s!%s@%s ACCOUNT %s",
 					    target_p->name, target_p->username, target_p->host,
 					    EmptyString(target_p->user->suser) ? "*" : target_p->user->suser);
 
@@ -221,7 +221,7 @@ me_rsfnc(struct Client *client_p, struct Client *source_p,
 			target_p->name, parv[2], target_p->username,
 			target_p->host);
 
-	sendto_common_channels_local(target_p, NOCAPS, ":%s!%s@%s NICK :%s",
+	sendto_common_channels_local(target_p, NOCAPS, NOCAPS, ":%s!%s@%s NICK :%s",
 				target_p->name, target_p->username,
 				target_p->host, parv[2]);
 

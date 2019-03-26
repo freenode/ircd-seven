@@ -468,6 +468,7 @@ struct ListClient
 #define CLICAP_ACCOUNT_NOTIFY	0x0008
 #define CLICAP_EXTENDED_JOIN	0x0010
 #define CLICAP_AWAY_NOTIFY	0x0020
+#define CLICAP_CHGHOST	0x0040
 
 /*
  * flags macros.

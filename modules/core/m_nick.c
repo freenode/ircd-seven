@@ -740,7 +740,7 @@ change_local_nick(struct Client *client_p, struct Client *source_p,
 			     source_p->name, nick, source_p->username, source_p->host);
 
 	/* send the nick change to the users channels */
-	sendto_common_channels_local(source_p, NOCAPS, ":%s!%s@%s NICK :%s",
+	sendto_common_channels_local(source_p, NOCAPS, NOCAPS, ":%s!%s@%s NICK :%s",
 				     source_p->name, source_p->username, source_p->host, nick);
 
 	/* send the nick change to servers.. */
@@ -807,7 +807,7 @@ change_remote_nick(struct Client *client_p, struct Client *source_p,
 	hook_info.arg2 = nick;
 	call_hook(h_remote_nick_change, &hook_info);
 
-	sendto_common_channels_local(source_p, NOCAPS, ":%s!%s@%s NICK :%s",
+	sendto_common_channels_local(source_p, NOCAPS, NOCAPS, ":%s!%s@%s NICK :%s",
 				     source_p->name, source_p->username, source_p->host, nick);
 
 	if(source_p->user)
