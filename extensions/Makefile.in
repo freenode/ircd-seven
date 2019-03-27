@@ -61,7 +61,6 @@ SRCS =                          \
   m_adminwall.c			\
   m_dehelper.c			\
   m_extendchans.c		\
-  m_filter.c		\
   m_findforwards.c		\
   m_identify.c			\
   m_listenoff.c			\
@@ -86,7 +85,8 @@ SRCS =                          \
   example_module.c 		\
   hints.c		\
   drain.c		\
-  m_invex_regonly.c
+  m_invex_regonly.c		\
+  @OPTIONAL_EXTS@
 
 OBJS = ${SRCS:.c=.so}
 
