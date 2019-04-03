@@ -201,13 +201,18 @@ static int
 mo_chghost(struct Client *client_p, struct Client *source_p,
 	int parc, const char *parv[])
 {
-#ifdef ENABLE_OPER_CHGHOST
 	struct Client *target_p;
 
 	if(!IsOperAdmin(source_p))
 	{
 		sendto_one(source_p, form_str(ERR_NOPRIVS),
 			   me.name, source_p->name, "admin");
+		return 0;
+	}
+
+	if (!ConfigFileEntry.oper_chghost)
+	{
+		sendto_one_numeric(source_p, ERR_DISABLED, form_str(ERR_DISABLED), "CHGHOST");
 		return 0;
 	}
 
@@ -232,10 +237,6 @@ mo_chghost(struct Client *client_p, struct Client *source_p,
 	sendto_server(NULL, NULL,
 		CAP_TS6, CAP_EUID, ":%s ENCAP * CHGHOST %s :%s",
 		use_id(source_p), use_id(target_p), parv[2]);
-#else
-	sendto_one_numeric(source_p, ERR_DISABLED, form_str(ERR_DISABLED),
-			"CHGHOST");
-#endif
 
 	return 0;
 }
