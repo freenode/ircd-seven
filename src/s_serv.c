@@ -91,6 +91,7 @@ struct Capability captab[] = {
 	{ "EOPMOD",	CAP_EOPMOD },
 	{ "BAN",	CAP_BAN },
 	{ "MLOCK",	CAP_MLOCK },
+	{ "UFNC",	CAP_UFNC },
 	{0, 0}
 };
 
