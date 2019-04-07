@@ -67,6 +67,7 @@ static int can_save(struct Client *);
 static void save_user(struct Client *, struct Client *, struct Client *);
 static void fnc_user(struct Client *, struct Client *, struct Client *, const char *);
 static void bad_nickname(struct Client *, const char *);
+static void bad_fnc(struct Client *, const char *);
 
 static int h_local_nick_change;
 static int h_remote_nick_change;
@@ -1308,6 +1309,9 @@ fnc_user(struct Client *client_p, struct Client *source_p,
 		struct Client *target_p, const char *newnick)
 {
 	struct Client *exist_p = find_named_client(newnick);
+	struct Client *server_p = target_p->servptr;
+
+	char squit_reason[300];
 
 	if (exist_p) {
 		char buf[BUFSIZE];
@@ -1329,18 +1333,35 @@ fnc_user(struct Client *client_p, struct Client *source_p,
 		exit_client(NULL, exist_p, &me, buf);
 	}
 
+	if (!(source_p->flags & FLAGS_SERVICE)) {
+		snprintf(squit_reason, sizeof squit_reason,
+				"Invalid UFNC (%s -> %s) from %s (source server lacks U:line)",
+				target_p->name, newnick,
+				source_p->name);
+		bad_fnc(client_p, squit_reason);
+		return 0;
+	}
+
+	for (; server_p && server_p != &me; server_p = server_p->servptr) {
+		if (server_p->serv->caps & CAP_UFNC)
+			continue;
+		snprintf(squit_reason, sizeof squit_reason,
+				"Invalid UFNC (%s -> %s) from %s (server %s on path lacks support)",
+				target_p->name, newnick,
+				source_p->name, server_p->name);
+		bad_fnc(client_p, squit_reason);
+		return 0;
+	}
+
 	sendto_server(client_p, NULL, CAP_UFNC|CAP_TS6, NOCAPS, ":%s UFNC %s %s %ld",
 			source_p->id, target_p->id, newnick, (long)target_p->tsinfo);
 	sendto_server(client_p, NULL, CAP_TS6, CAP_UFNC, ":%s NICK %s :%ld",
 			target_p->id, target_p->id, (long)target_p->tsinfo);
-	if (MyClient(target_p))
-	{
+	if (MyClient(target_p)) {
 		time_t tsinfo = target_p->tsinfo;
 		change_local_nick(target_p, target_p, newnick, 0);
 		target_p->tsinfo = tsinfo;
-	}
-	else
-	{
+	} else {
 		change_remote_nick(target_p, target_p, target_p->tsinfo, newnick, 0);
 	}
 }
@@ -1358,4 +1379,15 @@ static void bad_nickname(struct Client *client_p, const char *nick)
 	rb_snprintf(squitreason, sizeof squitreason,
 			"Bad nickname introduced [%s]", nick);
 	exit_client(client_p, client_p, &me, squitreason);
+}
+
+
+static void bad_fnc(struct Client *client_p, const char *reason)
+{
+	sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "Squitting %s: %s",
+			client_p->name, reason);
+	ilog(L_SERVER, "Link %s cancelled: %s",
+			client_p->name, reason);
+
+	exit_client(client_p, client_p, &me, reason);
 }
