@@ -84,3 +84,12 @@ In other cases, we believe UFNC cannot lead to nick desyncs:
 
    A second SAVE does not change the TS, so a second SAVE racing with a UFNC
    could desync; it is therefore prohibited to send a UFNC for a saved nick.
+
+ - When a UFNC is propagated as a NICK, the downgrade to NICK is performed by a
+   server on the path between the UFNC originator and the owner of the nick.
+   Therefore, from the point of view of a server without UFNC support, all nick
+   changes for a given target pass through the downgrading server. If UFNC
+   without downgrade is safe from desyncs, the downgrading server must have a
+   consistent view of the target's nick, and since nick changes for the target
+   can only come from the downgrading server, the non-UFNC server must have the
+   same consistent view.
