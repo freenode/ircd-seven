@@ -43,6 +43,8 @@ this are implemented, they must account for the fact that the nick change has
 already propagated; SAVE, SQUIT or KILL would be okay, while just ignoring the
 UFNC would not.
 
+UFNC may not be issued for a UID (saved) nick.
+
 UFNC must be silently ignored if nickTS does not match the target's TS.
 Otherwise, a server receiving a UFNC changes the target's nick to newnick,
 leaving its TS unchanged. It is propagated as a UFNC to servers that support it,
@@ -77,5 +79,8 @@ In other cases, we believe UFNC cannot lead to nick desyncs:
    (requiring a small modification to the NICK logic), and overridden if it
    arrives first.
 
- - SAVEs always change the TS, so a SAVE racing with a UFNC will win everywhere
-   by the same logic as for regular NICK.
+ - Initial SAVEs change the TS, so a SAVE racing with a UFNC will win
+   everywhere by the same logic as for a regular NICK.
+
+   A second SAVE does not change the TS, so a second SAVE racing with a UFNC
+   could desync; it is therefore prohibited to send a UFNC for a saved nick.
