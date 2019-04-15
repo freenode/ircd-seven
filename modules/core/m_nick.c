@@ -576,6 +576,10 @@ ms_ufnc(struct Client *client_p, struct Client *source_p, int parc, const char *
 		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 				"Ignored UFNC message for non-person %s from %s",
 				target_p->name, source_p->name);
+	else if (IsDigit(target_p->name[0]))
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
+				"Ignored UFNC message for saved user %s from %s",
+				target_p->name, source_p->name);
 	else if (target_p->tsinfo == atol(parv[3]))
 		fnc_user(client_p, source_p, target_p, newnick);
 	else
