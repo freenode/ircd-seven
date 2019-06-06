@@ -55,8 +55,8 @@ struct Message cap_msgtab = {
 mapi_clist_av1 cap_clist[] = { &cap_msgtab, NULL };
 DECLARE_MODULE_AV1(cap, modinit, NULL, cap_clist, NULL, NULL, "$Revision: 676 $");
 
-#define _CLICAP(name, capserv, capclient, flags)	\
-	{ (name), (capserv), (capclient), (flags), sizeof(name) - 1 }
+#define _CLICAP(name, capserv, capclient, flags, ...)	\
+	{ (name), (capserv), (capclient), (flags), sizeof(name) - 1, __VA_ARGS__ }
 
 #define CLICAP_FLAGS_STICKY	0x001
 #define CLICAP_FLAGS_NAK	0x002
@@ -69,6 +69,8 @@ static struct clicap
 	int cap_cli;		/* for altering c->s */
 	int flags;
 	int namelen;
+	int (*generate_value)(struct Client *source_p, char *buf, size_t n, const struct clicap *cap);
+		/* if non-null, returns length written (non-negative) for success, -1 to ask for a new buffer, -2 to hide the cap */
 } clicap_list[] = {
 	_CLICAP("identify-msg", CLICAP_IDENTIFY_MSG, 0, 0),
 	_CLICAP("multi-prefix",	CLICAP_MULTI_PREFIX, 0, 0),
@@ -184,6 +186,7 @@ clicap_generate(struct Client *source_p, const char *subcmd, int flags, int clea
 	int buflen = 0;
 	int curlen, mlen;
 	size_t i;
+	int use_values = (flags == 0 && !clear && source_p->flags & FLAGS_CAP_302);
 
 	mlen = rb_sprintf(buf, ":%s CAP %s %s",
 			me.name,
@@ -238,9 +241,56 @@ clicap_generate(struct Client *source_p, const char *subcmd, int flags, int clea
 			buflen++;
 		}
 
-		curlen = rb_sprintf(p, "%s ", clicap_list[i].name);
-		p += curlen;
-		buflen += curlen;
+		if(use_values && clicap_list[i].generate_value)
+		{
+			size_t remaining = BUFSIZE - 8 - buflen;
+			int l;
+			curlen = rb_sprintf(p, "%s=", clicap_list[i].name);
+			remaining -= curlen;
+			/* try to fill in the value (twice if we have to get a new buffer).
+			 * delete the = if we get an empty string, or the whole name if it asks to hide itself */
+			l = clicap_list[i].generate_value(source_p, p + curlen, remaining, &clicap_list[i]);
+			if (l == -1)
+			{
+				if(buflen != mlen)
+					p[-1] = '\0';
+				else
+					p[0] = '\0';
+				sendto_one(source_p, "%s * :%s", buf, capbuf);
+				p = capbuf;
+				buflen = mlen;
+				l = clicap_list[i].generate_value(source_p, p + curlen, remaining, &clicap_list[i]);
+			}
+			if (l == -2) /* don't list this cap at all */
+			{
+				*p = '\0';
+				continue;
+			}
+			if (l < 0) /* invalid value, or repeated -1 */
+			{
+				/* XXX warn somehow? just treat as if no value for now */
+				l = 0;
+			}
+			if (l == 0) /* no value */
+			{
+				p += curlen;
+				buflen += curlen;
+				p[-1] = ' ';
+				p[0] = '\0';
+				continue;
+			}
+			curlen += l + 1;
+			p += curlen;
+			buflen += curlen;
+			p[-1] = ' ';
+			p[0] = '\0';
+		}
+		else
+		{
+			curlen = rb_sprintf(p, "%s ", clicap_list[i].name);
+			p += curlen;
+			buflen += curlen;
+		}
 	}
 
 	/* remove trailing space */
