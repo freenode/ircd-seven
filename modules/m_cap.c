@@ -60,6 +60,7 @@ DECLARE_MODULE_AV1(cap, modinit, NULL, cap_clist, NULL, NULL, "$Revision: 676 $"
 
 #define CLICAP_FLAGS_STICKY	0x001
 #define CLICAP_FLAGS_NAK	0x002
+#define CLICAP_FLAGS_302	0x004
 
 static struct clicap
 {
@@ -209,6 +210,11 @@ clicap_generate(struct Client *source_p, const char *subcmd, int flags, int clea
 			else if(clear && clicap_list[i].flags & CLICAP_FLAGS_STICKY)
 				continue;
 		}
+		else
+		{
+			if(!IsCap302(source_p) && clicap_list[i].flags & CLICAP_FLAGS_302)
+				continue;
+		}
 
 		/* \r\n\0, possible "-", space, " *" */
 		if(buflen + clicap_list[i].namelen >= BUFSIZE - 8)
@@ -320,8 +326,26 @@ cap_list(struct Client *source_p, const char *arg)
 static void
 cap_ls(struct Client *source_p, const char *arg)
 {
+	int version = 301;
+
 	if(!IsRegistered(source_p))
 		source_p->flags |= FLAGS_CLICAP;
+
+	if(arg != NULL && IsDigit(arg[0]))
+	{
+		char *endp;
+		long v;
+		errno = 0;
+		v = strtol(arg, &endp, 10);
+		if (errno == 0 && *endp == '\0' && v >= 302 && v < INT_MAX)
+			version = v;
+	}
+
+	if(version >= 302)
+	{
+		SetCap302(source_p);
+		source_p->localClient->caps |= CLICAP_CAP_NOTIFY;
+	}
 
 	/* list of what we support */
 	clicap_generate(source_p, "LS", 0, 0);

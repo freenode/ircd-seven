@@ -403,6 +403,7 @@ struct ListClient
 #define FLAGS_TGCHANGE     0x400000	/* we're allowed to clear something */
 #define FLAGS_DYNSPOOF     0x800000	/* dynamic spoof, only opers see ip */
 #define FLAGS_IDMSG        0x2000000	/* Marked as 'identified' for identify-msg purposes */
+#define FLAGS_CAP_302      0x4000000	/* Sent us CAP LS 302 ever */
 
 /* flags for local clients, this needs stuff moved from above to here at some point */
 #define LFLAGS_SSL		0x00000001
@@ -508,6 +509,9 @@ struct ListClient
 #define IsIdentifiedMsg(x)	((x)->flags & FLAGS_IDMSG || IsService(x))
 #define SetIdentifiedMsg(x)	((x)->flags |= FLAGS_IDMSG)
 #define ClearIdentifiedMsg(x)	((x)->flags &= ~FLAGS_IDMSG)
+#define IsCap302(x)	((x)->flags & FLAGS_CAP_302)
+#define SetCap302(x)	((x)->flags |= FLAGS_CAP_302)
+#define ClearCap302(x)	((x)->flags &= ~FLAGS_CAP_302)
 
 /* local flags */
 
