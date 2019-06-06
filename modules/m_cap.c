@@ -59,6 +59,7 @@ DECLARE_MODULE_AV1(cap, modinit, NULL, cap_clist, NULL, NULL, "$Revision: 676 $"
 	{ (name), (capserv), (capclient), (flags), sizeof(name) - 1 }
 
 #define CLICAP_FLAGS_STICKY	0x001
+#define CLICAP_FLAGS_NAK	0x002
 
 static struct clicap
 {
@@ -377,6 +378,12 @@ cap_req(struct Client *source_p, const char *arg)
 		}
 		else
 		{
+			if(cap->flags & CLICAP_FLAGS_NAK)
+			{
+				finished = 0;
+				break;
+			}
+
 			capadd |= cap->cap_serv;
 		}
 
