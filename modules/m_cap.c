@@ -62,6 +62,10 @@ DECLARE_MODULE_AV1(cap, modinit, NULL, cap_clist, NULL, NULL, "$Revision: 676 $"
 #define CLICAP_FLAGS_NAK	0x002
 #define CLICAP_FLAGS_302	0x004
 
+struct clicap;
+
+static int clicap_write_sts(struct Client *, char *, size_t, const struct clicap *);
+
 static struct clicap
 {
 	const char *name;
@@ -82,6 +86,7 @@ static struct clicap
 	_CLICAP("tls", CLICAP_TLS, 0, 0),
 	_CLICAP("cap-notify", CLICAP_CAP_NOTIFY, 0, 0),
 	_CLICAP("userhost-in-names", CLICAP_USERHOST_IN_NAMES, 0, 0),
+	_CLICAP("sts", CLICAP_STS, 0, CLICAP_FLAGS_NAK | CLICAP_FLAGS_302, clicap_write_sts),
 };
 
 #define CLICAP_LIST_LEN (sizeof(clicap_list) / sizeof(struct clicap))
@@ -106,6 +111,24 @@ static int
 clicap_compare(const char *name, struct clicap *cap)
 {
 	return irccmp(name, cap->name);
+}
+
+static int
+clicap_write_sts(struct Client *source_p, char *buf, size_t n, const struct clicap *cap)
+{
+	const char plaintext_policy[] = "port=6697";
+	const char tls_policy[] = "duration=31556926,preload";
+	const char *policy = IsSSLClient(source_p) ? tls_policy : plaintext_policy;
+	size_t pollen = (IsSSLClient(source_p) ? sizeof tls_policy : sizeof plaintext_policy) - 1;
+
+	(void) cap;
+
+	if (n < pollen) {
+		return -1;
+	}
+
+	strcat(buf, policy);
+	return (int) pollen;
 }
 
 /* clicap_find()
