@@ -448,6 +448,7 @@ channel_member_names(struct Channel *chptr, struct Client *client_p, int show_eo
 	struct Client *target_p;
 	rb_dlink_node *ptr;
 	char lbuf[BUFSIZE];
+	char namebuf[NICKLEN + USERLEN + HOSTLEN + 5];  /* !@, @+, \0 */
 	char *t;
 	int mlen;
 	int tlen;
@@ -473,8 +474,15 @@ channel_member_names(struct Channel *chptr, struct Client *client_p, int show_eo
 			if(IsInvisible(target_p) && !is_member)
 				continue;
 
+			if(IsCapable(client_p, CLICAP_USERHOST_IN_NAMES))
+				tlen = rb_sprintf(namebuf, "%s%s!%s@%s ", find_channel_status(msptr, stack),
+						target_p->name, target_p->username, target_p->host);
+			else
+				tlen = rb_sprintf(namebuf, "%s%s ", find_channel_status(msptr, stack),
+						target_p->name);
+
 			/* space, possible "@+" prefix */
-			if(cur_len + strlen(target_p->name) + 3 >= BUFSIZE - 3)
+			if(cur_len + tlen >= BUFSIZE - 3)
 			{
 				*(t - 1) = '\0';
 				sendto_one(client_p, "%s", lbuf);
@@ -482,8 +490,7 @@ channel_member_names(struct Channel *chptr, struct Client *client_p, int show_eo
 				t = lbuf + mlen;
 			}
 
-			tlen = rb_sprintf(t, "%s%s ", find_channel_status(msptr, stack),
-					  target_p->name);
+			strcpy(t, namebuf);
 
 			cur_len += tlen;
 			t += tlen;

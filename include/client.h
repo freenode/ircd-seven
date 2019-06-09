@@ -470,6 +470,7 @@ struct ListClient
 #define CLICAP_AWAY_NOTIFY	0x0020
 #define CLICAP_CHGHOST	0x0040
 #define CLICAP_TLS		0x0080
+#define CLICAP_USERHOST_IN_NAMES	0x00100
 
 /*
  * flags macros.
