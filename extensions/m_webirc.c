@@ -102,6 +102,11 @@ mr_webirc(struct Client *client_p, struct Client *source_p, int parc, const char
 		sendto_one(source_p, "NOTICE * :CGI:IRC auth blocks must have a password");
 		return 0;
 	}
+	if (!IsSSL(source_p) && aconf->flags & CONF_FLAGS_NEED_SSL)
+	{
+		sendto_one(source_p, "NOTICE * :Your CGI:IRC block requires SSL");
+		return 0;
+	}
 
 	if (EmptyString(parv[1]))
 		encr = "";
