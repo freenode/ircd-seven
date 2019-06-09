@@ -531,7 +531,7 @@ register_local_user(struct Client *client_p, struct Client *source_p, const char
 		add_to_id_hash(source_p->id, source_p);
 	}
 
-	if (IsSSL(source_p))
+	if (IsSSL(source_p) && !IsInsecure(source_p))
 		source_p->umodes |= UMODE_SSLCLIENT;
 
 	if (source_p->umodes & UMODE_INVISIBLE)
