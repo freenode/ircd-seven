@@ -122,7 +122,7 @@ clicap_write_sts(struct Client *source_p, char *buf, size_t n, const struct clic
 
 	(void) cap;
 
-	if (IsSSLClient(source_p)) {
+	if (IsSSL(source_p)) {
 		policy = ConfigFileEntry.sts_default;
 	} else {
 		policy = ConfigFileEntry.sts_plaintext;
