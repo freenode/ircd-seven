@@ -1,5 +1,5 @@
 /* modules/m_cap.c
- * 
+ *
  *  Copyright (C) 2005 Lee Hardy <lee@leeh.co.uk>
  *  Copyright (C) 2005 ircd-ratbox development team
  *
@@ -55,10 +55,12 @@ struct Message cap_msgtab = {
 mapi_clist_av1 cap_clist[] = { &cap_msgtab, NULL };
 DECLARE_MODULE_AV1(cap, modinit, NULL, cap_clist, NULL, NULL, "$Revision: 676 $");
 
-#define _CLICAP(name, capserv, capclient, flags)	\
-	{ (name), (capserv), (capclient), (flags), sizeof(name) - 1 }
+#define _CLICAP(name, capserv, capclient, flags, ...)	\
+	{ (name), (capserv), (capclient), (flags), sizeof(name) - 1, __VA_ARGS__ }
 
 #define CLICAP_FLAGS_STICKY	0x001
+#define CLICAP_FLAGS_NAK	0x002
+#define CLICAP_FLAGS_302	0x004
 
 static struct clicap
 {
@@ -67,6 +69,8 @@ static struct clicap
 	int cap_cli;		/* for altering c->s */
 	int flags;
 	int namelen;
+	int (*generate_value)(struct Client *source_p, char *buf, size_t n, const struct clicap *cap);
+		/* if non-null, returns length written (non-negative) for success, -1 to ask for a new buffer, -2 to hide the cap */
 } clicap_list[] = {
 	_CLICAP("identify-msg", CLICAP_IDENTIFY_MSG, 0, 0),
 	_CLICAP("multi-prefix",	CLICAP_MULTI_PREFIX, 0, 0),
@@ -76,6 +80,8 @@ static struct clicap
 	_CLICAP("away-notify", CLICAP_AWAY_NOTIFY, 0, 0),
 	_CLICAP("chghost", CLICAP_CHGHOST, 0, 0),
 	_CLICAP("tls", CLICAP_TLS, 0, 0),
+	_CLICAP("cap-notify", CLICAP_CAP_NOTIFY, 0, 0),
+	_CLICAP("userhost-in-names", CLICAP_USERHOST_IN_NAMES, 0, 0),
 };
 
 #define CLICAP_LIST_LEN (sizeof(clicap_list) / sizeof(struct clicap))
@@ -152,7 +158,7 @@ clicap_find(const char *data, int *negate, int *finished)
 	if((s = strchr(p, ' ')))
 		*s++ = '\0';
 
-	if((cap = bsearch(p, clicap_list, CLICAP_LIST_LEN, 
+	if((cap = bsearch(p, clicap_list, CLICAP_LIST_LEN,
 				sizeof(struct clicap), (bqcmp) clicap_compare)))
 	{
 		if(s)
@@ -181,10 +187,11 @@ clicap_generate(struct Client *source_p, const char *subcmd, int flags, int clea
 	int buflen = 0;
 	int curlen, mlen;
 	size_t i;
+	int use_values = (flags == 0 && !clear && source_p->flags & FLAGS_CAP_302);
 
 	mlen = rb_sprintf(buf, ":%s CAP %s %s",
-			me.name, 
-			EmptyString(source_p->name) ? "*" : source_p->name, 
+			me.name,
+			EmptyString(source_p->name) ? "*" : source_p->name,
 			subcmd);
 
 	p = capbuf;
@@ -207,9 +214,14 @@ clicap_generate(struct Client *source_p, const char *subcmd, int flags, int clea
 			else if(clear && clicap_list[i].flags & CLICAP_FLAGS_STICKY)
 				continue;
 		}
+		else
+		{
+			if(!IsCap302(source_p) && clicap_list[i].flags & CLICAP_FLAGS_302)
+				continue;
+		}
 
-		/* \r\n\0, possible "-~=", space, " *" */
-		if(buflen + clicap_list[i].namelen >= BUFSIZE - 10)
+		/* \r\n\0, possible "-", space, " *" */
+		if(buflen + clicap_list[i].namelen >= BUFSIZE - 8)
 		{
 			/* remove our trailing space -- if buflen == mlen
 			 * here, we didnt even succeed in adding one.
@@ -228,37 +240,58 @@ clicap_generate(struct Client *source_p, const char *subcmd, int flags, int clea
 		{
 			*p++ = '-';
 			buflen++;
+		}
 
-			/* needs a client ack */
-			if(clicap_list[i].cap_cli && 
-			   IsCapable(source_p, clicap_list[i].cap_cli))
+		if(use_values && clicap_list[i].generate_value)
+		{
+			size_t remaining = BUFSIZE - 8 - buflen;
+			int l;
+			curlen = rb_sprintf(p, "%s=", clicap_list[i].name);
+			remaining -= curlen;
+			/* try to fill in the value (twice if we have to get a new buffer).
+			 * delete the = if we get an empty string, or the whole name if it asks to hide itself */
+			l = clicap_list[i].generate_value(source_p, p + curlen, remaining, &clicap_list[i]);
+			if (l == -1)
 			{
-				*p++ = '~';
-				buflen++;
+				if(buflen != mlen)
+					p[-1] = '\0';
+				else
+					p[0] = '\0';
+				sendto_one(source_p, "%s * :%s", buf, capbuf);
+				p = capbuf;
+				buflen = mlen;
+				l = clicap_list[i].generate_value(source_p, p + curlen, remaining, &clicap_list[i]);
 			}
+			if (l == -2) /* don't list this cap at all */
+			{
+				*p = '\0';
+				continue;
+			}
+			if (l < 0) /* invalid value, or repeated -1 */
+			{
+				/* XXX warn somehow? just treat as if no value for now */
+				l = 0;
+			}
+			if (l == 0) /* no value */
+			{
+				p += curlen;
+				buflen += curlen;
+				p[-1] = ' ';
+				p[0] = '\0';
+				continue;
+			}
+			curlen += l + 1;
+			p += curlen;
+			buflen += curlen;
+			p[-1] = ' ';
+			p[0] = '\0';
 		}
 		else
 		{
-			if(clicap_list[i].flags & CLICAP_FLAGS_STICKY)
-			{
-				*p++ = '=';
-				buflen++;
-			}
-
-			/* if we're doing an LS, then we only send this if
-			 * they havent ack'd
-			 */
-			if(clicap_list[i].cap_cli &&
-			   (!flags || !IsCapable(source_p, clicap_list[i].cap_cli)))
-			{
-				*p++ = '~';
-				buflen++;
-			}
+			curlen = rb_sprintf(p, "%s ", clicap_list[i].name);
+			p += curlen;
+			buflen += curlen;
 		}
-
-		curlen = rb_sprintf(p, "%s ", clicap_list[i].name);
-		p += curlen;
-		buflen += curlen;
 	}
 
 	/* remove trailing space */
@@ -306,7 +339,7 @@ cap_ack(struct Client *source_p, const char *arg)
 static void
 cap_clear(struct Client *source_p, const char *arg)
 {
-	clicap_generate(source_p, "ACK", 
+	clicap_generate(source_p, "ACK",
 			source_p->localClient->caps ? source_p->localClient->caps : -1, 1);
 
 	/* XXX - sticky capabs */
@@ -344,8 +377,26 @@ cap_list(struct Client *source_p, const char *arg)
 static void
 cap_ls(struct Client *source_p, const char *arg)
 {
+	int version = 301;
+
 	if(!IsRegistered(source_p))
 		source_p->flags |= FLAGS_CLICAP;
+
+	if(arg != NULL && IsDigit(arg[0]))
+	{
+		char *endp;
+		long v;
+		errno = 0;
+		v = strtol(arg, &endp, 10);
+		if (errno == 0 && *endp == '\0' && v >= 302 && v < INT_MAX)
+			version = v;
+	}
+
+	if(version >= 302)
+	{
+		SetCap302(source_p);
+		source_p->localClient->caps |= CLICAP_CAP_NOTIFY;
+	}
 
 	/* list of what we support */
 	clicap_generate(source_p, "LS", 0, 0);
@@ -403,19 +454,13 @@ cap_req(struct Client *source_p, const char *arg)
 		}
 		else
 		{
-			if(cap->flags & CLICAP_FLAGS_STICKY)
+			if(cap->flags & CLICAP_FLAGS_NAK)
 			{
-				strcat(pbuf[i], "=");
-				plen++;
+				finished = 0;
+				break;
 			}
 
 			capadd |= cap->cap_serv;
-		}
-
-		if(cap->cap_cli)
-		{
-			strcat(pbuf[i], "~");
-			plen++;
 		}
 
 		strcat(pbuf[i], cap->name);
