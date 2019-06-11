@@ -237,6 +237,9 @@ struct config_file_entry
 	int client_flood_message_time;
 	int client_flood_message_num;
 
+	char *sts_plaintext;
+	char *sts_default;
+
 };
 
 struct config_channel_entry

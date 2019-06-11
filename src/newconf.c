@@ -2195,6 +2195,8 @@ static struct ConfEntry conf_general_table[] =
 	{ "client_flood_burst_max",	CF_INT,   NULL, 0, &ConfigFileEntry.client_flood_burst_max	},
 	{ "client_flood_message_num",	CF_INT,   NULL, 0, &ConfigFileEntry.client_flood_message_num	},
 	{ "client_flood_message_time",	CF_INT,   NULL, 0, &ConfigFileEntry.client_flood_message_time	},
+	{ "sts_plaintext_policy",	CF_QSTRING, NULL, BUFSIZE, &ConfigFileEntry.sts_plaintext	},
+	{ "sts_default_policy",	CF_QSTRING, NULL, BUFSIZE, &ConfigFileEntry.sts_default	},
 	{ "\0", 		0, 	  NULL, 0, NULL }
 };
 

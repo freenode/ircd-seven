@@ -39,6 +39,7 @@
 #include "msg.h"
 #include "parse.h"
 #include "modules.h"
+#include "s_conf.h"
 #include "s_serv.h"
 #include "s_user.h"
 
@@ -116,12 +117,22 @@ clicap_compare(const char *name, struct clicap *cap)
 static int
 clicap_write_sts(struct Client *source_p, char *buf, size_t n, const struct clicap *cap)
 {
-	const char plaintext_policy[] = "port=6697";
-	const char tls_policy[] = "duration=31556926,preload";
-	const char *policy = IsSSLClient(source_p) ? tls_policy : plaintext_policy;
-	size_t pollen = (IsSSLClient(source_p) ? sizeof tls_policy : sizeof plaintext_policy) - 1;
+	const char *policy;
+	size_t pollen;
 
 	(void) cap;
+
+	if (IsSSLClient(source_p)) {
+		policy = ConfigFileEntry.sts_default;
+	} else {
+		policy = ConfigFileEntry.sts_plaintext;
+	}
+
+	if (policy == NULL) {
+		return -2;
+	}
+
+	pollen = strlen(policy);
 
 	if (n < pollen) {
 		return -1;
