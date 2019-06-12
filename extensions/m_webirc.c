@@ -126,9 +126,9 @@ mr_webirc(struct Client *client_p, struct Client *source_p, int parc, const char
 	if (parc >= 6)
 	{
 		char *s;
-		for (s = strtok(parv[5], " "); s != NULL; s = strtok(NULL, " "))
+		for (s = parv[5]; s != NULL; (s = strchr(s, ' ')) && s++)
 		{
-			if (!ircncmp(s, "secure", 6) && (s[6] == '=' || s[6] == '\0'))
+			if (!ircncmp(s, "secure", 6) && (s[6] == '=' || s[6] == ' ' || s[6] == '\0'))
 				secure = 1;
 		}
 	}
