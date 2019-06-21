@@ -474,6 +474,7 @@ struct ListClient
 #define CLICAP_TLS		0x0080
 #define CLICAP_CAP_NOTIFY	0x0100
 #define CLICAP_USERHOST_IN_NAMES	0x00200
+#define CLICAP_STS		0x0400
 
 /*
  * flags macros.
