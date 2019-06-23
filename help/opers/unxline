@@ -2,9 +2,11 @@ UNXLINE <gecos>
 
 Will attempt to unxline the given <gecos>
 
+- Requires Oper Priv: xline
+
 
 UNXLINE <gecos> ON <server>
 
 Will attempt to unxline the given <gecos> on <server>.
 
-- Requires Oper Priv: X
+- Requires Oper Priv: remoteban, xline

@@ -18,6 +18,8 @@ NO PARAMETERS:
               weakens +i control.
      +z     - Op moderated.  Messages blocked by +m, +b and +q are instead
               sent to ops.
+     +u     - Unfiltered.  Server-side content filters do not check messages
+              to this channel.
      +L     - Large ban list.  Increase maximum number of +beIq entries.
               Only settable by opers.
      +P     - Permanent.  Channel does not disappear when empty.  Only
@@ -48,7 +50,7 @@ WITH PARAMETERS:
      +o     - Op.  Allows a user full control over the channel.
               PARAMS: /mode #channel +o nick
      +b     - Ban.  Prevents a user from entering the channel, and from
-              sending or changing nick if they are on it, based on a 
+              sending or changing nick if they are on it, based on a
               nick!ident@host match.
               PARAMS: /mode #channel +b nick!user@host
      +q     - Quiet.  Prevents a user from sending to the channel or changing
@@ -58,6 +60,6 @@ WITH PARAMETERS:
               they are banned (+b) or quieted (+q), based on a nick!ident@host
               match.
               PARAMS: /mode #channel +e nick!user@host
-     +I     - Invite Exempt.  Allows a user to join a +i channel without an 
+     +I     - Invite Exempt.  Allows a user to join a +i channel without an
               invite, based on a nick!user@host match.
               PARAMS: /mode #channel +I nick!user@host
