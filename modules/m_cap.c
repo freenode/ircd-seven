@@ -209,11 +209,10 @@ clicap_find(const char *data, int *negate, int *finished)
  *
  * Inputs: client to send to, subcmd to send,
  *         flags to match against: 0 to do none, -1 if client has no flags,
- *         int to whether we are doing CAP CLEAR
  * Outputs: None
  */
 static void
-clicap_generate(struct Client *source_p, const char *subcmd, int flags, int clear)
+clicap_generate(struct Client *source_p, const char *subcmd, int flags)
 {
 	char buf[BUFSIZE];
 	char capbuf[BUFSIZE];
@@ -221,7 +220,7 @@ clicap_generate(struct Client *source_p, const char *subcmd, int flags, int clea
 	int buflen = 0;
 	int curlen, mlen;
 	size_t i;
-	int use_values = (flags == 0 && !clear && source_p->flags & FLAGS_CAP_302);
+	int use_values = (flags == 0 && source_p->flags & FLAGS_CAP_302);
 
 	mlen = rb_sprintf(buf, ":%s CAP %s %s",
 			me.name,
@@ -245,7 +244,7 @@ clicap_generate(struct Client *source_p, const char *subcmd, int flags, int clea
 			if(!IsCapable(source_p, clicap_list[i].cap_serv))
 				continue;
 			/* they are capable of this, check sticky */
-			else if(clear && clicap_list[i].flags & CLICAP_FLAGS_STICKY)
+			else if(clicap_list[i].flags & CLICAP_FLAGS_STICKY)
 				continue;
 		}
 		else
@@ -268,12 +267,6 @@ clicap_generate(struct Client *source_p, const char *subcmd, int flags, int clea
 			sendto_one(source_p, "%s * :%s", buf, capbuf);
 			p = capbuf;
 			buflen = mlen;
-		}
-
-		if(clear)
-		{
-			*p++ = '-';
-			buflen++;
 		}
 
 		if(use_values && clicap_list[i].generate_value)
@@ -338,53 +331,6 @@ clicap_generate(struct Client *source_p, const char *subcmd, int flags, int clea
 }
 
 static void
-cap_ack(struct Client *source_p, const char *arg)
-{
-	struct clicap *cap;
-	int capadd = 0, capdel = 0;
-	int finished = 0, negate;
-
-	if(EmptyString(arg))
-		return;
-
-	for(cap = clicap_find(arg, &negate, &finished); cap;
-	    cap = clicap_find(NULL, &negate, &finished))
-	{
-		/* sent an ACK for something they havent REQd */
-		if(!IsCapable(source_p, cap->cap_serv))
-			continue;
-
-		if(negate)
-		{
-			/* dont let them ack something sticky off */
-			if(cap->flags & CLICAP_FLAGS_STICKY)
-				continue;
-
-			capdel |= cap->cap_cli;
-		}
-		else
-			capadd |= cap->cap_cli;
-	}
-
-	source_p->localClient->caps |= capadd;
-	source_p->localClient->caps &= ~capdel;
-}
-
-static void
-cap_clear(struct Client *source_p, const char *arg)
-{
-	clicap_generate(source_p, "ACK",
-			source_p->localClient->caps ? source_p->localClient->caps : -1, 1);
-
-	/* XXX - sticky capabs */
-#ifdef CLICAP_STICKY
-	source_p->localClient->caps = source_p->localClient->caps & CLICAP_STICKY;
-#else
-	source_p->localClient->caps = 0;
-#endif
-}
-
-static void
 cap_end(struct Client *source_p, const char *arg)
 {
 	if(IsRegistered(source_p))
@@ -405,7 +351,7 @@ cap_list(struct Client *source_p, const char *arg)
 {
 	/* list of what theyre currently using */
 	clicap_generate(source_p, "LIST",
-			source_p->localClient->caps ? source_p->localClient->caps : -1, 0);
+			source_p->localClient->caps ? source_p->localClient->caps : -1);
 }
 
 static void
@@ -433,7 +379,7 @@ cap_ls(struct Client *source_p, const char *arg)
 	}
 
 	/* list of what we support */
-	clicap_generate(source_p, "LS", 0, 0);
+	clicap_generate(source_p, "LS", 0);
 }
 
 static void
@@ -527,8 +473,6 @@ static struct clicap_cmd
 	void (*func)(struct Client *source_p, const char *arg);
 } clicap_cmdlist[] = {
 	/* This list *MUST* be in alphabetical order */
-	{ "ACK",	cap_ack		},
-	{ "CLEAR",	cap_clear	},
 	{ "END",	cap_end		},
 	{ "LIST",	cap_list	},
 	{ "LS",		cap_ls		},
