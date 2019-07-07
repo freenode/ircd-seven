@@ -33,6 +33,7 @@
 #include "modules.h"
 #include "s_conf.h"
 #include "inline/stringops.h"
+#include "s_newconf.h"
 
 static const char quit_desc[] = "Provides the QUIT command to allow a user to leave the network";
 
@@ -71,7 +72,7 @@ m_quit(struct MsgBuf *msgbuf_p, struct Client *client_p, struct Client *source_p
 		comment = reason;
 	}
 
-	if(!IsOper(source_p) &&
+	if(!IsOperGeneral(source_p) &&
 	   (source_p->localClient->firsttime + ConfigFileEntry.anti_spam_exit_message_time) >
 	   rb_current_time())
 	{

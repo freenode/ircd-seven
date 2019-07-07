@@ -37,6 +37,7 @@
 #include "modules.h"
 #include "packet.h"
 #include "tgchange.h"
+#include "s_newconf.h"
 
 static const char invite_desc[] = "Provides facilities for invite and related notifications";
 
@@ -162,7 +163,7 @@ m_invite(struct MsgBuf *msgbuf_p, struct Client *client_p, struct Client *source
 
 	if(MyConnect(source_p))
 	{
-		if (ConfigFileEntry.target_change && !IsOper(source_p) &&
+		if (ConfigFileEntry.target_change && !IsOperGeneral(source_p) &&
 				!find_allowing_channel(source_p, target_p) &&
 				!add_target(source_p, target_p))
 		{
@@ -187,7 +188,7 @@ m_invite(struct MsgBuf *msgbuf_p, struct Client *client_p, struct Client *source
 
 	if(MyConnect(target_p))
 	{
-		if(!IsOper(source_p) && (IsSetCallerId(target_p) ||
+		if(!IsOperGeneral(source_p) && (IsSetCallerId(target_p) ||
 					(IsSetRegOnlyMsg(target_p) && !source_p->user->suser[0])) &&
 				!accept_message(source_p, target_p))
 		{
