@@ -315,7 +315,7 @@ rb_init_ssl(void)
 	SSL_CTX_set_options(ssl_server_ctx, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 | SSL_OP_CIPHER_SERVER_PREFERENCE);
 	SSL_CTX_set_verify(ssl_server_ctx, SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE, verify_accept_all_cb);
 
-	ssl_client_ctx = SSL_CTX_new(TLSv1_client_method());
+	ssl_client_ctx = SSL_CTX_new(TLS_client_method());
 
 	if(ssl_client_ctx == NULL)
 	{
