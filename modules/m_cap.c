@@ -62,6 +62,7 @@ DECLARE_MODULE_AV1(cap, modinit, NULL, cap_clist, NULL, NULL, "$Revision: 676 $"
 #define CLICAP_FLAGS_STICKY	0x001
 #define CLICAP_FLAGS_NAK	0x002
 #define CLICAP_FLAGS_302	0x004
+#define CLICAP_FLAGS_HIDDEN	0x008
 
 struct clicap;
 
@@ -86,7 +87,7 @@ static struct clicap
 	_CLICAP("chghost", CLICAP_CHGHOST, 0, 0),
 	_CLICAP("tls", CLICAP_TLS, 0, 0),
 	_CLICAP("cap-notify", CLICAP_CAP_NOTIFY, 0, 0),
-	_CLICAP("userhost-in-names", CLICAP_USERHOST_IN_NAMES, 0, 0),
+	_CLICAP("userhost-in-names", CLICAP_USERHOST_IN_NAMES, 0, CLICAP_FLAGS_HIDDEN),
 	_CLICAP("sts", CLICAP_STS, 0, CLICAP_FLAGS_NAK | CLICAP_FLAGS_302, clicap_write_sts),
 };
 
@@ -251,6 +252,8 @@ clicap_generate(struct Client *source_p, const char *subcmd, int flags, int clea
 		else
 		{
 			if(!IsCap302(source_p) && clicap_list[i].flags & CLICAP_FLAGS_302)
+				continue;
+			if(!IsCapable(source_p, clicap_list[i].cap_serv) && clicap_list[i].flags & CLICAP_FLAGS_HIDDEN)
 				continue;
 		}
 
