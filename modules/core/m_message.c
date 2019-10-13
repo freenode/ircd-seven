@@ -551,7 +551,7 @@ msg_channel(enum message_type msgtype,
 			return;
 		}
 		if(result == CAN_SEND_OPV ||
-		   !flood_attack_channel(msgtype, source_p, chptr, chptr->chname))
+		   !flood_attack_channel(msgtype == MESSAGE_TYPE_NOTICE, source_p, chptr, chptr->chname))
 		{
 			if (msgtype != MESSAGE_TYPE_NOTICE && *text == '\001' &&
 					strncasecmp(text + 1, "ACTION ", 7))
@@ -571,7 +571,7 @@ msg_channel(enum message_type msgtype,
 	}
 	else if (msptr && IsOverride(source_p))
 	{
-		if (!flood_attack_channel(msgtype, source_p, chptr, chptr->chname))
+		if (!flood_attack_channel(msgtype == MESSAGE_TYPE_NOTICE, source_p, chptr, chptr->chname))
 		{
 			if(MyClient(source_p) && rb_current_time() > msptr->override_ts + 300)
 			{
@@ -606,7 +606,7 @@ msg_channel(enum message_type msgtype,
 				   me.name, source_p->name, chptr->chname);
 			return;
 		}
-		if(!flood_attack_channel(msgtype, source_p, chptr, chptr->chname))
+		if(!flood_attack_channel(msgtype == MESSAGE_TYPE_NOTICE, source_p, chptr, chptr->chname))
 		{
 			sendto_channel_opmod(client_p, source_p, chptr,
 					     cmdname[msgtype], text);
@@ -676,7 +676,7 @@ msg_channel_opmod(enum message_type msgtype,
 			(!(chptr->mode.mode & MODE_NOPRIVMSGS) ||
 			 IsMember(source_p, chptr)))
 	{
-		if(!flood_attack_channel(msgtype, source_p, chptr, chptr->chname))
+		if(!flood_attack_channel(msgtype == MESSAGE_TYPE_NOTICE, source_p, chptr, chptr->chname))
 		{
 			sendto_channel_opmod(client_p, source_p, chptr,
 					     cmdname[msgtype], text);
