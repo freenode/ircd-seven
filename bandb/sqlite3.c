@@ -39359,7 +39359,7 @@ balance(MemPage * pPage, int insert)
 ** first Cell on the root page.  This is necessary because an insert 
 ** or delete might change the number of cells on a page or delete
 ** a page entirely and we do not want to leave any cursors 
-** pointing to non-existant pages or cells.
+** pointing to nonexistent pages or cells.
 */
 static int
 checkReadLocks(Btree * pBtree, Pgno pgnoRoot, BtCursor * pExclude)

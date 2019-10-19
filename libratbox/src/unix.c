@@ -120,7 +120,7 @@ rb_sleep(unsigned int seconds, unsigned int useconds)
 #endif
 }
 
-/* this is to keep some linkers from bitching about exporting a non-existant symbol..bleh */
+/* this is to keep some linkers from bitching about exporting a nonexistent symbol..bleh */
 char *
 rb_strerror(int error)
 {

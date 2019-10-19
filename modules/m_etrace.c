@@ -259,7 +259,7 @@ m_chantrace(struct Client *client_p, struct Client *source_p, int parc, const ch
 		return 0;
 	}
 
-	/* dont report operspys for nonexistant channels. */
+	/* dont report operspys for nonexistent channels. */
 	if(operspy)
 		report_operspy(source_p, "CHANTRACE", chptr->chname);
 

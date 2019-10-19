@@ -1869,7 +1869,7 @@ conf_call_set(struct TopConf *tc, char *item, conf_parm_t * value, int type)
 	if((cf = find_conf_item(tc, item)) == NULL)
 	{
 		conf_report_error
-			("Non-existant configuration setting %s::%s.", tc->tc_name, (char *) item);
+			("Nonexistent configuration setting %s::%s.", tc->tc_name, (char *) item);
 		return -1;
 	}
 
