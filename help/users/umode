@@ -4,13 +4,15 @@ Usermodes:
 
      USERMODE     DESCRIPTION
 -----------------------------------------------------------------
-         +i     - Designates this client 'invisible'.
-         +g     - "caller id" mode only allow accept clients to message you
-         +u     - Disables content-based spam filtering for private messages
-                  you receive.
-         +w     - Can see oper wallops.
+         +i     - Invisible - hides you from channel listings by users who do
+                  not share the channel with you.
+         +g     - "caller id" mode - prevents anyone from messaging you until
+                  /accept-ed.
+         +u     - Unfiltered - messages to you will not be subject to
+                  server-side content filtering.
+         +w     - Wallops - you receive /wallops messages from staff.
          +D     - Deaf - ignores all channel messages.
          +Q     - Prevents you from being affected by channel forwarding.
          +R     - Prevents unidentified users from messaging you. You may
                   exempt individuals with /accept .
-         +Z     - Is connected via SSL (cannot be set or unset).
+         +Z     - Is connected via TLS (cannot be set or unset).

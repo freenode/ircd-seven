@@ -1,0 +1,5 @@
+REMOVE <channel> <nick> :[msg]
+
+The REMOVE command functions identically to a kick,
+but is sent to users as a PART.  You must be a
+channel operator to use this command.

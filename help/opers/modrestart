@@ -4,4 +4,4 @@ MODRESTART
 All modules are unloaded, then those in modules/autoload
 are loaded
 
-- Requires Oper Priv: A
+- Requires Oper Priv: admin

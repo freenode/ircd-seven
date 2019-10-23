@@ -23,4 +23,5 @@ KLINE [duration] <user@host> ON irc.server :[reason] [| oper reason]
 will kline the user on irc.server if irc.server accepts
 remote klines. irc.server can contain wildcards.
 
-- Requires Oper Priv: K
+- Requires Oper Priv: kline
+- Requires Oper Priv: remoteban when "ON" is used

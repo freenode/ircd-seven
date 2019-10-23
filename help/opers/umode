@@ -4,15 +4,17 @@ Usermodes: (* designates that the umode is oper only)
 
      USERMODE     DESCRIPTION
 -----------------------------------------------------------------
-         +i     - Designates this client 'invisible'.
-         +g     - "caller id" mode only allow accept clients to message you
-         +u     - Disables content-based spam filtering for private messages
-                  you receive.
+         +i     - Invisible - hides you from channel listings by users who do
+                  not share the channel with you.
+         +g     - "caller id" mode - prevents anyone from messaging you until
+                  /accept-ed.
          +w     - Can see oper and server wallops.
          +o     - Designates this client is an IRC Operator.
                   Use the /oper command to attain this.
          +O     - Designates this client is a 'helper' -- operator with reduced
                   privilege. Use the /oper command to attain this.
+         +u     - Unfiltered - messages to you will not be subject to
+                  server-side content filtering. Redundant for opers.
        * +a     - Is marked as a server admin in whois.
        * +l     - Can see oper locops (local wallops).
        * +s     - Can see server notices (see /quote help snomask).
@@ -22,4 +24,4 @@ Usermodes: (* designates that the umode is oper only)
          +Q     - Prevents you from being affected by channel forwarding.
          +R     - Prevents unidentified users from messaging you. You may
                   exempt individuals with /accept .
-         +Z     - Is connected via SSL (cannot be set or unset).
+         +Z     - Is connected via TLS (cannot be set or unset).
