@@ -6,6 +6,8 @@ Usermodes:
 -----------------------------------------------------------------
          +i     - Designates this client 'invisible'.
          +g     - "caller id" mode only allow accept clients to message you
+         +u     - Disables content-based spam filtering for private messages
+                  you receive.
          +w     - Can see oper wallops.
          +D     - Deaf - ignores all channel messages.
          +Q     - Prevents you from being affected by channel forwarding.
