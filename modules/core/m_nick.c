@@ -62,9 +62,12 @@ static int ms_nick(struct Client *, struct Client *, int, const char **);
 static int ms_uid(struct Client *, struct Client *, int, const char **);
 static int ms_euid(struct Client *, struct Client *, int, const char **);
 static int ms_save(struct Client *, struct Client *, int, const char **);
+static int ms_ufnc(struct Client *, struct Client *, int, const char **);
 static int can_save(struct Client *);
 static void save_user(struct Client *, struct Client *, struct Client *);
+static void fnc_user(struct Client *, struct Client *, struct Client *, const char *);
 static void bad_nickname(struct Client *, const char *);
+static void bad_fnc(struct Client *, const char *);
 
 static int h_local_nick_change;
 static int h_remote_nick_change;
@@ -85,9 +88,13 @@ struct Message save_msgtab = {
 	"SAVE", 0, 0, 0, MFLG_SLOW,
 	{mg_ignore, mg_ignore, mg_ignore, {ms_save, 3}, mg_ignore, mg_ignore}
 };
+struct Message ufnc_msgtab = {
+	"UFNC", 0, 0, 0, MFLG_SLOW,
+	{mg_ignore, mg_ignore, mg_ignore, {ms_ufnc, 4}, mg_ignore, mg_ignore}
+};
 
 mapi_clist_av1 nick_clist[] = { &nick_msgtab, &uid_msgtab, &euid_msgtab,
-	&save_msgtab, NULL };
+	&save_msgtab, &ufnc_msgtab, NULL };
 
 mapi_hlist_av1 nick_hlist[] = {
 	{ "local_nick_change", &h_local_nick_change },
@@ -249,7 +256,7 @@ m_nick(struct Client *client_p, struct Client *source_p, int parc, const char *p
 }
 
 /* mc_nick()
- *      
+ *
  * server -> server nick change
  *    parv[1] = nickname
  *    parv[2] = TS when nick change
@@ -270,17 +277,22 @@ mc_nick(struct Client *client_p, struct Client *source_p, int parc, const char *
 	newts = atol(parv[2]);
 	target_p = find_named_client(parv[1]);
 
+	if (newts == source_p->tsinfo && target_p != source_p)
+	{
+		/* doesn't change the TS, so it's a case change. ignore it
+		 * if the nick has changed materially */
+	}
 	/* if the nick doesnt exist, allow it and process like normal */
-	if(target_p == NULL)
+	else if (target_p == NULL)
 	{
 		change_remote_nick(client_p, source_p, newts, parv[1], 1);
 	}
-	else if(IsUnknown(target_p))
+	else if (IsUnknown(target_p))
 	{
 		exit_client(NULL, target_p, &me, "Overridden");
 		change_remote_nick(client_p, source_p, newts, parv[1], 1);
 	}
-	else if(target_p == source_p)
+	else if (target_p == source_p)
 	{
 		/* client changing case of nick */
 		if(strcmp(target_p->name, parv[1]))
@@ -546,11 +558,42 @@ ms_save(struct Client *client_p, struct Client *source_p, int parc, const char *
 	return 0;
 }
 
+/* ms_ufnc()
+ *   parv[1] - UID
+ *   parv[2] - newnick
+ *   parv[3] - TS
+ */
+static int
+ms_ufnc(struct Client *client_p, struct Client *source_p, int parc, const char *parv[])
+{
+	struct Client *target_p;
+
+	target_p = find_id(parv[1]);
+	char *newnick = parv[2];
+	if (target_p == NULL)
+		return 0;
+	if (!IsPerson(target_p))
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
+				"Ignored UFNC message for non-person %s from %s",
+				target_p->name, source_p->name);
+	else if (IsDigit(target_p->name[0]))
+		sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
+				"Ignored UFNC message for saved user %s from %s",
+				target_p->name, source_p->name);
+	else if (target_p->tsinfo == atol(parv[3]))
+		fnc_user(client_p, source_p, target_p, newnick);
+	else
+		sendto_realops_snomask(SNO_SKILL, L_NETWIDE,
+				"Ignored UFNC message for %s from %s",
+				target_p->name, source_p->name);
+	return 0;
+}
+
 /* clean_nick()
  *
  * input	- nickname to check
  * output	- 0 if erroneous, else 1
- * side effects - 
+ * side effects -
  */
 static int
 clean_nick(const char *nick, int loc_client)
@@ -764,7 +807,7 @@ change_local_nick(struct Client *client_p, struct Client *source_p,
 		monitor_signon(source_p);
 
 	/* Make sure everyone that has this client on its accept list
-	 * loses that reference. 
+	 * loses that reference.
 	 */
 	/* we used to call del_all_accepts() here, but theres no real reason
 	 * to clear a clients own list of accepted clients.  So just remove
@@ -1265,6 +1308,69 @@ save_user(struct Client *client_p, struct Client *source_p,
 		change_remote_nick(target_p, target_p, SAVE_NICKTS, target_p->id, 0);
 }
 
+static void
+fnc_user(struct Client *client_p, struct Client *source_p,
+		struct Client *target_p, const char *newnick)
+{
+	struct Client *exist_p = find_named_client(newnick);
+	struct Client *server_p = target_p->servptr;
+
+	char squit_reason[300];
+
+	if (exist_p) {
+		char buf[BUFSIZE];
+
+		if (exist_p == target_p) return;
+
+		if(MyClient(exist_p))
+			sendto_one(exist_p, ":%s KILL %s :(Nickname regained by services)",
+				me.name, exist_p->name);
+
+		exist_p->flags |= FLAGS_KILLED;
+		/* Do not send kills to servers for unknowns -- jilles */
+		if(IsClient(exist_p))
+			kill_client_serv_butone(NULL, exist_p,
+				"%s (Nickname regained by services)", me.name);
+
+		rb_snprintf(buf, sizeof(buf), "Killed (%s (Nickname regained by services))",
+			me.name);
+		exit_client(NULL, exist_p, &me, buf);
+	}
+
+	if (!(source_p->flags & FLAGS_SERVICE)) {
+		snprintf(squit_reason, sizeof squit_reason,
+				"Invalid UFNC (%s -> %s) from %s (source server lacks U:line)",
+				target_p->name, newnick,
+				source_p->name);
+		bad_fnc(client_p, squit_reason);
+		return 0;
+	}
+
+	for (; server_p && server_p != &me; server_p = server_p->servptr) {
+		if (server_p->serv->caps & CAP_UFNC)
+			continue;
+		snprintf(squit_reason, sizeof squit_reason,
+				"Invalid UFNC (%s -> %s) from %s (server %s on path lacks support)",
+				target_p->name, newnick,
+				source_p->name, server_p->name);
+		bad_fnc(client_p, squit_reason);
+		return 0;
+	}
+
+	sendto_server(client_p, NULL, CAP_UFNC|CAP_TS6, NOCAPS, ":%s UFNC %s %s %ld",
+			source_p->id, target_p->id, newnick, (long)target_p->tsinfo);
+	sendto_server(client_p, NULL, CAP_TS6, CAP_UFNC, ":%s NICK %s :%ld",
+			target_p->id, target_p->id, (long)target_p->tsinfo);
+	if (MyClient(target_p)) {
+		time_t tsinfo = target_p->tsinfo;
+		change_local_nick(target_p, target_p, newnick, 0);
+		target_p->tsinfo = tsinfo;
+	} else {
+		change_remote_nick(target_p, target_p, target_p->tsinfo, newnick, 0);
+	}
+}
+
+
 static void bad_nickname(struct Client *client_p, const char *nick)
 {
 	char squitreason[100];
@@ -1277,4 +1383,15 @@ static void bad_nickname(struct Client *client_p, const char *nick)
 	rb_snprintf(squitreason, sizeof squitreason,
 			"Bad nickname introduced [%s]", nick);
 	exit_client(client_p, client_p, &me, squitreason);
+}
+
+
+static void bad_fnc(struct Client *client_p, const char *reason)
+{
+	sendto_realops_snomask(SNO_GENERAL, L_NETWIDE, "Squitting %s: %s",
+			client_p->name, reason);
+	ilog(L_SERVER, "Link %s cancelled: %s",
+			client_p->name, reason);
+
+	exit_client(client_p, client_p, &me, reason);
 }
