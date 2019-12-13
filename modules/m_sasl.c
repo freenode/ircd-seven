@@ -86,7 +86,7 @@ mr_authenticate(struct Client *client_p, struct Client *source_p,
 	if (*parv[1] == ':' || strchr(parv[1], ' '))
 	{
 		exit_client(client_p, client_p, client_p, "Malformed AUTHENTICATE");
-		return;
+		return 0;
 	}
 
 	if(source_p->preClient->sasl_complete)
