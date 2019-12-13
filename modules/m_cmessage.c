@@ -196,11 +196,11 @@ m_cmessage(int p_or_n, enum message_type msgtype,
 	call_hook(h_privmsg_user, &hdata);
 
 	if (hdata.approved != 0)
-		return;
+		return 0;
 
 	/* the hook may have killed them */
 	if (IsAnyDead(source_p))
-		return;
+		return 0;
 
 	sendto_anywhere_message(target_p, source_p, cmdname[msgtype], "%s", hdata.text);
 
