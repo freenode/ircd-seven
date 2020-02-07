@@ -361,7 +361,7 @@ register_local_user(struct Client *client_p, struct Client *source_p, const char
 	{
 		ServerStats.is_ref++;
 		sendto_one_notice(source_p, ":*** Notice -- You need to identify via SASL to use this server");
-		exit_client(client_p, source_p, &me, "SASL access only");
+		exit_client(client_p, source_p, &me, "SASL access only - see https://freenode.net/kb/answer/sasl");
 		return (CLIENT_EXITED);
 	}
 
