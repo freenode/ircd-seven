@@ -12,23 +12,35 @@
 
    As of hybrid-4, the distribution uses GNU autoconf instead of the old
    Config script. The Makefile has also been updated to include CFLAGS
-   defines for popular modern OSes.
+   defines for popular modern OSes. 
 
-   1. 
+   Read the NEWS file to find out about the exciting new features in
+   this version. Other good reads are BUGS, doc/example.conf, and
+   README.FIRST.
 
-       Read the NEWS file to find out about the exciting new features in
-       this version. Other good reads are BUGS, doc/example.conf, and
-       README.FIRST.
+   1.
+
+       Install dependencies. This loads a list of dependencies from
+       ./DEPENDENCIES and installs them. Use "less DEPENDENCIES" to
+       preview what will be installed.
+
+       sudo bash install-deps.sh
 
    2. 
 
-       Run the configure script. It will create include/setup.h and the
-       Makefiles to match your system. In ircd-ratbox, the paths are now handled
-       with the --prefix option to configure, not in config.h.
-       /usr/local/ircd is the default if no prefix is specified.
+       Create and run the configure script. It will create
+       include/setup.h and the Makefiles to match your system. In
+       ircd-ratbox, the paths are now handled with the --prefix option
+       to configure, not in config.h.  /usr/local/ircd is the default
+       if no prefix is specified.
 
-       ./configure --prefix="/usr/local/ircd"
+       autoconf && ./configure --prefix="/usr/local/ircd"
 
+       If you get errors about missing packages, run the following
+       commands for each one and then go to step 1 again:
+
+       echo PACKAGE-NAME >> DEPENDENCIES
+       git commit DEPENDENCIES -m "Install dependency PACKAGE-NAME"
          Note: There are some special optional parameters to the configure
          script that some admins may wish to use.
 
