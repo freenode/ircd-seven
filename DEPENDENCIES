@@ -1,0 +1,6 @@
+# This is a comment
+bison
+flex
+# Issue #153
+libhyperscan-dev
+pkg-config
