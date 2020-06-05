@@ -1044,7 +1044,7 @@ user_mode(struct Client *client_p, struct Client *source_p, int parc, const char
 
 	if(source_p != target_p)
 	{
-		if (MyOper(source_p) && parc < 3)
+		if (HasPrivilege(source_p, "auspex:umodes") && parc < 3)
 			show_other_user_mode(source_p, target_p);
 		else
 			sendto_one(source_p, form_str(ERR_USERSDONTMATCH), me.name, source_p->name);
@@ -1233,6 +1233,9 @@ user_mode(struct Client *client_p, struct Client *source_p, int parc, const char
 		sendto_one_notice(source_p, ":*** You need oper and admin flag for +a");
 		source_p->umodes &= ~UMODE_ADMIN;
 	}
+
+	if(MyClient(source_p))
+		source_p->handler = IsOperGeneral(source_p) ? OPER_HANDLER : CLIENT_HANDLER;
 
 	/* let modules providing usermodes know that we've changed our usermode --nenolod */
 	hdata.client = source_p;
@@ -1435,6 +1438,8 @@ oper_up(struct Client *source_p, struct oper_conf *oper_p)
 	hdata.oldumodes = old;
 	hdata.oldsnomask = oldsnomask;
 	call_hook(h_umode_changed, &hdata);
+
+	source_p->handler = IsOperGeneral(source_p) ? OPER_HANDLER : CLIENT_HANDLER;
 
 	sendto_realops_snomask(SNO_GENERAL, L_ALL,
 			     "%s (%s!%s@%s) is now an operator", oper_p->name, source_p->name,

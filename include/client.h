@@ -376,7 +376,7 @@ struct ListClient
 				 (x)->handler = SERVER_HANDLER; }
 
 #define SetClient(x)            {(x)->status = STAT_CLIENT; \
-				 (x)->handler = IsOper((x)) ? \
+				 (x)->handler = IsOperGeneral((x)) ? \
 					OPER_HANDLER : CLIENT_HANDLER; }
 #define SetRemoteClient(x)	{(x)->status = STAT_CLIENT; \
 				 (x)->handler = RCLIENT_HANDLER; }
@@ -523,12 +523,8 @@ struct ListClient
 /* oper flags */
 #define MyOper(x)               (MyConnect(x) && IsOper(x))
 
-#define SetOper(x)              {(x)->umodes |= UMODE_OPER; \
-				 if (MyClient((x))) (x)->handler = OPER_HANDLER;}
-
-#define ClearOper(x)            {(x)->umodes &= ~(UMODE_OPER|UMODE_ADMIN); \
-				 if (MyClient((x)) && !IsOper((x)) && !IsServer((x))) \
-				  (x)->handler = CLIENT_HANDLER; }
+#define SetOper(x)              ((x)->umodes |= UMODE_OPER)
+#define ClearOper(x)            ((x)->umodes &= ~(UMODE_OPER|UMODE_ADMIN))
 
 /* umode flags */
 #define IsInvisible(x)          ((x)->umodes & UMODE_INVISIBLE)

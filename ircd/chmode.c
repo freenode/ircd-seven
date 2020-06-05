@@ -660,7 +660,7 @@ chm_hidden(struct Client *source_p, struct Channel *chptr,
 	  int alevel, int parc, int *parn,
 	  const char **parv, int *errors, int dir, char c, long mode_type)
 {
-	if(!IsOper(source_p) && !IsServer(source_p))
+	if(MyClient(source_p) && !IsOperGeneral(source_p))
 	{
 		if(!(*errors & SM_ERR_NOPRIVS))
 			sendto_one_numeric(source_p, ERR_NOPRIVILEGES, form_str(ERR_NOPRIVILEGES));
@@ -707,24 +707,21 @@ chm_staff(struct Client *source_p, struct Channel *chptr,
 	  int alevel, int parc, int *parn,
 	  const char **parv, int *errors, int dir, char c, long mode_type)
 {
-	if(!IsOper(source_p) && !IsServer(source_p))
+	if(MyClient(source_p) && !IsOper(source_p))
 	{
 		if(!(*errors & SM_ERR_NOPRIVS))
 			sendto_one_numeric(source_p, ERR_NOPRIVILEGES, form_str(ERR_NOPRIVILEGES));
 		*errors |= SM_ERR_NOPRIVS;
 		return;
 	}
-	if(MyClient(source_p) && !IsOperResv(source_p))
+	if(MyClient(source_p) && !HasPrivilege(source_p, "oper:cmodes"))
 	{
 		if(!(*errors & SM_ERR_NOPRIVS))
 			sendto_one(source_p, form_str(ERR_NOPRIVS), me.name,
-					source_p->name, "resv");
+					source_p->name, "cmodes");
 		*errors |= SM_ERR_NOPRIVS;
 		return;
 	}
-
-	if(!allow_mode_change(source_p, chptr, CHFL_CHANOP, errors, c))
-		return;
 
 	if(MyClient(source_p) && (++mode_limit_simple > MAXMODES_SIMPLE))
 		return;
@@ -1269,7 +1266,7 @@ chm_forward(struct Client *source_p, struct Channel *chptr,
 	if(!allow_mode_change(source_p, chptr, alevel, errors, c))
 		return;
 #else
-	if(!IsOper(source_p) && !IsServer(source_p))
+	if(!IsOperGeneral(source_p) && !IsServer(source_p))
 	{
 		if(!(*errors & SM_ERR_NOPRIVS))
 			sendto_one_numeric(source_p, ERR_NOPRIVILEGES, form_str(ERR_NOPRIVILEGES));
