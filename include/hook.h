@@ -11,6 +11,16 @@ typedef struct
 	rb_dlink_list hooks;
 } hook;
 
+enum hook_priority
+{
+	HOOK_LOWEST = 10,
+	HOOK_LOW = 20,
+	HOOK_NORMAL = 30,
+	HOOK_HIGH = 40,
+	HOOK_HIGHEST = 50,
+	HOOK_MONITOR = 100
+};
+
 typedef void (*hookfn) (void *data);
 
 extern int h_iosend_id;
@@ -35,10 +45,13 @@ extern int h_conf_read_start;
 extern int h_conf_read_end;
 extern int h_outbound_msgbuf;
 extern int h_rehash;
+extern int h_cap_change;
+extern int h_sendq_cleared;
 
 void init_hook(void);
 int register_hook(const char *name);
 void add_hook(const char *name, hookfn fn);
+void add_hook_prio(const char *name, hookfn fn, enum hook_priority priority);
 void remove_hook(const char *name, hookfn fn);
 void call_hook(int id, void *arg);
 
@@ -116,9 +129,24 @@ typedef struct
 typedef struct
 {
 	struct Client *client;
+	const char *reason;
+	const char *orig_reason;
+} hook_data_client_quit;
+
+typedef struct
+{
+	struct Client *client;
 	unsigned int oldumodes;
 	unsigned int oldsnomask;
 } hook_data_umode_changed;
+
+typedef struct
+{
+	struct Client *client;
+	int oldcaps;
+	int add;
+	int del;
+} hook_data_cap_change;
 
 enum message_type {
 	MESSAGE_TYPE_NOTICE,

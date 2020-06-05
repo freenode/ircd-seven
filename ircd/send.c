@@ -72,7 +72,7 @@ _send_linebuf(struct Client *to, buf_head_t *linebuf)
 	{
 		if(IsServer(to))
 		{
-			sendto_realops_snomask(SNO_GENERAL, L_ALL,
+			sendto_realops_snomask(SNO_GENERAL, L_NETWIDE,
 					     "Max SendQ limit exceeded for %s: %u > %lu",
 					     to->name,
 					     rb_linebuf_len(&to->localClient->buf_sendq),
@@ -182,7 +182,12 @@ send_queued(struct Client *to)
 			       send_queued_write, to);
 	}
 	else
+	{
+		hook_data_client hdata;
+		hdata.client = to;
 		ClearFlush(to);
+		call_hook(h_sendq_cleared, &hdata);
+	}
 }
 
 void
