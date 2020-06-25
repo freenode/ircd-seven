@@ -101,7 +101,7 @@ mo_kline(struct Client *client_p, struct Client *source_p, int parc, const char 
 {
 	char def[] = "No Reason";
 	char user[USERLEN + 2];
-	char host[HOSTLEN + 2];
+	char host_buf[HOSTLEN + 3], *host = host_buf + 1;
 	char *reason = def;
 	char *oper_reason;
 	const char *target_server = NULL;
@@ -124,6 +124,12 @@ mo_kline(struct Client *client_p, struct Client *source_p, int parc, const char 
 
 	if(find_user_host(source_p, parv[loc], user, host) == 0)
 		return 0;
+
+	if (*host == ':')
+	{
+		host--;
+		*host = '0';
+	}
 
 	loc++;
 
