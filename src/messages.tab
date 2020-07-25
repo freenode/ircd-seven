@@ -456,7 +456,7 @@ static  const char *  replies[] = {
 /* 432 ERR_ERRONEUSNICKNAME, */ ":%s 432 %s %s :Erroneous Nickname",
 /* 433 ERR_NICKNAMEINUSE, */    ":%s 433 %s %s :Nickname is already in use.",
 /* 434 */       NULL,
-/* 435 ERR_BANNICKCHANGE */     "%s %s :Cannot change nickname while banned/quieted on channel",
+/* 435 */       NULL,
 /* 436 ERR_NICKCOLLISION, */    "%s :Nickname collision KILL",
 /* 437 ERR_UNAVAILRESOURCE, */	":%s 437 %s %s :Nick/channel is temporarily unavailable",
 /* 438 ERR_NICKTOOFAST */       ":%s 438 %s %s %s :Nick change too fast. Please wait %d seconds.",
