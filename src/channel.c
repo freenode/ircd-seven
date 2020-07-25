@@ -981,44 +981,6 @@ flood_attack_channel(int p_or_n, struct Client *source_p, struct Channel *chptr,
 	return 0;
 }
 
-/* find_bannickchange_channel()
- * Input: client to check
- * Output: channel preventing nick change
- */
-struct Channel *
-find_bannickchange_channel(struct Client *client_p)
-{
-	struct Channel *chptr;
-	struct membership *msptr;
-	rb_dlink_node *ptr;
-	char src_host[NICKLEN + USERLEN + HOSTLEN + 6];
-	char src_iphost[NICKLEN + USERLEN + HOSTLEN + 6];
-
-	if (!MyClient(client_p) || IsOverride(client_p))
-		return NULL;
-
-	rb_sprintf(src_host, "%s!%s@%s", client_p->name, client_p->username, client_p->host);
-	rb_sprintf(src_iphost, "%s!%s@%s", client_p->name, client_p->username, client_p->sockhost);
-
-	RB_DLINK_FOREACH(ptr, client_p->user->channel.head)
-	{
-		msptr = ptr->data;
-		chptr = msptr->chptr;
-		if (is_chanop_voiced(msptr))
-			continue;
-		/* cached can_send */
-		if (msptr->bants == chptr->bants)
-		{
-			if (can_send_banned(msptr))
-				return chptr;
-		}
-		else if (is_banned(chptr, client_p, msptr, src_host, src_iphost, NULL) == CHFL_BAN
-			|| is_quieted(chptr, client_p, msptr, src_host, src_iphost) == CHFL_BAN)
-			return chptr;
-	}
-	return NULL;
-}
-
 /* void check_spambot_warning(struct Client *source_p)
  * Input: Client to check, channel name or NULL if this is a part.
  * Output: none

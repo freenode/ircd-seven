@@ -690,14 +690,6 @@ change_local_nick(struct Client *client_p, struct Client *source_p,
 
 	if (dosend)
 	{
-		chptr = find_bannickchange_channel(source_p);
-		if (chptr != NULL)
-		{
-			sendto_one_numeric(source_p, ERR_BANNICKCHANGE,
-					form_str(ERR_BANNICKCHANGE),
-					nick, chptr->chname);
-			return;
-		}
 		if((source_p->localClient->last_nick_change + ConfigFileEntry.max_nick_time) < rb_current_time())
 			source_p->localClient->number_of_nick_changes = 0;
 
