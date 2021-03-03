@@ -63,11 +63,11 @@ extern char linebuf[];
 
 static rb_bh *confitem_heap = NULL;
 
-rb_dlink_list prop_bans;
-
 rb_dlink_list temp_klines[LAST_TEMP_TYPE];
 rb_dlink_list temp_dlines[LAST_TEMP_TYPE];
 rb_dlink_list service_list;
+
+struct Dictionary *prop_bans_dict;
 
 /* internally defined functions */
 static void set_default_conf(void);
@@ -75,9 +75,11 @@ static void validate_conf(void);
 static void read_conf(FILE *);
 static void clear_out_old_conf(void);
 
-static void expire_prop_bans(void *list);
+static void expire_prop_bans(void *);
 static void expire_temp_kd(void *list);
 static void reorganise_temp_kd(void *list);
+
+static int cmp_prop_ban(const void *, const void *);
 
 FILE *conf_fbfile_in;
 extern char yytext[];
@@ -89,8 +91,9 @@ void
 init_s_conf(void)
 {
 	confitem_heap = rb_bh_create(sizeof(struct ConfItem), CONFITEM_HEAP_SIZE, "confitem_heap");
+	prop_bans_dict = irc_dictionary_create(cmp_prop_ban);
 
-	rb_event_addish("expire_prop_bans", expire_prop_bans, &prop_bans, 60);
+	rb_event_addish("expire_prop_bans", expire_prop_bans, NULL, 60);
 
 	rb_event_addish("expire_temp_klines", expire_temp_kd, &temp_klines[TEMP_MIN], 60);
 	rb_event_addish("expire_temp_dlines", expire_temp_kd, &temp_dlines[TEMP_MIN], 60);
@@ -181,10 +184,10 @@ check_client(struct Client *client_p, struct Client *source_p, const char *usern
 
 	if((i = verify_access(source_p, username)))
 	{
-		ilog(L_FUSER, "Access denied: %s[%s]", 
+		ilog(L_FUSER, "Access denied: %s[%s]",
 		     source_p->name, source_p->sockhost);
 	}
-	
+
 	switch (i)
 	{
 	case SOCKET_ERROR:
@@ -204,7 +207,7 @@ check_client(struct Client *client_p, struct Client *source_p, const char *usern
 
 		ilog(L_FUSER, "Too many local connections from %s!%s%s@%s",
 			source_p->name, IsGotId(source_p) ? "" : "~",
-			source_p->username, source_p->sockhost);	
+			source_p->username, source_p->sockhost);
 
 		ServerStats.is_ref++;
 		exit_client(client_p, source_p, &me, "Too many host connections (local)");
@@ -245,7 +248,7 @@ check_client(struct Client *client_p, struct Client *source_p, const char *usern
 				source_p->username, source_p->host,
 				show_ip(NULL, source_p) && !IsIPSpoof(source_p) ? source_p->sockhost : "255.255.255.255");
 
-		ilog(L_FUSER, "Too many connections from %s!%s%s@%s.", 
+		ilog(L_FUSER, "Too many connections from %s!%s%s@%s.",
 			source_p->name, IsGotId(source_p) ? "" : "~",
 			source_p->username, source_p->sockhost);
 
@@ -263,7 +266,7 @@ check_client(struct Client *client_p, struct Client *source_p, const char *usern
 			else
 #endif
 				port = ntohs(((struct sockaddr_in *)&source_p->localClient->listener->addr)->sin_port);
-			
+
 			ServerStats.is_ref++;
 			/* jdc - lists server name & port connections are on */
 			/*       a purely cosmetical change */
@@ -318,7 +321,7 @@ verify_access(struct Client *client_p, const char *username)
 
 	if(IsGotId(client_p))
 	{
-		aconf = find_address_conf(client_p->host, client_p->sockhost, 
+		aconf = find_address_conf(client_p->host, client_p->sockhost,
 					client_p->username, client_p->username,
 					(struct sockaddr *) &client_p->localClient->ip,
 					client_p->localClient->ip.ss_family,
@@ -398,7 +401,7 @@ verify_access(struct Client *client_p, const char *username)
 
 /*
  * add_ip_limit
- * 
+ *
  * Returns 1 if successful 0 if not
  *
  * This checks if the user has exceed the limits for their class
@@ -569,7 +572,7 @@ detach_conf(struct Client *client_p)
 
 /*
  * attach_conf
- * 
+ *
  * inputs	- client pointer
  * 		- conf pointer
  * output	-
@@ -691,7 +694,7 @@ set_default_conf(void)
 	ConfigFileEntry.default_adminstring = rb_strdup("is a Server Administrator");
 	ConfigFileEntry.servicestring = rb_strdup("is a Network Service");
 
-	ConfigFileEntry.default_umodes = UMODE_INVISIBLE;	
+	ConfigFileEntry.default_umodes = UMODE_INVISIBLE;
 	ConfigFileEntry.failed_oper_notice = YES;
 	ConfigFileEntry.anti_nick_flood = NO;
 	ConfigFileEntry.disable_fake_channels = NO;
@@ -788,7 +791,7 @@ set_default_conf(void)
 	ConfigFileEntry.tkline_expire_notices = 0;
 
         ConfigFileEntry.reject_after_count = 5;
-	ConfigFileEntry.reject_ban_time = 300;  
+	ConfigFileEntry.reject_ban_time = 300;
 	ConfigFileEntry.reject_duration = 120;
 	ConfigFileEntry.throttle_count = 4;
 	ConfigFileEntry.throttle_duration = 60;
@@ -811,7 +814,7 @@ set_default_conf(void)
 #undef NO
 
 /*
- * read_conf() 
+ * read_conf()
  *
  *
  * inputs       - file descriptor pointing to config file to use
@@ -863,7 +866,7 @@ validate_conf(void)
 		int start = ServerInfo.ssld_count - get_ssld_count();
 		/* start up additional ssld if needed */
 		start_ssldaemon(start, ServerInfo.ssl_cert, ServerInfo.ssl_private_key, ServerInfo.ssl_dh_params);
-				
+
 	}
 
 	if((ConfigFileEntry.client_flood_max_lines < CLIENT_FLOOD_MIN) ||
@@ -884,7 +887,7 @@ validate_conf(void)
  *
  * inputs        - pointer to struct ConfItem
  * output        - none
- * Side effects  - links in given struct ConfItem into 
+ * Side effects  - links in given struct ConfItem into
  *                 temporary kline link list
  */
 void
@@ -950,7 +953,7 @@ add_temp_dline(struct ConfItem *aconf)
 }
 
 /* valid_wild_card()
- * 
+ *
  * input        - user buffer, host buffer
  * output       - 0 if invalid, 1 if valid
  * side effects -
@@ -1005,31 +1008,53 @@ valid_wild_card(const char *luser, const char *lhost)
 	return 0;
 }
 
-rb_dlink_node *
-find_prop_ban(unsigned int status, const char *user, const char *host)
+
+int cmp_prop_ban(const void *a_, const void *b_)
 {
-	rb_dlink_node *ptr;
-	struct ConfItem *aconf;
+	const struct ConfItem *a = a_, *b = b_;
+	int r;
 
-	RB_DLINK_FOREACH(ptr, prop_bans.head)
-	{
-		aconf = ptr->data;
+	if ((a->status & ~CONF_ILLEGAL) > (int)(b->status & ~CONF_ILLEGAL)) return 1;
+	if ((a->status & ~CONF_ILLEGAL) < (int)(b->status & ~CONF_ILLEGAL)) return -1;
 
-		if((aconf->status & ~CONF_ILLEGAL) == status &&
-				(!user || !aconf->user ||
-				 !irccmp(aconf->user, user)) &&
-				!irccmp(aconf->host, host))
-			return ptr;
-	}
-	return NULL;
+	r = irccmp(a->host, b->host);
+	if (r) return r;
+
+	if (a->user && b->user)
+		return irccmp(a->user, b->user);
+
+	return 0;
 }
 
 void
-deactivate_conf(struct ConfItem *aconf, rb_dlink_node *ptr)
+add_prop_ban(struct ConfItem *aconf)
+{
+	irc_dictionary_add(prop_bans_dict, (const char *)aconf, aconf);
+}
+
+struct ConfItem *
+find_prop_ban(unsigned status, const char *user, const char *host)
+{
+	struct ConfItem key = {.status = status, .user = (char *)user, .host = (char *)host};
+	return irc_dictionary_retrieve(prop_bans_dict, (const char *)&key);
+}
+
+void
+remove_prop_ban(struct ConfItem *aconf)
+{
+	irc_dictionary_delete(prop_bans_dict, (const char *)aconf);
+}
+
+int
+lookup_prop_ban(struct ConfItem *aconf)
+{
+	return irc_dictionary_retrieve(prop_bans_dict, (const char *)aconf) == aconf;
+}
+
+void
+deactivate_conf(struct ConfItem *aconf)
 {
 	int i;
-
-	s_assert(ptr->data == aconf);
 
 	switch (aconf->status)
 	{
@@ -1069,7 +1094,7 @@ deactivate_conf(struct ConfItem *aconf, rb_dlink_node *ptr)
 	else
 	{
 		if (aconf->lifetime != 0)
-			rb_dlinkDestroy(ptr, &prop_bans);
+			remove_prop_ban(aconf);
 		free_conf(aconf);
 	}
 }
@@ -1080,13 +1105,11 @@ deactivate_conf(struct ConfItem *aconf, rb_dlink_node *ptr)
 void
 replace_old_ban(struct ConfItem *aconf)
 {
-	rb_dlink_node *ptr;
 	struct ConfItem *oldconf;
 
-	ptr = find_prop_ban(aconf->status, aconf->user, aconf->host);
-	if(ptr != NULL)
+	oldconf = find_prop_ban(aconf->status, aconf->user, aconf->host);
+	if (oldconf != NULL)
 	{
-		oldconf = ptr->data;
 		/* Remember at least as long as the old one. */
 		if(oldconf->lifetime > aconf->lifetime)
 			aconf->lifetime = oldconf->lifetime;
@@ -1100,23 +1123,23 @@ replace_old_ban(struct ConfItem *aconf)
 			aconf->lifetime = aconf->hold;
 		/* Tell deactivate_conf() to destroy it. */
 		oldconf->lifetime = rb_current_time();
-		deactivate_conf(oldconf, ptr);
+		deactivate_conf(oldconf);
 	}
 }
 
 static void
-expire_prop_bans(void *list)
+expire_prop_bans(void *unused)
 {
-	rb_dlink_node *ptr;
-	rb_dlink_node *next_ptr;
 	struct ConfItem *aconf;
+	time_t now;
+	struct DictionaryIter state;
 
-	RB_DLINK_FOREACH_SAFE(ptr, next_ptr, ((rb_dlink_list *) list)->head)
+	now = rb_current_time();
+
+	DICTIONARY_FOREACH(aconf, &state, prop_bans_dict)
 	{
-		aconf = ptr->data;
-
-		if(aconf->lifetime <= rb_current_time() ||
-				(aconf->hold <= rb_current_time() &&
+		if(aconf->lifetime <= now ||
+				(aconf->hold <= now &&
 				 !(aconf->status & CONF_ILLEGAL)))
 		{
 			/* Alert opers that a TKline expired - Hwy */
@@ -1130,7 +1153,7 @@ expire_prop_bans(void *list)
 						     aconf->host ? aconf->host : "*");
 
 			/* will destroy or mark illegal */
-			deactivate_conf(aconf, ptr);
+			deactivate_conf(aconf);
 		}
 	}
 }
@@ -1180,7 +1203,7 @@ reorganise_temp_kd(void *list)
 
 		if(aconf->hold < (rb_current_time() + (60 * 60)))
 		{
-			rb_dlinkMoveNode(ptr, list, (aconf->status == CONF_KILL) ? 
+			rb_dlinkMoveNode(ptr, list, (aconf->status == CONF_KILL) ?
 					&temp_klines[TEMP_MIN] : &temp_dlines[TEMP_MIN]);
 			aconf->port = TEMP_MIN;
 		}
@@ -1188,14 +1211,14 @@ reorganise_temp_kd(void *list)
 		{
 			if(aconf->hold < (rb_current_time() + (1440 * 60)))
 			{
-				rb_dlinkMoveNode(ptr, list, (aconf->status == CONF_KILL) ? 
+				rb_dlinkMoveNode(ptr, list, (aconf->status == CONF_KILL) ?
 						&temp_klines[TEMP_HOUR] : &temp_dlines[TEMP_HOUR]);
 				aconf->port = TEMP_HOUR;
 			}
-			else if(aconf->port > TEMP_DAY && 
+			else if(aconf->port > TEMP_DAY &&
 				(aconf->hold < (rb_current_time() + (10080 * 60))))
 			{
-				rb_dlinkMoveNode(ptr, list, (aconf->status == CONF_KILL) ? 
+				rb_dlinkMoveNode(ptr, list, (aconf->status == CONF_KILL) ?
 						&temp_klines[TEMP_DAY] : &temp_dlines[TEMP_DAY]);
 				aconf->port = TEMP_DAY;
 			}
@@ -1225,7 +1248,7 @@ get_oper_name(struct Client *client_p)
 	}
 
 	rb_snprintf(buffer, sizeof(buffer), "%s!%s@%s{%s}",
-		   client_p->name, client_p->username, 
+		   client_p->name, client_p->username,
 		   client_p->host, client_p->servptr->name);
 	return buffer;
 }
@@ -1235,7 +1258,7 @@ get_oper_name(struct Client *client_p)
  *
  * inputs        - struct ConfItem
  *
- * output         - name 
+ * output         - name
  *                - host
  *                - pass
  *                - user
@@ -1282,7 +1305,7 @@ get_user_ban_reason(struct ConfItem *aconf)
 }
 
 void
-get_printable_kline(struct Client *source_p, struct ConfItem *aconf, 
+get_printable_kline(struct Client *source_p, struct ConfItem *aconf,
 		    char **host, char **reason,
 		    char **user, char **oper_reason)
 {
@@ -1339,7 +1362,7 @@ read_conf_files(int cold)
 	   FIXME: The full path is in conffilenamebuf first time since we
 	   dont know anything else
 
-	   - Gozem 2002-07-21 
+	   - Gozem 2002-07-21
 	 */
 	rb_strlcpy(conffilebuf, filename, sizeof(conffilebuf));
 
@@ -1469,7 +1492,7 @@ clear_out_old_conf(void)
  * conf_add_class_to_conf
  * inputs       - pointer to config item
  * output       - NONE
- * side effects - Add a class pointer to a conf 
+ * side effects - Add a class pointer to a conf
  */
 
 void

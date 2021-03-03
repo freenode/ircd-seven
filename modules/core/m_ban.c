@@ -1,7 +1,7 @@
 /*
  * charybdis: An advanced ircd.
  * m_ban.c: Propagates network bans across servers.
- * 
+ *
  *  Copyright (C) 2010 Jilles Tjoelker
  *
  * Redistribution and use in source and binary forms, with or without
@@ -82,7 +82,6 @@ m_ban(struct Client *client_p, struct Client *source_p, int parc, const char *pa
 static int
 ms_ban(struct Client *client_p, struct Client *source_p, int parc, const char *parv[])
 {
-	rb_dlink_node *ptr;
 	struct ConfItem *aconf;
 	unsigned int ntype;
 	const char *oper, *stype;
@@ -90,6 +89,7 @@ ms_ban(struct Client *client_p, struct Client *source_p, int parc, const char *p
 	char *p;
 	int act;
 	int valid;
+	int new = 0;
 
 	if (strlen(parv[1]) != 1)
 	{
@@ -126,11 +126,10 @@ ms_ban(struct Client *client_p, struct Client *source_p, int parc, const char *p
 		oper = IsServer(source_p) ? source_p->name : get_oper_name(source_p);
 	else
 		oper = parv[7];
-	ptr = find_prop_ban(ntype, parv[2], parv[3]);
-	if (ptr != NULL)
+	aconf = find_prop_ban(ntype, parv[2], parv[3]);
+	if (aconf != NULL)
 	{
 		/* We already know about this ban mask. */
-		aconf = ptr->data;
 		if (aconf->created > created ||
 				(aconf->created == created &&
 				 aconf->lifetime >= lifetime))
@@ -157,7 +156,7 @@ ms_ban(struct Client *client_p, struct Client *source_p, int parc, const char *p
 		if (aconf->lifetime <= rb_current_time())
 			return 0;
 		/* Deactivate, it will be reactivated later if appropriate. */
-		deactivate_conf(aconf, ptr);
+		deactivate_conf(aconf);
 		rb_free(aconf->user);
 		aconf->user = NULL;
 		rb_free(aconf->host);
@@ -175,8 +174,8 @@ ms_ban(struct Client *client_p, struct Client *source_p, int parc, const char *p
 		aconf = make_conf();
 		aconf->status = CONF_ILLEGAL | ntype;
 		aconf->lifetime = lifetime;
-		rb_dlinkAddAlloc(aconf, &prop_bans);
 		act = hold != created && hold > rb_current_time();
+		new = 1;
 	}
 	aconf->flags &= ~CONF_FLAGS_MYOPER;
 	aconf->flags |= CONF_FLAGS_TEMPORARY;
@@ -185,6 +184,8 @@ ms_ban(struct Client *client_p, struct Client *source_p, int parc, const char *p
 	aconf->info.oper = operhash_add(oper);
 	aconf->created = created;
 	aconf->hold = hold;
+	if (new)
+		add_prop_ban(aconf);
 	if (ntype != CONF_KILL || (p = strchr(parv[parc - 1], '|')) == NULL)
 		aconf->passwd = rb_strdup(parv[parc - 1]);
 	else

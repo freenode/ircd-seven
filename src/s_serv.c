@@ -54,6 +54,7 @@
 #include "msg.h"
 #include "reject.h"
 #include "sslproc.h"
+#include "irc_dictionary.h"
 
 #ifndef INADDR_NONE
 #define INADDR_NONE ((unsigned int) 0xffffffff)
@@ -408,19 +409,18 @@ send_capabilities(struct Client *client_p, int cap_can_send)
 static void
 burst_ban(struct Client *client_p)
 {
-	rb_dlink_node *ptr;
 	struct ConfItem *aconf;
 	const char *type, *oper;
 	/* +5 for !,@,{,} and null */
 	char operbuf[NICKLEN + USERLEN + HOSTLEN + HOSTLEN + 5];
 	char *p;
 	size_t melen;
+	struct DictionaryIter state;
 
 	melen = strlen(me.name);
-	RB_DLINK_FOREACH(ptr, prop_bans.head)
-	{
-		aconf = ptr->data;
 
+	DICTIONARY_FOREACH(aconf, &state, prop_bans_dict)
+	{
 		/* Skip expired stuff. */
 		if(aconf->lifetime < rb_current_time())
 			continue;

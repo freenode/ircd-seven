@@ -419,7 +419,7 @@ mo_unkline(struct Client *client_p, struct Client *source_p, int parc, const cha
 		sendto_one_notice(source_p, ":No K-Line for %s@%s", user, host);
 		return 0;
 	}
-	
+
 	if(aconf->lifetime)
 	{
 		if(propagated)
@@ -500,7 +500,7 @@ handle_remote_unkline(struct Client *source_p, const char *user, const char *hos
 
 /* apply_kline()
  *
- * inputs	- 
+ * inputs	-
  * output	- NONE
  * side effects	- kline as given, is added to the hashtable
  *		  and conf file
@@ -584,7 +584,7 @@ apply_prop_kline(struct Client *source_p, struct ConfItem *aconf,
 
 	replace_old_ban(aconf);
 
-	rb_dlinkAddAlloc(aconf, &prop_bans);
+	add_prop_ban(aconf);
 	add_conf_by_address(aconf->host, CONF_KILL, aconf->user, NULL, aconf);
 
 	/* no oper reason.. */
@@ -623,7 +623,7 @@ apply_prop_kline(struct Client *source_p, struct ConfItem *aconf,
 }
 
 /* find_user_host()
- * 
+ *
  * inputs	- client placing kline, user@host, user buffer, host buffer
  * output	- 0 if not ok to kline, 1 to kline i.e. if valid user host
  * side effects -
@@ -839,10 +839,7 @@ remove_temp_kline(struct Client *source_p, struct ConfItem *aconf)
 static void
 remove_prop_kline(struct Client *source_p, struct ConfItem *aconf)
 {
-	rb_dlink_node *ptr;
-
-	ptr = rb_dlinkFind(aconf, &prop_bans);
-	if (!ptr)
+	if (!lookup_prop_ban(aconf))
 		return;
 	sendto_one_notice(source_p,
 			  ":Un-klined [%s@%s] from global k-lines",
@@ -869,5 +866,5 @@ remove_prop_kline(struct Client *source_p, struct ConfItem *aconf)
 			0,
 			(int)(aconf->lifetime - aconf->created));
 	remove_reject_mask(aconf->user, aconf->host);
-	deactivate_conf(aconf, ptr);
+	deactivate_conf(aconf);
 }
