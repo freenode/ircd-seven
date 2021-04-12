@@ -153,7 +153,7 @@ struct config_file_entry
 
 	char *identifyservice;
 	char *identifycommand;
-	
+
 	char *fname_userlog;
 	char *fname_fuserlog;
 	char *fname_operlog;
@@ -325,7 +325,7 @@ extern struct admin_info AdminInfo;	/* defined in ircd.c */
 
 extern rb_dlink_list service_list;
 
-extern rb_dlink_list prop_bans;
+extern struct Dictionary *prop_bans_dict;
 
 typedef enum temp_list
 {
@@ -344,8 +344,11 @@ extern void init_s_conf(void);
 extern struct ConfItem *make_conf(void);
 extern void free_conf(struct ConfItem *);
 
-extern rb_dlink_node *find_prop_ban(unsigned int status, const char *user, const char *host);
-extern void deactivate_conf(struct ConfItem *, rb_dlink_node *);
+extern struct ConfItem *find_prop_ban(unsigned int status, const char *user, const char *host);
+extern void add_prop_ban(struct ConfItem *);
+extern void remove_prop_ban(struct ConfItem *);
+extern int lookup_prop_ban(struct ConfItem *);
+extern void deactivate_conf(struct ConfItem *);
 extern void replace_old_ban(struct ConfItem *);
 
 extern void read_conf_files(int cold);

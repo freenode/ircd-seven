@@ -1,5 +1,5 @@
 /* modules/m_xline.c
- * 
+ *
  *  Copyright (C) 2002-2003 Lee Hardy <lee@leeh.co.uk>
  *  Copyright (C) 2002-2005 ircd-ratbox development team
  *
@@ -307,7 +307,7 @@ apply_xline(struct Client *source_p, const char *name, const char *reason, int t
 		aconf->lifetime = aconf->hold;
 
 		replace_old_ban(aconf);
-		rb_dlinkAddAlloc(aconf, &prop_bans);
+		add_prop_ban(aconf);
 
 		sendto_realops_snomask(SNO_GENERAL, L_ALL,
 				       "%s added global %d min. X-Line for [%s] [%s]",
@@ -506,8 +506,7 @@ remove_xline(struct Client *source_p, const char *name, int propagated)
 					sendto_one_notice(source_p, ":Cannot remove global X-Line %s on specific servers", name);
 					return;
 				}
-				ptr = rb_dlinkFind(aconf, &prop_bans);
-				if(ptr == NULL)
+				if (!lookup_prop_ban(aconf))
 					return;
 				sendto_one_notice(source_p, ":X-Line for [%s] is removed", name);
 				sendto_realops_snomask(SNO_GENERAL, L_ALL,
@@ -529,7 +528,7 @@ remove_xline(struct Client *source_p, const char *name, int propagated)
 						0,
 						(int)(aconf->lifetime - aconf->created));
 				remove_reject_mask(aconf->host, NULL);
-				deactivate_conf(aconf, ptr);
+				deactivate_conf(aconf);
 				return;
 			}
 			else if(propagated && rb_dlink_list_length(&cluster_conf_list))
